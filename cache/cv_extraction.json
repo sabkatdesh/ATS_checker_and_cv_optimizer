@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "full_name": "John Doe",
+    "location": null,
+    "email": "johndoe@example.com",
+    "phone": "+1 (555) 123-4567",
+    "linkedin": "linkedin.com/in/johndoe",
+    "portfolio": null,
+    "github": "github.com/johndoe"
+  },
+  "professional_summary": "Results-driven AI Engineer with 5 years of experience in designing, developing, and deploying machine learning and deep learning solutions. Skilled in building scalable AI systems, optimizing workflows, and delivering impactful projects across diverse industries.",
+  "skills": {
+    "hard_skills": [
+      "Python",
+      "C++",
+      "JavaScript",
+      "Pandas",
+      "Numpy",
+      "SQL",
+      "Apache Spark"
+    ],
+    "soft_skills": [],
+    "tools": [],
+    "frameworks": [
+      "TensorFlow",
+      "PyTorch",
+      "Scikit-learn",
+      "Keras"
+    ],
+    "cloud_platforms": [
+      "Amazon Web Services",
+      "Microsoft Azure",
+      "Google Cloud Platform"
+    ]
+  },
+  "experience_summary": {
+    "total_years": 5.0,
+    "seniority": "senior",
+    "role_type": "AI Engineer",
+    "relevant_years": 5.0
+  },
+  "work_experience": [
+    {
+      "job_title": "AI Engineer",
+      "company_name": "TechVision Solutions",
+      "employment_type": "full_time",
+      "start_date": "2021-01-01",
+      "end_date": null,
+      "responsibilities": [
+        "Designed and deployed LLM-powered chatbot for customer support",
+        "Implemented computer vision pipeline for defect detection in manufacturing",
+        "Led a team of 4 engineers to integrate RAG systems for enterprise knowledge bases",
+        "Optimized ML models for scalability"
+      ],
+      "achievements": [
+        "Reduced response time by 40%",
+        "Achieved 95% accuracy in defect detection",
+        "Reduced cloud costs by 25%"
+      ],
+      "tools_used": []
+    },
+    {
+      "job_title": "Machine Learning Engineer",
+      "company_name": "DataCore Analytics",
+      "employment_type": "full_time",
+      "start_date": "2019-01-01",
+      "end_date": "2020-12-31",
+      "responsibilities": [
+        "Developed predictive analytics models for financial risk assessment",
+        "Built recommendation engine for e-commerce platform",
+        "Automated data preprocessing workflows"
+      ],
+      "achievements": [
+        "Improved forecast accuracy by 30%",
+        "Increased customer engagement by 20%",
+        "Cut manual effort by 50%"
+      ],
+      "tools_used": []
+    }
+  ],
+  "education": [
+    {
+      "degree": "M.Sc.",
+      "field_of_study": "Artificial Intelligence",
+      "institution": "University of California, Berkeley",
+      "graduation_year": 2018
+    },
+    {
+      "degree": "B.Sc.",
+      "field_of_study": "Computer Science",
+      "institution": "University of Toronto",
+      "graduation_year": 2016
+    }
+  ],
+  "certifications": [
+    {
+      "name": "AWS Certified Machine Learning - Specialty",
+      "issuer": "AWS",
+      "year": null
+    },
+    {
+      "name": "TensorFlow Developer Certificate",
+      "issuer": "TensorFlow",
+      "year": null
+    }
+  ],
+  "projects": [],
+  "quality_flags": {
+    "missing_dates": false,
+    "missing_skills": false,
+    "weak_metrics": false,
+    "low_confidence_extraction": false
+  }
+}

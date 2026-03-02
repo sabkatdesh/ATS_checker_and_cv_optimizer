@@ -1,0 +1,64 @@
+{
+  "job_title": "Data & AI Engineer",
+  "company_name": null,
+  "location": null,
+  "employment_type": null,
+  "summary": null,
+  "responsibilities": {
+    "responsibilities": [
+      "Design, build, and maintain scalable and secure data pipelines across cloud and on-prem environments.",
+      "Integrate data from ERP (e.g., SAP), BI platforms (e.g., SAC), and external sources into centralized data lakes or warehouses.",
+      "Optimize ETL/ELT processes for performance, reliability, and cost-efficiency.",
+      "Define and implement data quality rules, validation checks, and cleansing routines.",
+      "Partner with data scientists and analysts to operationalize AI/ML models."
+    ]
+  },
+  "requirements": {
+    "must_have": [
+      "Bachelor's or Master's degree in Computer Science, Data Engineering, or related field.",
+      "Minimum 5-6 years of experience in data engineering, analytics, or AI/ML implementation.",
+      "Strong proficiency in SQL, Python, Spark, and cloud platforms (Azure, AWS, GCP).",
+      "Experience with data quality tools, governance frameworks, and metadata management.",
+      "Excellent communication, problem-solving, and stakeholder management skills."
+    ],
+    "nice_to_have": []
+  },
+  "skills": {
+    "hard_skills": [
+      "SQL",
+      "Python",
+      "Apache Spark",
+      "Ai/Ml"
+    ],
+    "soft_skills": [
+      "Communication",
+      "Problem-Solving",
+      "Stakeholder Management"
+    ],
+    "tools": [
+      "Sap",
+      "Sac",
+      "Data Quality Tools"
+    ],
+    "frameworks": [],
+    "cloud_platforms": [
+      "Microsoft Azure",
+      "Amazon Web Services",
+      "Google Cloud Platform"
+    ]
+  },
+  "experience": {
+    "min_years": 5,
+    "max_years": 6,
+    "seniority": "senior",
+    "role_type": "Data & AI Engineer"
+  },
+  "education": {
+    "degree_required": "Bachelor's or Master's degree",
+    "degree_preferred": null,
+    "fields_of_study": [
+      "Computer Science",
+      "Data Engineering"
+    ]
+  }
+}
