@@ -11,6 +11,7 @@ CVOptimizer is a full-stack SaaS application that uses multi-agent LLMs to autom
 🌍 **Live Demo:** https://peaceful-puppy-286139.netlify.app/
 
 ---
+<img width="1456" height="818" alt="image" src="https://github.com/user-attachments/assets/13a0c6cf-57a4-4bc5-804a-8708f9e4b990" />
 
 ## 🎯 What It Does
 
