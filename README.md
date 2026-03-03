@@ -11,7 +11,6 @@ CVOptimizer is a full-stack SaaS application that uses multi-agent LLMs to autom
 🌍 **Live Demo:** https://peaceful-puppy-286139.netlify.app/
 
 ---
-<img width="1456" height="818" alt="image" src="https://github.com/user-attachments/assets/13a0c6cf-57a4-4bc5-804a-8708f9e4b990" />
 
 ## 🎯 What It Does
 
@@ -31,6 +30,10 @@ Transform your generic CV into an ATS-crushing document in 90 seconds.
 - **62.18%** Interview Rate
 - **45%+** Average ATS Improvement
 - **8.23/10** Average User Rating
+
+<img width="1910" height="943" alt="image" src="https://github.com/user-attachments/assets/17080752-3c0d-4e9c-804f-7140931d18fb" />
+
+<img width="1908" height="857" alt="image" src="https://github.com/user-attachments/assets/7a4b84ed-6bad-4106-939b-a2c2827e6070" />
 
 ---
 
@@ -62,6 +65,11 @@ Transform your generic CV into an ATS-crushing document in 90 seconds.
 - Asks user clarifying questions
 - Resumes from checkpoint with user answers
 - LangGraph checkpointing ensures no state loss
+
+<img width="1896" height="855" alt="image" src="https://github.com/user-attachments/assets/6f6a0977-24dc-443d-b386-7c1a46fbbb7f" />
+
+<img width="1906" height="853" alt="image" src="https://github.com/user-attachments/assets/8c8d4187-7390-4a9d-b19e-d3e3449e3a19" />
+
 
 ### ✅ Budget-Aware CV Rewriting
 - Respects word count limits per seniority level
@@ -404,21 +412,22 @@ AI Engineer | GenAI & Agentic Systems | Full-Stack Developer
 ---
 
 ## 📊 Real Case Study
+<img width="1886" height="852" alt="image" src="https://github.com/user-attachments/assets/c8b4917b-a26f-4d1e-a6cd-e019a9418196" />
 
 ### GenAI Engineer Role Optimization
 
 **Before:**
-- ATS Score: 40/100 (below competitive)
+- ATS Score: 60/100 (below competitive)
 - Missing keywords: RAG, fine-tuning, vector databases
 - Weak project descriptions
 
 **After:**
-- ATS Score: 92.5/100 (highly competitive)
+- ATS Score: 97.5/100 (highly competitive)
 - Added all JD-specific keywords
 - Enhanced project tech stacks
 - Added relevant certifications
 
-**Improvement:** +52.5 points in 1.5 minutes
+**Improvement:** +37.5 points in 1.5 minutes
 
 This case study demonstrates CVOptimizer's effectiveness in real-world scenarios.
 
