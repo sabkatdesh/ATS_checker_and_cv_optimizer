@@ -2,7 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import install_error_handlers
-from app.api.routers import billing, health, legacy, profiles, sessions, templates, user_settings
+from app.api.routers import (
+    billing,
+    cover_letters,
+    health,
+    legacy,
+    profiles,
+    sessions,
+    templates,
+    user_settings,
+)
 from app.container import Container, build_container
 
 
@@ -24,6 +33,7 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(user_settings.router)
     app.include_router(billing.router)
     app.include_router(sessions.router)
+    app.include_router(cover_letters.router)
     if container.settings.dev_tools_enabled:
         app.include_router(billing.dev_router)
     app.include_router(legacy.router)
