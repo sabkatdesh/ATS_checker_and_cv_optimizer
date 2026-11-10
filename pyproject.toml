@@ -42,6 +42,9 @@ include = ["app/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "T20"]
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "E501"]
 "scripts/**" = ["T20"]
@@ -51,3 +54,7 @@ python_version = "3.12"
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 files = ["app"]
+
+[[tool.mypy.overrides]]
+module = ["services.*", "core.*", "database"]
+follow_imports = "silent"

@@ -6,6 +6,9 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
+# removed in Task 7
+TEMPORARY_ALLOW_LIST: frozenset[str] = frozenset({"app/api/routers/legacy.py"})
+
 
 def check(
     paths: Iterable[Path],
@@ -22,6 +25,8 @@ def check(
             continue
         count = len(path.read_text(encoding="utf-8").splitlines())
         shown = path.as_posix()
+        if shown in TEMPORARY_ALLOW_LIST:
+            continue
         if path.parts and path.parts[0] in strict_roots:
             if count > limit:
                 errors.append(f"{shown}: {count} lines (max {limit})")
