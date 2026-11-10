@@ -444,13 +444,6 @@ def list_sessions(authorization: str = Header(None), c: Container = Depends(get_
     return {"sessions": sessions}
 
 
-@router.get("/templates")
-def list_templates(c: Container = Depends(get_container)):
-    """Return all available CV templates (public — no auth required)"""
-    templates = c.store.get_cv_templates()
-    return {"templates": templates}
-
-
 @router.get("/settings")
 def get_settings(authorization: str = Header(None), c: Container = Depends(get_container)):
     user_id = require_user_id(c, authorization)
