@@ -17,7 +17,7 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: end-of-file-fixer
-        files: ^(app|tests|scripts|\.github)/|^(pyproject\.toml|\.pre-commit-config\.yaml|CONTRIBUTING\.md|\.gitignore)$
+        files: ^(app|tests|scripts|\.github)/|^(pyproject\.toml|\.pre-commit-config\.yaml|\.gitignore)$
   - repo: local
     hooks:
       - id: file-length

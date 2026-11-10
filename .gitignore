@@ -40,5 +40,6 @@ Thumbs.db
 
 # Logs
 *.log
-logs/.mypy_cache/
+logs/
+.mypy_cache/
 .ruff_cache/
