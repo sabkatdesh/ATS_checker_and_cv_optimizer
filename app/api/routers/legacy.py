@@ -10,14 +10,12 @@ from pydantic import BaseModel
 
 from app.api.deps import get_container, require_user_id
 from app.container import Container
+from app.domain.credits.legacy import CV_GENERATION_COST
 from core.parsers.input_validator import validate_jd
 from services.profile_builder import ProfileBuilder
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# How many coins one CV generation costs
-CV_GENERATION_COST = 0
 
 
 class StartSessionRequest(BaseModel):
@@ -38,11 +36,6 @@ class CoverLetterEditRequest(BaseModel):
 
 class HITLReplyRequest(BaseModel):
     user_qna: str
-
-
-class AddCoinsRequest(BaseModel):
-    amount: int
-    description: str = "Manual top-up"
 
 
 @router.get("/")
@@ -328,42 +321,6 @@ def list_sessions(authorization: str = Header(None), c: Container = Depends(get_
     user_id = require_user_id(c, authorization)
     sessions = c.store.get_user_sessions(user_id)
     return {"sessions": sessions}
-
-
-@router.get("/billing/balance")
-def get_balance(authorization: str = Header(None), c: Container = Depends(get_container)):
-    """Get current coin balance"""
-    user_id = require_user_id(c, authorization)
-    balance = c.store.get_coin_balance(user_id)
-    return {"balance": balance, "cost_per_cv": CV_GENERATION_COST}
-
-
-@router.get("/billing/history")
-def billing_history(authorization: str = Header(None), c: Container = Depends(get_container)):
-    """Get full transaction history"""
-    user_id = require_user_id(c, authorization)
-    transactions = c.store.get_coin_transactions(user_id)
-    return {"transactions": transactions}
-
-
-@router.post("/billing/add-coins")
-def manual_add_coins(
-    body: AddCoinsRequest, authorization: str = Header(None), c: Container = Depends(get_container)
-):
-    """
-    Manually add coins to a user's account.
-    This will later be called by bKash/Nagad webhook after payment.
-    For now used for testing and manual top-ups.
-    """
-    user_id = require_user_id(c, authorization)
-
-    if body.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
-
-    c.store.add_coins(user_id, body.amount, body.description)
-    new_balance = c.store.get_coin_balance(user_id)
-
-    return {"message": f"{body.amount} coins added successfully", "new_balance": new_balance}
 
 
 def _finalize_session(
