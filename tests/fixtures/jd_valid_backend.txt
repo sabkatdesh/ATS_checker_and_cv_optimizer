@@ -1,0 +1,18 @@
+Backend Engineer - Example Tech Ltd, Dhaka
+
+We are looking for a Backend Engineer to join our growing platform team. You will design, build and operate the services that power our customer-facing products, working closely with product managers and frontend engineers.
+
+Responsibilities
+- Design and implement RESTful APIs in Python using FastAPI or Django.
+- Model data in PostgreSQL and write efficient queries.
+- Write automated tests and participate in code reviews.
+- Deploy and monitor services using Docker and cloud infrastructure.
+- Collaborate with the team to improve reliability and performance.
+
+Requirements
+- 2+ years of professional experience building backend systems.
+- Strong knowledge of Python, SQL and HTTP fundamentals.
+- Familiarity with Git, CI pipelines and containerised deployments.
+- Good communication skills and the ability to work in a small team.
+
+Nice to have: experience with message queues, caching layers and observability tooling.

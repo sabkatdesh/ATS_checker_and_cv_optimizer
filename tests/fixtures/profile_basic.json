@@ -1,0 +1,12 @@
+{
+  "full_name": "Test Person",
+  "email": "test.person@example.com",
+  "phone": "+8801712345678",
+  "location": "Dhaka, Bangladesh",
+  "summary": "Backend engineer with experience building web services.",
+  "skills": {"languages": ["Python", "SQL"], "tools": ["Docker", "Git"]},
+  "experience": [
+    {"company": "Example Tech Ltd", "title": "Backend Engineer", "start_date": "2021-01", "end_date": "2023-06", "bullets": ["Built REST APIs serving internal teams.", "Reduced query latency through indexing."]},
+    {"company": "Sample Software", "title": "Junior Developer", "start_date": "2019-03", "end_date": "2020-12", "bullets": ["Maintained Django applications.", "Wrote unit tests for core modules."]}
+  ]
+}
