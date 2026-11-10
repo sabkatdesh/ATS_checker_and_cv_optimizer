@@ -255,8 +255,8 @@ def start_session(
                 # Pipeline completed — finalize
                 _finalize_session(c, thread_id, result, user_id, profile=profile)
 
-        except Exception as e:
-            logger.error(f"Pipeline error for thread {thread_id}: {e}")
+        except Exception:
+            logger.exception("Pipeline error for thread %s", thread_id)
             c.store.update_session(thread_id, {"status": "error"})
 
     c.runner.submit(run_in_background)
@@ -326,8 +326,8 @@ def hitl_reply(
             else:
                 profile = c.store.get_cv_profile(user_id)
                 _finalize_session(c, thread_id, result, user_id, profile=profile)
-        except Exception as e:
-            logger.error(f"Resume error for thread {thread_id}: {e}")
+        except Exception:
+            logger.exception("Resume error for thread %s", thread_id)
             c.store.update_session(thread_id, {"status": "error"})
 
     c.runner.submit(resume_in_background)
@@ -370,8 +370,8 @@ def submit_cover_letter_options(
             result = c.pipeline.resume_cover_letter(thread_id, tone, length)
             profile = c.store.get_cv_profile(user_id)
             _finalize_session(c, thread_id, result, user_id, profile=profile)
-        except Exception as e:
-            logger.error(f"Cover letter resume error for {thread_id}: {e}")
+        except Exception:
+            logger.exception("Cover letter resume error for %s", thread_id)
             c.store.update_session(thread_id, {"status": "error"})
 
     c.runner.submit(resume_cl_in_background)
@@ -545,16 +545,18 @@ def _finalize_session(
     structured_cv = result.get("structured_cv")
     if not structured_cv:
         logger.info(
-            f"[PDF] No structured_cv in pipeline result for {thread_id}. "
-            f"Result keys: {list(result.keys())}"
+            "[PDF] No structured_cv in pipeline result for %s. Result keys: %s",
+            thread_id,
+            list(result.keys()),
         )
     if structured_cv:
         try:
             profile = profile or {}
             logger.info(
-                f"[PDF] Generating for {thread_id}, "
-                f"template={profile.get('preferred_template', 'classic')}, "
-                f"domain={result.get('detected_domain', 'general')}"
+                "[PDF] Generating for %s, template=%s, domain=%s",
+                thread_id,
+                profile.get("preferred_template", "classic"),
+                result.get("detected_domain", "general"),
             )
             generator = c.make_pdf_renderer()
             pdf_bytes = generator.render(
@@ -571,14 +573,14 @@ def _finalize_session(
 
             # Upload to Supabase storage
             pdf_url = c.store.upload_pdf_to_storage(thread_id, user_id, local_path)
-            logger.info(f"[PDF] Uploaded successfully for {thread_id}: {pdf_url}")
+            logger.info("[PDF] Uploaded successfully for %s", thread_id)
 
             # Clean up local file
             if os.path.exists(local_path):
                 os.remove(local_path)
 
-        except Exception as e:
-            logger.error(f"[PDF] Generation failed for {thread_id}: {e}")
+        except Exception:
+            logger.exception("[PDF] Generation failed for %s", thread_id)
 
     # ── Cover letter PDF (optional) ─────────────────────────────────────────────
     cover_letter_pdf_url = None
@@ -613,8 +615,8 @@ def _finalize_session(
             if os.path.exists(cl_local_path):
                 os.remove(cl_local_path)
 
-        except Exception as e:
-            logger.error(f"Cover letter PDF generation failed for {thread_id}: {e}")
+        except Exception:
+            logger.exception("Cover letter PDF generation failed for %s", thread_id)
 
     # Deduct coins
     c.store.deduct_coins(user_id, CV_GENERATION_COST, f"CV generation - thread {thread_id}")
