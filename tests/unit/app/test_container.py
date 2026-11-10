@@ -15,7 +15,7 @@ import sys
 from app.config.settings import AppSettings
 from app.container import build_container
 build_container(AppSettings(_env_file=None))
-bad = [m for m in ("database", "core.pipeline.graph", "core.llm_client") if m in sys.modules]
+bad = [m for m in ("api", "database", "core", "services") if m in sys.modules]
 print(",".join(bad))
 sys.exit(1 if bad else 0)
 """

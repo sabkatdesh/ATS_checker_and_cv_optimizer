@@ -77,7 +77,7 @@ uv sync
 # Edit code, add features, fix bugs
 
 # Test locally
-python -m uvicorn api:app --reload
+uv run uvicorn app.main:app --reload
 streamlit run streamlit_app.py
 ```
 
@@ -326,7 +326,7 @@ uv run mypy
 ### Run Locally
 ```bash
 # Terminal 1: Backend
-python -m uvicorn api:app --reload
+uv run uvicorn app.main:app --reload
 
 # Terminal 2: Frontend
 streamlit run streamlit_app.py

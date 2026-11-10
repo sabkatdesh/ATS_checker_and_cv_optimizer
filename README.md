@@ -163,7 +163,7 @@ cd cv-optimizer
 
 2. **Install Dependencies**
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 3. **Set Environment Variables**
@@ -182,7 +182,7 @@ API_URL=http://localhost:8000
 
 4. **Run Backend (Terminal 1)**
 ```bash
-python -m uvicorn api:app --reload
+uv run uvicorn app.main:app --reload
 ```
 Backend runs on `http://localhost:8000`
 
