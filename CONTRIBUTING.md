@@ -88,6 +88,9 @@ uv run pytest -q
 
 # Test specific module
 uv run pytest tests/test_ats_checker.py
+
+# Test with coverage
+uv run pytest --cov=. tests/
 ```
 
 #### 5. Commit Your Changes
@@ -303,20 +306,21 @@ def function_name(param1: str, param2: int) -> bool:
 git clone https://github.com/YOUR_USERNAME/cv-optimizer.git
 cd cv-optimizer
 
-# Install Python 3.12 and all dependencies (uv manages the virtualenv)
+
+# Install dependencies
 uv sync
 
-# Install git hooks (ruff, gitleaks, file-length)
+# Install git hooks
 uv run pre-commit install
 
 # Run formatter
-black .
+uv run ruff format
 
 # Run linter
-flake8 .
+uv run ruff check
 
 # Run type checker
-mypy .
+uv run mypy
 ```
 
 ### Run Locally
