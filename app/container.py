@@ -3,13 +3,18 @@
 import threading
 from collections.abc import Callable
 
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
-from app.adapters.legacy_bridge import LegacyPipeline
 from app.adapters.llm.azure_legacy import build_azure_client
 from app.config.settings import AppSettings, ConfigError, load_settings
+from app.pipeline.chains import build_chains
+from app.pipeline.graph import build_graph
+from app.pipeline.service import PipelineService
 from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
 from app.ports.legacy_store import LegacyStore
@@ -44,7 +49,8 @@ def _default_cover_letter() -> CoverLetterRenderer:
 
 
 def _default_pipeline(settings: AppSettings) -> PipelineRunner:
-    return LegacyPipeline()
+    chains = build_chains(build_azure_client(settings).llm)
+    return PipelineService(build_graph(chains, MemorySaver(serde=JsonPlusSerializer())))
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:

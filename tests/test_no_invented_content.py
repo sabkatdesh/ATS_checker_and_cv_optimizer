@@ -121,7 +121,7 @@ def test_no_skills_invented_marker():
         "Never invent job titles, dates, metrics, company names, certifications, "
         "or technologies that are not already present in the user's profile."
     )
-    from core.pipeline.prompts import REWRITE_PROMPT
+    from app.pipeline.prompts import REWRITE_PROMPT
 
     prompt_text = REWRITE_PROMPT.template
     assert any(

@@ -18,13 +18,13 @@ Usage (class):
 from __future__ import annotations
 
 import json
-import logging
 import re
 from typing import TypeVar
 
+import structlog
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -71,8 +71,7 @@ def safe_llm_parse(raw_text: str, model_class: type[T], fallback: T) -> T:  # no
         except Exception:  # noqa: S110
             pass
 
-    logger.warning("Could not parse %s from LLM output. Using fallback.", model_class.__name__)
-    print(f"[PARSE FAIL] {model_class.__name__} — first 300 chars: {raw_text[:300]!r}")  # noqa: T201
+    log.warning("llm.parse_failed", model=model_class.__name__, raw_len=len(raw_text))
     return fallback
 
 
