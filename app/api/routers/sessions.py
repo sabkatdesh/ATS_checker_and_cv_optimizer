@@ -7,8 +7,8 @@ from app.api.deps import get_container, require_user_id
 from app.api.schemas.sessions import HITLReplyRequest, StartSessionRequest
 from app.container import Container
 from app.domain.credits.legacy import CV_GENERATION_COST
+from app.domain.parsing.input_validator import validate_jd
 from app.services.generation import resume_after_answers, run_new_session
-from core.parsers.input_validator import validate_jd
 
 router = APIRouter()
 

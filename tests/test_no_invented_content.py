@@ -5,7 +5,7 @@ These tests verify the pipeline never invents skills, companies, or dates
 that weren't in the original profile.
 """
 
-from core.parsers.input_validator import validate_jd
+from app.domain.parsing.input_validator import validate_jd
 
 # ── Input validator — edge cases ──────────────────────────────────────────────
 

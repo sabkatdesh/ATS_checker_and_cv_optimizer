@@ -1,0 +1,273 @@
+{
+  "$defs": {
+    "Domain": {
+      "enum": [
+        "tech",
+        "medical",
+        "education",
+        "trades",
+        "finance",
+        "legal",
+        "creative",
+        "general"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "JDEducationBlock": {
+      "properties": {
+        "degree_preferred": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Degree Preferred"
+        },
+        "degree_required": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Degree Required"
+        },
+        "fields_of_study": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields Of Study",
+          "type": "array"
+        }
+      },
+      "title": "JDEducationBlock",
+      "type": "object"
+    },
+    "JDExperienceBlock": {
+      "properties": {
+        "max_years": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Years"
+        },
+        "min_years": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Years"
+        },
+        "role_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Type"
+        },
+        "seniority": {
+          "$ref": "#/$defs/SeniorityLevel",
+          "default": "unknown"
+        }
+      },
+      "title": "JDExperienceBlock",
+      "type": "object"
+    },
+    "JDRequirementBlock": {
+      "properties": {
+        "must_have": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Have",
+          "type": "array"
+        },
+        "nice_to_have": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Nice To Have",
+          "type": "array"
+        }
+      },
+      "title": "JDRequirementBlock",
+      "type": "object"
+    },
+    "JDResponsibilityBlock": {
+      "properties": {
+        "responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibilities",
+          "type": "array"
+        }
+      },
+      "title": "JDResponsibilityBlock",
+      "type": "object"
+    },
+    "JDSkillBlock": {
+      "properties": {
+        "cloud_platforms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cloud Platforms",
+          "type": "array"
+        },
+        "frameworks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Frameworks",
+          "type": "array"
+        },
+        "hard_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Skills",
+          "type": "array"
+        },
+        "soft_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft Skills",
+          "type": "array"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "title": "JDSkillBlock",
+      "type": "object"
+    },
+    "SeniorityLevel": {
+      "enum": [
+        "intern",
+        "junior",
+        "mid",
+        "senior",
+        "lead",
+        "manager",
+        "director",
+        "unknown"
+      ],
+      "title": "SeniorityLevel",
+      "type": "string"
+    }
+  },
+  "description": "Full structured JD used for ATS scoring and rewriting.",
+  "properties": {
+    "company_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Company Name"
+    },
+    "domain": {
+      "$ref": "#/$defs/Domain",
+      "default": "general"
+    },
+    "education": {
+      "$ref": "#/$defs/JDEducationBlock"
+    },
+    "employment_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Employment Type"
+    },
+    "experience": {
+      "$ref": "#/$defs/JDExperienceBlock"
+    },
+    "job_title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Title"
+    },
+    "location": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location"
+    },
+    "requirements": {
+      "$ref": "#/$defs/JDRequirementBlock"
+    },
+    "responsibilities": {
+      "$ref": "#/$defs/JDResponsibilityBlock"
+    },
+    "skills": {
+      "$ref": "#/$defs/JDSkillBlock"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Summary"
+    }
+  },
+  "title": "JobDescriptionStructured",
+  "type": "object"
+}

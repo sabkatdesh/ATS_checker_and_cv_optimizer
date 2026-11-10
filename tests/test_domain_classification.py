@@ -5,8 +5,8 @@ detect_domain() was designed for structured DB profile dicts (cv_profiles table)
 not raw CV text. Tests use minimal constructed profiles matching real DB shape.
 """
 
-from core.schemas.domain_config import Domain
-from services.profile_builder import ProfileBuilder
+from app.domain.cv.domain_config import Domain
+from app.domain.cv.profile_text import ProfileBuilder
 
 
 def test_tech_detected_from_skills():

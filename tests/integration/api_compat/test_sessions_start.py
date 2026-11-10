@@ -1,8 +1,8 @@
 import re
 from types import SimpleNamespace
 
-from core.parsers.input_validator import validate_jd
-from services.profile_builder import ProfileBuilder
+from app.domain.cv.profile_text import ProfileBuilder
+from app.domain.parsing.input_validator import validate_jd
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
 

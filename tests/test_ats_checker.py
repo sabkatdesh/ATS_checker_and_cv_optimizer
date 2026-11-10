@@ -6,7 +6,7 @@ Uses minimal stub objects so no LLM calls are needed.
 
 from unittest.mock import MagicMock
 
-from core.ats.ats_checker import (
+from app.domain.ats.checker import (
     _flexible_match,
     _match_education,
     _match_experience,

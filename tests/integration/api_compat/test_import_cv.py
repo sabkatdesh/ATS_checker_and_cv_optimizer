@@ -1,5 +1,5 @@
-from core.schemas.universal_cv import UniversalCVStructured
-from services.profile_builder import ProfileBuilder
+from app.domain.cv.profile_text import ProfileBuilder
+from app.domain.cv.universal_cv import UniversalCVStructured
 from tests.fakes.backend import auth_header
 
 LONG_CV = "Experienced professional with a strong record of delivery. " * 5

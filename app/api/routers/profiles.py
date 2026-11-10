@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from app.api.deps import get_container, require_user_id
 from app.api.schemas.profiles import ImportCVRequest, ProfileUpdateRequest
 from app.container import Container
-from services.profile_builder import ProfileBuilder
+from app.domain.cv.profile_text import ProfileBuilder
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ def import_cv(
         )
 
     try:
-        from core.schemas.universal_cv import UniversalCVStructured
+        from app.domain.cv.universal_cv import UniversalCVStructured
 
         client = c.make_llm_client()
         prompt = (

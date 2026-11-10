@@ -1,9 +1,9 @@
 import logging
 
 from app.container import Container
+from app.domain.cv.profile_text import ProfileBuilder
 from app.ports.pipeline import JsonDict
 from app.services.finalize import finalize_session
-from services.profile_builder import ProfileBuilder
 
 logger = logging.getLogger(__name__)
 

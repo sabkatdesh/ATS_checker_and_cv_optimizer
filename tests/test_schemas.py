@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from core.schemas.universal_cv import UniversalCVStructured
+from app.domain.cv.universal_cv import UniversalCVStructured
 from tests.conftest import ALL_TEST_PAIRS, TEST_SET_DIR
 
 
