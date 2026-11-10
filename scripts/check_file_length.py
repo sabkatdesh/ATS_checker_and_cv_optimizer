@@ -6,8 +6,7 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
-# removed in Task 7
-TEMPORARY_ALLOW_LIST: frozenset[str] = frozenset({"app/api/routers/legacy.py"})
+TEMPORARY_ALLOW_LIST: frozenset[str] = frozenset()
 
 
 def check(

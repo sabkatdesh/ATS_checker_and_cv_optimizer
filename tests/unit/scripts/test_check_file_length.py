@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts.check_file_length import check
+from scripts.check_file_length import TEMPORARY_ALLOW_LIST, check
 
 
 def _write(root: Path, rel: str, lines: int) -> Path:
@@ -38,3 +38,7 @@ def test_test_file_401_is_error(tmp_path, monkeypatch):
     _write(tmp_path, "tests/test_x.py", 401)
     errors, _ = check([Path("tests/test_x.py")])
     assert len(errors) == 1
+
+
+def test_allow_list_is_empty():
+    assert TEMPORARY_ALLOW_LIST == frozenset()

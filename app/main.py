@@ -6,7 +6,6 @@ from app.api.routers import (
     billing,
     cover_letters,
     health,
-    legacy,
     profiles,
     sessions,
     templates,
@@ -36,7 +35,6 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(cover_letters.router)
     if container.settings.dev_tools_enabled:
         app.include_router(billing.dev_router)
-    app.include_router(legacy.router)
     return app
 
 
