@@ -1,0 +1,43 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Build outputs
+dist/
+build/
+
+# Output files
+*.pdf
+pdfs/
+
+# LLM cache (may contain user data)
+cache/
+
+# Test data (anonymized CVs — not for version control)
+data/test_set/
+
+# IDE
+.idea/
+.vscode/
+
+# Frontend dependencies (Phase 7)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

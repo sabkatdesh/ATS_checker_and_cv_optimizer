@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="{{ 'bn' if bangla else 'en' }}">
+<head>
+<meta charset="UTF-8">
+<style>
+@page {
+  size: A4;
+  margin: 22mm 25mm 22mm 25mm;
+}
+
+:root {
+  --text: #1a1a1a;
+  --muted: #4a4a4a;
+  --border: #c0c0c0;
+}
+
+{% if bangla %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Bold.ttf') format('truetype');
+  font-weight: bold;
+}
+body { font-family: 'HindSiliguri', 'Georgia', serif; }
+{% else %}
+body { font-family: 'Georgia', 'Times New Roman', serif; }
+{% endif %}
+
+body {
+  font-size: 11pt;
+  line-height: 1.65;
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+.letter-body {
+  max-width: 160mm;
+}
+
+.salutation {
+  margin-top: 28px;
+  margin-bottom: 16px;
+  font-size: 11pt;
+}
+
+.paragraph {
+  margin-bottom: 14px;
+  text-align: justify;
+}
+
+.sign-off-block {
+  margin-top: 32px;
+  font-size: 11pt;
+}
+
+.sign-off-line {
+  margin-bottom: 48px; /* space for hand-written signature */
+}
+
+.candidate-name {
+  font-weight: bold;
+  font-size: 11pt;
+}
+
+hr.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+</style>
+</head>
+<body>
+<div class="letter-body">
+
+  <div class="salutation">{{ cl.salutation }}</div>
+
+  {% if cl.opening_paragraph %}
+  <p class="paragraph">{{ cl.opening_paragraph }}</p>
+  {% endif %}
+
+  {% for para in cl.body_paragraphs %}
+  <p class="paragraph">{{ para }}</p>
+  {% endfor %}
+
+  {% if cl.closing_paragraph %}
+  <p class="paragraph">{{ cl.closing_paragraph }}</p>
+  {% endif %}
+
+  <div class="sign-off-block">
+    <div class="sign-off-line">{{ cl.sign_off }}</div>
+    {% if candidate_name %}
+    <div class="candidate-name">{{ candidate_name }}</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

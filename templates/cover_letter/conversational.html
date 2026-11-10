@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="{{ 'bn' if bangla else 'en' }}">
+<head>
+<meta charset="UTF-8">
+<style>
+@page {
+  size: A4;
+  margin: 20mm 22mm 20mm 22mm;
+}
+
+:root {
+  --accent: #4361ee;
+  --text: #1a1a1a;
+  --muted: #5a5a5a;
+  --light-bg: #f7f8fc;
+  --border: #dde1f0;
+}
+
+{% if bangla %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Bold.ttf') format('truetype');
+  font-weight: bold;
+}
+body { font-family: 'HindSiliguri', 'Inter', 'Segoe UI', sans-serif; }
+{% else %}
+body { font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif; }
+{% endif %}
+
+body {
+  font-size: 11pt;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+.accent-bar {
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-bottom: 28px;
+}
+
+.letter-body {
+  max-width: 160mm;
+}
+
+.salutation {
+  font-size: 12pt;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.paragraph {
+  margin-bottom: 14px;
+}
+
+.sign-off-block {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  font-size: 11pt;
+}
+
+.sign-off-line {
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.candidate-name {
+  font-weight: 700;
+  font-size: 12pt;
+  color: var(--text);
+}
+</style>
+</head>
+<body>
+<div class="accent-bar"></div>
+<div class="letter-body">
+
+  <div class="salutation">{{ cl.salutation }}</div>
+
+  {% if cl.opening_paragraph %}
+  <p class="paragraph">{{ cl.opening_paragraph }}</p>
+  {% endif %}
+
+  {% for para in cl.body_paragraphs %}
+  <p class="paragraph">{{ para }}</p>
+  {% endfor %}
+
+  {% if cl.closing_paragraph %}
+  <p class="paragraph">{{ cl.closing_paragraph }}</p>
+  {% endif %}
+
+  <div class="sign-off-block">
+    <div class="sign-off-line">{{ cl.sign_off }}</div>
+    {% if candidate_name %}
+    <div class="candidate-name">{{ candidate_name }}</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

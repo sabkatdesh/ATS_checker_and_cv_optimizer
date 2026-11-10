@@ -1,0 +1,312 @@
+{# ─── Shared CV section macros ───────────────────────────────────────────────
+   Imported by all 6 templates.
+   Filters: month_year — registered on the PDFGenerator Jinja2 environment.
+   Autoescape is OFF — data comes from LLM extraction, not direct browser input.
+──────────────────────────────────────────────────────────────────────────── #}
+
+{% macro render_meta(meta) %}
+<header class="cv-header">
+  <h1 class="cv-name">{{ meta.full_name or "Your Name" }}</h1>
+  <div class="cv-contact">
+    {% if meta.location %}<span class="contact-item">{{ meta.location }}</span>{% endif %}
+    {% if meta.email %}<span class="contact-item">{{ meta.email }}</span>{% endif %}
+    {% if meta.phone %}<span class="contact-item">{{ meta.phone }}</span>{% endif %}
+    {% if meta.linkedin %}<span class="contact-item">{{ meta.linkedin }}</span>{% endif %}
+    {% for label, url in (meta.optional_links or {}).items() %}
+      <span class="contact-item">{{ label }}: {{ url }}</span>
+    {% endfor %}
+  </div>
+</header>
+{% endmacro %}
+
+
+{% macro render_summary(summary) %}
+{% if summary %}
+<section class="cv-section summary-section">
+  <h2 class="section-title">Professional Summary</h2>
+  <p class="summary-text">{{ summary }}</p>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_skills(skills) %}
+{% set has_content = skills.hard_skills or skills.soft_skills or skills.tools or skills.frameworks or skills.cloud_platforms %}
+{% if has_content %}
+<section class="cv-section skills-section">
+  <h2 class="section-title">Skills</h2>
+  <div class="skills-block">
+    {% if skills.hard_skills %}
+    <div class="skill-row">
+      <span class="skill-label">Technical</span>
+      <span class="skill-values">{{ skills.hard_skills | join(", ") }}</span>
+    </div>
+    {% endif %}
+    {% if skills.tools %}
+    <div class="skill-row">
+      <span class="skill-label">Tools</span>
+      <span class="skill-values">{{ skills.tools | join(", ") }}</span>
+    </div>
+    {% endif %}
+    {% if skills.frameworks %}
+    <div class="skill-row">
+      <span class="skill-label">Frameworks</span>
+      <span class="skill-values">{{ skills.frameworks | join(", ") }}</span>
+    </div>
+    {% endif %}
+    {% if skills.cloud_platforms %}
+    <div class="skill-row">
+      <span class="skill-label">Cloud</span>
+      <span class="skill-values">{{ skills.cloud_platforms | join(", ") }}</span>
+    </div>
+    {% endif %}
+    {% if skills.soft_skills %}
+    <div class="skill-row">
+      <span class="skill-label">Soft Skills</span>
+      <span class="skill-values">{{ skills.soft_skills | join(", ") }}</span>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_work_experience(jobs) %}
+{% if jobs %}
+<section class="cv-section experience-section">
+  <h2 class="section-title">Work Experience</h2>
+  {% for job in jobs %}
+  <div class="job-entry">
+    <div class="job-header">
+      <div class="job-title-block">
+        <span class="job-title">{{ job.job_title }}</span>
+        {% if job.company_name %}<span class="job-company">{{ job.company_name }}</span>{% endif %}
+      </div>
+      <span class="job-dates">{{ job.start_date | month_year }} – {{ job.end_date | month_year }}</span>
+    </div>
+    {% if job.responsibilities %}
+    <ul class="bullet-list">
+      {% for r in job.responsibilities %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if job.achievements %}
+    <ul class="bullet-list achievements">
+      {% for a in job.achievements %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_education(edu_list) %}
+{% if edu_list %}
+<section class="cv-section education-section">
+  <h2 class="section-title">Education</h2>
+  {% for edu in edu_list %}
+  <div class="edu-entry">
+    <div class="edu-header">
+      <span class="edu-degree">
+        {{ edu.degree or "" }}{% if edu.field_of_study %} in {{ edu.field_of_study }}{% endif %}
+      </span>
+      {% if edu.graduation_year %}<span class="edu-year">{{ edu.graduation_year }}</span>{% endif %}
+    </div>
+    {% if edu.institution %}<div class="edu-institution">{{ edu.institution }}</div>{% endif %}
+    {% if edu.grade %}<div class="edu-grade">{{ edu.grade }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_certifications(certs) %}
+{% if certs %}
+<section class="cv-section certifications-section">
+  <h2 class="section-title">Certifications</h2>
+  <ul class="cert-list">
+    {% for cert in certs %}
+    <li class="cert-entry">
+      <strong>{{ cert.name }}</strong>{% if cert.issuer %} — {{ cert.issuer }}{% endif %}{% if cert.year %} ({{ cert.year }}){% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_projects(projects) %}
+{% if projects %}
+<section class="cv-section projects-section">
+  <h2 class="section-title">Projects</h2>
+  {% for proj in projects %}
+  <div class="project-entry">
+    <div class="project-header">
+      <span class="project-title">{{ proj.title }}</span>
+      {% if proj.url %}<span class="project-url">{{ proj.url }}</span>{% endif %}
+    </div>
+    {% if proj.description %}<p class="project-desc">{{ proj.description }}</p>{% endif %}
+    {% if proj.technologies %}<div class="project-tech">{{ proj.technologies | join(" · ") }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_licenses(licenses) %}
+{% if licenses %}
+<section class="cv-section licenses-section">
+  <h2 class="section-title">Licenses &amp; Registrations</h2>
+  <ul class="license-list">
+    {% for lic in licenses %}
+    <li class="license-entry">
+      <strong>{{ lic.name }}</strong>{% if lic.issuing_body %} — {{ lic.issuing_body }}{% endif %}{% if lic.license_number %} · No. {{ lic.license_number }}{% endif %}{% if lic.valid_until %} · Valid until: {{ lic.valid_until }}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_clinical_practice(clinical) %}
+{% if clinical %}
+<section class="cv-section clinical-section">
+  <h2 class="section-title">Clinical Practice</h2>
+  {% for entry in clinical %}
+  <div class="clinical-entry">
+    <div class="clinical-header">
+      <span class="clinical-setting">{{ entry.setting }}</span>
+      {% if entry.role %}<span class="clinical-role"> — {{ entry.role }}</span>{% endif %}
+      <span class="clinical-dates">{{ entry.start_date | month_year }} – {{ entry.end_date | month_year }}</span>
+    </div>
+    {% if entry.institution %}<div class="clinical-institution">{{ entry.institution }}</div>{% endif %}
+    {% if entry.responsibilities %}
+    <ul class="bullet-list">
+      {% for r in entry.responsibilities %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_trade_qualifications(quals) %}
+{% if quals %}
+<section class="cv-section trade-quals-section">
+  <h2 class="section-title">Trade Qualifications</h2>
+  <ul class="trade-qual-list">
+    {% for q in quals %}
+    <li><strong>{{ q.qualification }}</strong>{% if q.certifying_body %} — {{ q.certifying_body }}{% endif %}{% if q.year %} ({{ q.year }}){% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_publications(pubs) %}
+{% if pubs %}
+<section class="cv-section publications-section">
+  <h2 class="section-title">Publications</h2>
+  <ol class="pub-list">
+    {% for pub in pubs %}
+    <li class="pub-entry">
+      <span class="pub-title">{{ pub.title }}</span>
+      {% if pub.authors %}<span class="pub-authors">{{ pub.authors }}.</span>{% endif %}
+      {% if pub.journal_or_venue %}<em class="pub-journal">{{ pub.journal_or_venue }}</em>{% endif %}
+      {% if pub.year %}<span class="pub-year">({{ pub.year }})</span>{% endif %}
+      {% if pub.doi_or_url %}<span class="pub-doi">{{ pub.doi_or_url }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_languages(languages) %}
+{% if languages %}
+<section class="cv-section languages-section">
+  <h2 class="section-title">Languages</h2>
+  <div class="language-list">
+    {% for lang in languages %}
+    <span class="lang-entry">{{ lang.language }}{% if lang.proficiency %} ({{ lang.proficiency }}){% endif %}</span>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_volunteering(vols) %}
+{% if vols %}
+<section class="cv-section volunteering-section">
+  <h2 class="section-title">Volunteering</h2>
+  {% for vol in vols %}
+  <div class="vol-entry">
+    <div class="vol-header">
+      <span class="vol-org">{{ vol.organization }}</span>
+      {% if vol.role %}<span class="vol-role"> — {{ vol.role }}</span>{% endif %}
+    </div>
+    {% if vol.description %}<p class="vol-desc">{{ vol.description }}</p>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro render_awards(awards) %}
+{% if awards %}
+<section class="cv-section awards-section">
+  <h2 class="section-title">Awards &amp; Honours</h2>
+  <ul class="award-list">
+    {% for award in awards %}
+    <li class="award-entry">
+      <strong>{{ award.title }}</strong>{% if award.issuer %} — {{ award.issuer }}{% endif %}{% if award.year %} ({{ award.year }}){% endif %}
+      {% if award.description %}<p class="award-desc">{{ award.description }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{% macro dispatch_section(block_name, cv) %}
+  {% if block_name == 'professional_summary' and cv.professional_summary %}
+    {{ render_summary(cv.professional_summary) }}
+  {% elif block_name == 'skills' %}
+    {{ render_skills(cv.skills) }}
+  {% elif block_name == 'work_experience' and cv.work_experience %}
+    {{ render_work_experience(cv.work_experience) }}
+  {% elif block_name == 'education' and cv.education %}
+    {{ render_education(cv.education) }}
+  {% elif block_name == 'certifications' and cv.certifications %}
+    {{ render_certifications(cv.certifications) }}
+  {% elif block_name == 'projects' and cv.projects %}
+    {{ render_projects(cv.projects) }}
+  {% elif block_name == 'licenses' and cv.licenses %}
+    {{ render_licenses(cv.licenses) }}
+  {% elif block_name == 'clinical_practice' and cv.clinical_practice %}
+    {{ render_clinical_practice(cv.clinical_practice) }}
+  {% elif block_name == 'trade_qualifications' and cv.trade_qualifications %}
+    {{ render_trade_qualifications(cv.trade_qualifications) }}
+  {% elif block_name == 'publications' and cv.publications %}
+    {{ render_publications(cv.publications) }}
+  {% elif block_name == 'languages' and cv.languages %}
+    {{ render_languages(cv.languages) }}
+  {% elif block_name == 'volunteering' and cv.volunteering %}
+    {{ render_volunteering(cv.volunteering) }}
+  {% elif block_name == 'awards' and cv.awards %}
+    {{ render_awards(cv.awards) }}
+  {% endif %}
+{% endmacro %}

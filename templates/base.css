@@ -1,0 +1,53 @@
+/* ── Shared CSS custom properties — referenced by all 6 CV templates ──────────
+   Templates embed their own <style> blocks and override as needed.
+   This file documents the shared property contract.
+   WeasyPrint resolves @import when base_url is set to the templates directory.
+───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Accent: set per-render via Jinja2 ({{ accent }}) — this is the fallback */
+  --accent: #4361ee;
+
+  /* Typography */
+  --text: #1a1a1a;
+  --muted: #5a5a5a;
+  --light: #f4f4f4;
+  --border: #d0d0d0;
+}
+
+/* ── Print defaults ─────────────────────────────────────────────────────────── */
+@page {
+  size: A4;
+  margin: 16mm 18mm 16mm 18mm;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: var(--text);
+  font-size: 10pt;
+  line-height: 1.45;
+  font-family: 'Calibri', 'Arial', sans-serif;
+}
+
+/* ── Bangla font stack ──────────────────────────────────────────────────────── */
+:lang(bn) {
+  font-family: 'HindSiliguri', 'Noto Sans Bengali', 'Calibri', sans-serif;
+}
+
+/* ── Utility: prevent orphaned section headings ──────────────────────────── */
+.cv-section {
+  break-inside: avoid-page;
+}
+
+h1, h2, h3 {
+  break-after: avoid;
+}
+
+li {
+  break-inside: avoid;
+}

@@ -1,0 +1,323 @@
+{% from "_macros.html" import render_summary, render_work_experience, render_education,
+    render_projects, render_licenses, render_clinical_practice,
+    render_trade_qualifications, render_publications, render_volunteering %}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<style>
+/* ── Page setup ──────────────────────────────────────────────────────────── */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+:root {
+  --accent: {{ accent }};
+  --accent-dark: {{ accent }};
+  --text: #1c1c1c;
+  --muted: #666;
+  --sidebar-bg: {{ accent }};
+  --sidebar-text: #ffffff;
+  --sidebar-muted: rgba(255,255,255,0.75);
+  --body-bg: #ffffff;
+}
+
+{% if lang == 'bn' %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Bold.ttf') format('truetype');
+  font-weight: bold;
+}
+body { font-family: 'HindSiliguri', 'Calibri', 'Arial', sans-serif; }
+{% else %}
+body { font-family: 'Calibri', 'Arial', sans-serif; }
+{% endif %}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { color: var(--text); font-size: 10pt; line-height: 1.45; background: var(--body-bg); }
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.layout {
+  display: flex;
+  width: 100%;
+  min-height: 297mm;
+}
+.sidebar {
+  width: 32%;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  padding: 18mm 10mm 16mm 12mm;
+  flex-shrink: 0;
+}
+.main-content {
+  width: 68%;
+  padding: 16mm 14mm 16mm 12mm;
+}
+
+/* ── Sidebar — name + contact ─────────────────────────────────────────────── */
+.sidebar-name {
+  font-size: 17pt;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2pt;
+  word-break: break-word;
+}
+.sidebar-role {
+  font-size: 9.5pt;
+  color: var(--sidebar-muted);
+  margin-bottom: 12pt;
+}
+.sidebar-contact {
+  font-size: 8.5pt;
+  color: var(--sidebar-muted);
+  line-height: 1.9;
+  margin-bottom: 14pt;
+}
+.sidebar-contact div { word-break: break-all; }
+
+/* ── Sidebar sections ─────────────────────────────────────────────────────── */
+.sidebar-section { margin-bottom: 12pt; break-inside: avoid; }
+.sidebar-title {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5pt;
+  color: var(--sidebar-muted);
+  border-bottom: 0.75pt solid rgba(255,255,255,0.35);
+  padding-bottom: 2pt;
+  margin-bottom: 5pt;
+}
+
+/* Sidebar skills as rows */
+.sb-skill-row { margin-bottom: 3pt; }
+.sb-skill-label { font-weight: 700; font-size: 8pt; display: block; color: var(--sidebar-text); }
+.sb-skill-values { font-size: 8pt; color: var(--sidebar-muted); line-height: 1.4; }
+
+/* Sidebar languages */
+.sb-lang { font-size: 8.5pt; margin-bottom: 2pt; }
+.sb-lang-prof { color: var(--sidebar-muted); }
+
+/* Sidebar certs */
+.sb-cert { font-size: 8pt; margin-bottom: 3pt; color: var(--sidebar-text); line-height: 1.4; }
+.sb-cert-issuer { color: var(--sidebar-muted); }
+
+/* Sidebar awards */
+.sb-award { font-size: 8pt; margin-bottom: 4pt; color: var(--sidebar-text); }
+
+/* ── Main — section titles ────────────────────────────────────────────────── */
+.section-title {
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1pt;
+  color: var(--accent);
+  border-bottom: 0.75pt solid var(--accent);
+  padding-bottom: 2pt;
+  margin-bottom: 6pt;
+}
+.cv-section {
+  margin-top: 9pt;
+  break-inside: avoid-page;
+}
+
+/* ── Summary ──────────────────────────────────────────────────────────────── */
+.summary-text { font-size: 9.5pt; line-height: 1.5; }
+
+/* ── Work experience ──────────────────────────────────────────────────────── */
+.job-entry { margin-bottom: 8pt; break-inside: avoid; }
+.job-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.job-title-block { flex: 1; }
+.job-title { font-weight: 700; font-size: 10.5pt; display: block; }
+.job-company { font-size: 9pt; color: var(--muted); display: block; margin-top: 1pt; }
+.job-dates { font-size: 8.5pt; color: var(--muted); white-space: nowrap; }
+.bullet-list { padding-left: 13pt; margin-top: 3pt; }
+.bullet-list li { font-size: 9.5pt; margin-bottom: 1.5pt; }
+.achievements li::marker { content: "▸ "; color: var(--accent); }
+
+/* ── Education ────────────────────────────────────────────────────────────── */
+.edu-entry { margin-bottom: 5pt; break-inside: avoid; }
+.edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+.edu-degree { font-weight: 600; font-size: 10pt; flex: 1; }
+.edu-year { font-size: 8.5pt; color: var(--muted); }
+.edu-institution { font-size: 9pt; color: var(--muted); margin-top: 1pt; }
+.edu-grade { font-size: 8.5pt; color: var(--muted); }
+
+/* ── Projects ─────────────────────────────────────────────────────────────── */
+.project-entry { margin-bottom: 7pt; break-inside: avoid; }
+.project-header { display: flex; justify-content: space-between; align-items: baseline; }
+.project-title { font-weight: 600; font-size: 10pt; }
+.project-url { font-size: 8pt; color: var(--muted); }
+.project-desc { font-size: 9pt; margin: 2pt 0; line-height: 1.4; }
+.project-tech { font-size: 8.5pt; color: var(--muted); }
+
+/* ── Licenses ─────────────────────────────────────────────────────────────── */
+.license-list { list-style: none; padding: 0; }
+.license-entry {
+  font-size: 9pt; margin-bottom: 3pt;
+  padding: 3pt 7pt;
+  background: #f5f5f5;
+  border-left: 3pt solid var(--accent);
+}
+
+/* ── Clinical ─────────────────────────────────────────────────────────────── */
+.clinical-entry { margin-bottom: 7pt; break-inside: avoid; }
+.clinical-setting { font-weight: 700; font-size: 10.5pt; }
+.clinical-role { font-size: 9.5pt; color: var(--muted); }
+.clinical-dates { font-size: 8.5pt; color: var(--muted); float: right; }
+.clinical-institution { font-size: 9pt; color: var(--muted); margin-bottom: 2pt; }
+
+/* ── Trade qualifications ─────────────────────────────────────────────────── */
+.trade-qual-list { padding-left: 13pt; }
+.trade-qual-list li { font-size: 9.5pt; margin-bottom: 3pt; }
+
+/* ── Publications ─────────────────────────────────────────────────────────── */
+.pub-list { padding-left: 14pt; }
+.pub-entry { margin-bottom: 6pt; font-size: 9pt; break-inside: avoid; }
+.pub-title { font-weight: 600; }
+.pub-authors { color: var(--muted); }
+.pub-doi { font-size: 8pt; color: var(--muted); display: block; }
+
+/* ── Volunteering ─────────────────────────────────────────────────────────── */
+.vol-entry { margin-bottom: 5pt; }
+.vol-org { font-weight: 600; font-size: 10pt; }
+.vol-role { font-size: 9pt; color: var(--muted); }
+.vol-desc { font-size: 9pt; color: var(--muted); margin-top: 2pt; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-name">{{ cv.meta.full_name or "Your Name" }}</div>
+    {% if cv.experience_summary and cv.experience_summary.role_type %}
+    <div class="sidebar-role">{{ cv.experience_summary.role_type }}</div>
+    {% endif %}
+
+    <div class="sidebar-contact">
+      {% if cv.meta.location %}<div>📍 {{ cv.meta.location }}</div>{% endif %}
+      {% if cv.meta.email %}<div>✉ {{ cv.meta.email }}</div>{% endif %}
+      {% if cv.meta.phone %}<div>✆ {{ cv.meta.phone }}</div>{% endif %}
+      {% if cv.meta.linkedin %}<div>{{ cv.meta.linkedin }}</div>{% endif %}
+      {% for label, url in (cv.meta.optional_links or {}).items() %}
+        <div>{{ label }}: {{ url }}</div>
+      {% endfor %}
+    </div>
+
+    {# ── Skills ──────────────────────────────────────────────────────────── #}
+    {% set s = cv.skills %}
+    {% if s.hard_skills or s.tools or s.frameworks or s.cloud_platforms or s.soft_skills %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">Skills</div>
+      {% if s.hard_skills %}
+      <div class="sb-skill-row">
+        <span class="sb-skill-label">Technical</span>
+        <span class="sb-skill-values">{{ s.hard_skills | join(", ") }}</span>
+      </div>
+      {% endif %}
+      {% if s.tools %}
+      <div class="sb-skill-row">
+        <span class="sb-skill-label">Tools</span>
+        <span class="sb-skill-values">{{ s.tools | join(", ") }}</span>
+      </div>
+      {% endif %}
+      {% if s.frameworks %}
+      <div class="sb-skill-row">
+        <span class="sb-skill-label">Frameworks</span>
+        <span class="sb-skill-values">{{ s.frameworks | join(", ") }}</span>
+      </div>
+      {% endif %}
+      {% if s.cloud_platforms %}
+      <div class="sb-skill-row">
+        <span class="sb-skill-label">Cloud</span>
+        <span class="sb-skill-values">{{ s.cloud_platforms | join(", ") }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Certifications ──────────────────────────────────────────────────── #}
+    {% if cv.certifications %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">Certifications</div>
+      {% for cert in cv.certifications %}
+      <div class="sb-cert">
+        <strong>{{ cert.name }}</strong>
+        {% if cert.issuer or cert.year %}
+        <span class="sb-cert-issuer">{% if cert.issuer %}{{ cert.issuer }}{% endif %}{% if cert.year %} ({{ cert.year }}){% endif %}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Awards ──────────────────────────────────────────────────────────── #}
+    {% if cv.awards %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">Awards</div>
+      {% for award in cv.awards %}
+      <div class="sb-award">
+        <strong>{{ award.title }}</strong>{% if award.year %} ({{ award.year }}){% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Languages ───────────────────────────────────────────────────────── #}
+    {% if cv.languages %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">Languages</div>
+      {% for lang_item in cv.languages %}
+      <div class="sb-lang">
+        {{ lang_item.language }}{% if lang_item.proficiency %} <span class="sb-lang-prof">({{ lang_item.proficiency }})</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if cv.references_available %}
+    <div class="sidebar-section" style="margin-top: auto;">
+      <div class="sidebar-title">References</div>
+      <div style="font-size: 8pt; color: var(--sidebar-muted);">Available upon request</div>
+    </div>
+    {% endif %}
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════════════════════════════ -->
+  <main class="main-content">
+    {# Render domain-ordered sections, skip sidebar-handled ones #}
+    {% set sidebar_blocks = ['meta', 'skills', 'certifications', 'languages', 'awards'] %}
+    {% for block_name in block_order %}
+      {% if block_name not in sidebar_blocks %}
+        {% if block_name == 'professional_summary' and cv.professional_summary %}
+          {{ render_summary(cv.professional_summary) }}
+        {% elif block_name == 'work_experience' and cv.work_experience %}
+          {{ render_work_experience(cv.work_experience) }}
+        {% elif block_name == 'education' and cv.education %}
+          {{ render_education(cv.education) }}
+        {% elif block_name == 'projects' and cv.projects %}
+          {{ render_projects(cv.projects) }}
+        {% elif block_name == 'licenses' and cv.licenses %}
+          {{ render_licenses(cv.licenses) }}
+        {% elif block_name == 'clinical_practice' and cv.clinical_practice %}
+          {{ render_clinical_practice(cv.clinical_practice) }}
+        {% elif block_name == 'trade_qualifications' and cv.trade_qualifications %}
+          {{ render_trade_qualifications(cv.trade_qualifications) }}
+        {% elif block_name == 'publications' and cv.publications %}
+          {{ render_publications(cv.publications) }}
+        {% elif block_name == 'volunteering' and cv.volunteering %}
+          {{ render_volunteering(cv.volunteering) }}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </main>
+
+</div>
+</body>
+</html>

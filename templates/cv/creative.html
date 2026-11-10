@@ -1,0 +1,306 @@
+{% from "_macros.html" import render_education, render_work_experience,
+    render_certifications, render_languages, render_awards,
+    render_volunteering, render_publications %}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<style>
+/* ── Creative: bold header, two-column, portfolio-forward ─────────────────── */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+:root {
+  --accent: {{ accent }};
+  --text: #1c1c1c;
+  --muted: #666;
+  --light: #f8f8f8;
+  --header-text: #fff;
+}
+
+{% if lang == 'bn' %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+body { font-family: 'HindSiliguri', 'Calibri', 'Arial', sans-serif; }
+{% else %}
+body { font-family: 'Calibri', 'Arial', sans-serif; }
+{% endif %}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { color: var(--text); font-size: 10pt; line-height: 1.45; background: #fff; }
+
+/* ── Bold header ──────────────────────────────────────────────────────────── */
+.cv-header {
+  background: var(--accent);
+  color: var(--header-text);
+  padding: 12mm 14mm 10mm 14mm;
+}
+.cv-name {
+  font-size: 24pt;
+  font-weight: 700;
+  letter-spacing: -0.5pt;
+  line-height: 1.1;
+}
+.cv-title-line {
+  font-size: 11pt;
+  opacity: 0.85;
+  margin: 3pt 0 8pt 0;
+  font-weight: 400;
+}
+.cv-contact {
+  font-size: 8.5pt;
+  opacity: 0.9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10pt;
+}
+.contact-item { }
+
+/* Portfolio / GitHub link — most prominent contact item */
+.contact-portfolio {
+  font-weight: 700;
+  font-size: 9pt;
+  border: 1pt solid rgba(255,255,255,0.6);
+  padding: 1.5pt 6pt;
+  border-radius: 2pt;
+}
+
+/* ── Two-column body ──────────────────────────────────────────────────────── */
+.body-layout {
+  display: flex;
+  width: 100%;
+}
+.left-col {
+  width: 35%;
+  background: var(--light);
+  padding: 12mm 8mm 12mm 10mm;
+  flex-shrink: 0;
+}
+.right-col {
+  width: 65%;
+  padding: 12mm 12mm 12mm 10mm;
+}
+
+/* ── Section titles ───────────────────────────────────────────────────────── */
+.section-title {
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2pt;
+  color: var(--accent);
+  border-bottom: 1pt solid var(--accent);
+  padding-bottom: 2pt;
+  margin-bottom: 6pt;
+}
+.cv-section { margin-top: 10pt; break-inside: avoid-page; }
+
+/* ── Summary ──────────────────────────────────────────────────────────────── */
+.summary-text { font-size: 9.5pt; line-height: 1.5; }
+
+/* ── Projects — main showcase section ────────────────────────────────────── */
+.project-entry {
+  margin-bottom: 9pt;
+  break-inside: avoid;
+  padding: 6pt 8pt;
+  border-left: 3pt solid var(--accent);
+  background: var(--light);
+}
+.project-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.project-title { font-weight: 700; font-size: 10.5pt; color: var(--accent); }
+.project-url { font-size: 8pt; color: var(--muted); }
+.project-desc { font-size: 9.5pt; margin: 3pt 0; line-height: 1.45; }
+.project-tech {
+  font-size: 8.5pt;
+  color: var(--header-text);
+  background: var(--accent);
+  display: inline-block;
+  padding: 1.5pt 5pt;
+  border-radius: 2pt;
+  margin-top: 2pt;
+}
+
+/* ── Work experience ──────────────────────────────────────────────────────── */
+.job-entry { margin-bottom: 8pt; break-inside: avoid; }
+.job-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.job-title-block { flex: 1; }
+.job-title { font-weight: 700; font-size: 10.5pt; display: block; }
+.job-company { font-size: 9pt; color: var(--muted); display: block; margin-top: 1pt; }
+.job-dates { font-size: 8.5pt; color: var(--muted); white-space: nowrap; }
+.bullet-list { padding-left: 13pt; margin-top: 3pt; }
+.bullet-list li { font-size: 9.5pt; margin-bottom: 1.5pt; }
+.achievements li::marker { content: "▸ "; color: var(--accent); }
+
+/* ── Education ────────────────────────────────────────────────────────────── */
+.edu-entry { margin-bottom: 5pt; break-inside: avoid; }
+.edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+.edu-degree { font-weight: 600; font-size: 10pt; flex: 1; }
+.edu-year { font-size: 8.5pt; color: var(--muted); }
+.edu-institution { font-size: 9pt; color: var(--muted); margin-top: 1pt; }
+.edu-grade { font-size: 8.5pt; color: var(--muted); }
+
+/* ── Skills (left column — as tags) ──────────────────────────────────────── */
+.skills-section .skills-block { }
+.skill-row { margin-bottom: 6pt; }
+.skill-label { font-weight: 700; font-size: 8.5pt; color: var(--text); display: block; margin-bottom: 2pt; }
+.skill-values { font-size: 8.5pt; color: var(--muted); line-height: 1.5; }
+
+/* ── Certifications ───────────────────────────────────────────────────────── */
+.cert-list { list-style: none; padding: 0; }
+.cert-entry { font-size: 8.5pt; margin-bottom: 3pt; }
+
+/* ── Languages ────────────────────────────────────────────────────────────── */
+.language-list { display: flex; flex-direction: column; gap: 3pt; }
+.lang-entry { font-size: 8.5pt; }
+
+/* ── Awards ───────────────────────────────────────────────────────────────── */
+.award-list { list-style: none; padding: 0; }
+.award-entry { font-size: 8.5pt; margin-bottom: 4pt; }
+.award-desc { font-size: 8pt; color: var(--muted); margin-top: 1pt; }
+
+/* ── Volunteering ─────────────────────────────────────────────────────────── */
+.vol-entry { margin-bottom: 5pt; }
+.vol-org { font-weight: 600; font-size: 9.5pt; }
+.vol-role { font-size: 9pt; color: var(--muted); }
+.vol-desc { font-size: 9pt; color: var(--muted); margin-top: 1pt; }
+
+/* ── Publications ─────────────────────────────────────────────────────────── */
+.pub-list { padding-left: 12pt; }
+.pub-entry { margin-bottom: 5pt; font-size: 8.5pt; break-inside: avoid; }
+.pub-title { font-weight: 600; }
+.pub-authors { color: var(--muted); }
+.pub-doi { font-size: 7.5pt; color: var(--muted); display: block; }
+
+/* ── Licenses ─────────────────────────────────────────────────────────────── */
+.license-list { list-style: none; padding: 0; }
+.license-entry { font-size: 8.5pt; margin-bottom: 3pt; padding: 2pt 5pt; background: #eee; border-left: 2.5pt solid var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ═══ BOLD HEADER ════════════════════════════════════════════════════════ -->
+<header class="cv-header">
+  <h1 class="cv-name">{{ cv.meta.full_name or "Your Name" }}</h1>
+  {% if cv.experience_summary and cv.experience_summary.role_type %}
+  <div class="cv-title-line">{{ cv.experience_summary.role_type }}</div>
+  {% endif %}
+  <div class="cv-contact">
+    {% if cv.meta.location %}<span class="contact-item">📍 {{ cv.meta.location }}</span>{% endif %}
+    {% if cv.meta.email %}<span class="contact-item">✉ {{ cv.meta.email }}</span>{% endif %}
+    {% if cv.meta.phone %}<span class="contact-item">✆ {{ cv.meta.phone }}</span>{% endif %}
+    {% if cv.meta.linkedin %}<span class="contact-item">{{ cv.meta.linkedin }}</span>{% endif %}
+    {% for label, url in (cv.meta.optional_links or {}).items() %}
+      <span class="contact-item contact-portfolio">{{ label }}: {{ url }}</span>
+    {% endfor %}
+  </div>
+</header>
+
+<!-- ═══ TWO-COLUMN BODY ═════════════════════════════════════════════════════ -->
+<div class="body-layout">
+
+  <!-- Left column: skills, tools, certifications, languages, awards -->
+  <aside class="left-col">
+
+    {% set s = cv.skills %}
+    {% if s.hard_skills or s.tools or s.frameworks or s.soft_skills %}
+    <section class="cv-section skills-section">
+      <h2 class="section-title">Skills &amp; Tools</h2>
+      <div class="skills-block">
+        {% if s.hard_skills %}
+        <div class="skill-row">
+          <span class="skill-label">Technical</span>
+          <span class="skill-values">{{ s.hard_skills | join(" · ") }}</span>
+        </div>
+        {% endif %}
+        {% if s.tools %}
+        <div class="skill-row">
+          <span class="skill-label">Tools</span>
+          <span class="skill-values">{{ s.tools | join(" · ") }}</span>
+        </div>
+        {% endif %}
+        {% if s.frameworks %}
+        <div class="skill-row">
+          <span class="skill-label">Frameworks</span>
+          <span class="skill-values">{{ s.frameworks | join(" · ") }}</span>
+        </div>
+        {% endif %}
+        {% if s.cloud_platforms %}
+        <div class="skill-row">
+          <span class="skill-label">Cloud</span>
+          <span class="skill-values">{{ s.cloud_platforms | join(" · ") }}</span>
+        </div>
+        {% endif %}
+        {% if s.soft_skills %}
+        <div class="skill-row">
+          <span class="skill-label">Soft Skills</span>
+          <span class="skill-values">{{ s.soft_skills | join(" · ") }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if cv.certifications %}
+    {{ render_certifications(cv.certifications) }}
+    {% endif %}
+
+    {% if cv.languages %}
+    {{ render_languages(cv.languages) }}
+    {% endif %}
+
+    {% if cv.awards %}
+    {{ render_awards(cv.awards) }}
+    {% endif %}
+
+    {% if cv.references_available %}
+    <section class="cv-section">
+      <h2 class="section-title">References</h2>
+      <p style="font-size: 8.5pt; color: var(--muted);">Available upon request</p>
+    </section>
+    {% endif %}
+  </aside>
+
+  <!-- Right column: summary, projects, experience, education, publications -->
+  <main class="right-col">
+    {% set right_blocks = ['professional_summary', 'projects', 'work_experience', 'education', 'publications', 'volunteering', 'licenses', 'trade_qualifications', 'clinical_practice'] %}
+    {% for block_name in block_order %}
+      {% if block_name in right_blocks %}
+        {% if block_name == 'professional_summary' and cv.professional_summary %}
+          <section class="cv-section summary-section">
+            <h2 class="section-title">About</h2>
+            <p class="summary-text">{{ cv.professional_summary }}</p>
+          </section>
+        {% elif block_name == 'projects' and cv.projects %}
+          <section class="cv-section projects-section">
+            <h2 class="section-title">Projects &amp; Portfolio</h2>
+            {% for proj in cv.projects %}
+            <div class="project-entry">
+              <div class="project-header">
+                <span class="project-title">{{ proj.title }}</span>
+                {% if proj.url %}<span class="project-url">{{ proj.url }}</span>{% endif %}
+              </div>
+              {% if proj.description %}<p class="project-desc">{{ proj.description }}</p>{% endif %}
+              {% if proj.technologies %}<div class="project-tech">{{ proj.technologies | join(" · ") }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </section>
+        {% elif block_name == 'work_experience' and cv.work_experience %}
+          {{ render_work_experience(cv.work_experience) }}
+        {% elif block_name == 'education' and cv.education %}
+          {{ render_education(cv.education) }}
+        {% elif block_name == 'publications' and cv.publications %}
+          {{ render_publications(cv.publications) }}
+        {% elif block_name == 'volunteering' and cv.volunteering %}
+          {{ render_volunteering(cv.volunteering) }}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </main>
+
+</div>
+</body>
+</html>

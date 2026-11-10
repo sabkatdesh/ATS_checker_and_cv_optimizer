@@ -1,0 +1,163 @@
+{% from "_macros.html" import render_meta, dispatch_section %}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<style>
+/* ── Compact: maximum density for one-page CVs ────────────────────────────── */
+@page {
+  size: A4;
+  margin: 12mm 14mm 12mm 14mm;
+}
+
+:root {
+  --accent: {{ accent }};
+  --text: #111;
+  --muted: #4a4a4a;
+  --light: #f0f0f0;
+}
+
+{% if lang == 'bn' %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+body { font-family: 'HindSiliguri', 'Arial Narrow', 'Arial', sans-serif; }
+{% else %}
+body { font-family: 'Arial Narrow', 'Arial', sans-serif; }
+{% endif %}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { color: var(--text); font-size: 9pt; line-height: 1.35; }
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.cv-header {
+  border-top: 3pt solid var(--accent);
+  padding: 6pt 0 5pt 0;
+  margin-bottom: 5pt;
+}
+.cv-name {
+  font-size: 16pt;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.2pt;
+  line-height: 1.1;
+}
+.cv-contact {
+  margin-top: 2pt;
+  font-size: 8pt;
+  color: var(--muted);
+}
+.contact-item::after { content: " · "; }
+.contact-item:last-child::after { content: ""; }
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.cv-section { margin-top: 6pt; break-inside: avoid-page; }
+.section-title {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1pt;
+  color: var(--accent);
+  border-bottom: 0.5pt solid var(--accent);
+  padding-bottom: 1.5pt;
+  margin-bottom: 4pt;
+}
+
+/* ── Summary ──────────────────────────────────────────────────────────────── */
+.summary-text { font-size: 8.5pt; line-height: 1.4; }
+
+/* ── Skills ───────────────────────────────────────────────────────────────── */
+.skills-block { }
+.skill-row { display: flex; gap: 4pt; align-items: baseline; margin-bottom: 1.5pt; }
+.skill-label { font-weight: 700; font-size: 8pt; min-width: 62pt; flex-shrink: 0; }
+.skill-values { font-size: 8pt; color: var(--muted); }
+
+/* ── Work experience ──────────────────────────────────────────────────────── */
+.job-entry { margin-bottom: 5pt; break-inside: avoid; }
+.job-header { display: flex; justify-content: space-between; align-items: baseline; }
+.job-title-block { flex: 1; }
+.job-title { font-weight: 700; font-size: 9.5pt; display: inline; }
+.job-company { font-size: 8.5pt; color: var(--muted); display: inline; margin-left: 4pt; }
+.job-dates { font-size: 8pt; color: var(--muted); white-space: nowrap; }
+.bullet-list { padding-left: 11pt; margin-top: 1.5pt; }
+.bullet-list li { font-size: 8.5pt; margin-bottom: 0.75pt; }
+.achievements li::marker { content: "▸ "; color: var(--accent); }
+
+/* ── Education ────────────────────────────────────────────────────────────── */
+.edu-entry { margin-bottom: 3pt; }
+.edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+.edu-degree { font-weight: 600; font-size: 9pt; flex: 1; }
+.edu-year { font-size: 8pt; color: var(--muted); }
+.edu-institution { font-size: 8.5pt; color: var(--muted); }
+.edu-grade { font-size: 8pt; color: var(--muted); }
+
+/* ── Certifications ───────────────────────────────────────────────────────── */
+.cert-list { list-style: none; padding: 0; columns: 2; gap: 8pt; }
+.cert-entry { font-size: 8.5pt; margin-bottom: 2pt; break-inside: avoid; }
+
+/* ── Projects ─────────────────────────────────────────────────────────────── */
+.project-entry { margin-bottom: 4pt; break-inside: avoid; }
+.project-header { display: flex; justify-content: space-between; }
+.project-title { font-weight: 600; font-size: 9pt; }
+.project-url { font-size: 7.5pt; color: var(--muted); }
+.project-desc { font-size: 8.5pt; margin: 1pt 0; }
+.project-tech { font-size: 8pt; color: var(--muted); }
+
+/* ── Licenses ─────────────────────────────────────────────────────────────── */
+.license-list { list-style: none; padding: 0; }
+.license-entry { font-size: 8.5pt; margin-bottom: 2pt; padding: 2pt 5pt; background: var(--light); border-left: 2pt solid var(--accent); }
+
+/* ── Trade qualifications ─────────────────────────────────────────────────── */
+.trade-qual-list { padding-left: 11pt; columns: 2; gap: 8pt; }
+.trade-qual-list li { font-size: 8.5pt; margin-bottom: 2pt; break-inside: avoid; }
+
+/* ── Clinical ─────────────────────────────────────────────────────────────── */
+.clinical-entry { margin-bottom: 5pt; break-inside: avoid; }
+.clinical-setting { font-weight: 700; font-size: 9.5pt; }
+.clinical-role { font-size: 8.5pt; color: var(--muted); }
+.clinical-dates { font-size: 8pt; color: var(--muted); float: right; }
+.clinical-institution { font-size: 8.5pt; color: var(--muted); }
+
+/* ── Publications ─────────────────────────────────────────────────────────── */
+.pub-list { padding-left: 12pt; }
+.pub-entry { margin-bottom: 4pt; font-size: 8.5pt; }
+.pub-title { font-weight: 600; }
+.pub-authors { color: var(--muted); }
+.pub-doi { font-size: 7.5pt; color: var(--muted); display: block; }
+
+/* ── Languages ────────────────────────────────────────────────────────────── */
+.language-list { display: flex; flex-wrap: wrap; gap: 8pt; }
+.lang-entry { font-size: 8.5pt; }
+
+/* ── Volunteering ─────────────────────────────────────────────────────────── */
+.vol-entry { margin-bottom: 3pt; }
+.vol-org { font-weight: 600; font-size: 9pt; }
+.vol-role { font-size: 8.5pt; color: var(--muted); }
+.vol-desc { font-size: 8.5pt; color: var(--muted); }
+
+/* ── Awards ───────────────────────────────────────────────────────────────── */
+.award-list { list-style: none; padding: 0; columns: 2; gap: 8pt; }
+.award-entry { font-size: 8.5pt; margin-bottom: 3pt; break-inside: avoid; }
+.award-desc { font-size: 8pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+{{ render_meta(cv.meta) }}
+
+{% for block_name in block_order %}
+  {% if block_name != 'meta' %}
+    {{ dispatch_section(block_name, cv) }}
+  {% endif %}
+{% endfor %}
+
+{% if cv.references_available %}
+<p style="margin-top: 6pt; font-size: 8pt; color: var(--muted); font-style: italic;">
+  References available upon request.
+</p>
+{% endif %}
+
+</body>
+</html>

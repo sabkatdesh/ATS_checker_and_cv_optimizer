@@ -1,0 +1,165 @@
+{% from "_macros.html" import render_meta, dispatch_section %}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<style>
+/* ── Academic: long-form with publications, research focus ────────────────── */
+@page {
+  size: A4;
+  margin: 18mm 22mm 18mm 22mm;
+}
+
+:root {
+  --accent: {{ accent }};
+  --text: #111;
+  --muted: #555;
+  --light: #f6f6f6;
+}
+
+{% if lang == 'bn' %}
+@font-face {
+  font-family: 'HindSiliguri';
+  src: url('../fonts/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+body { font-family: 'HindSiliguri', 'Georgia', serif; }
+{% else %}
+body { font-family: 'Georgia', 'Times New Roman', serif; }
+{% endif %}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { color: var(--text); font-size: 10.5pt; line-height: 1.55; }
+
+/* ── Header — centered academic style ────────────────────────────────────── */
+.cv-header {
+  text-align: center;
+  padding: 0 0 10pt 0;
+  margin-bottom: 10pt;
+  border-bottom: 1.5pt solid var(--accent);
+}
+.cv-name {
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.5pt;
+  font-variant: small-caps;
+}
+.cv-contact {
+  margin-top: 5pt;
+  font-size: 9pt;
+  color: var(--muted);
+  font-style: italic;
+}
+.contact-item::after { content: "  ·  "; }
+.contact-item:last-child::after { content: ""; }
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.cv-section { margin-top: 12pt; break-inside: avoid-page; }
+.section-title {
+  font-size: 11pt;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant: small-caps;
+  letter-spacing: 0.5pt;
+  border-bottom: 0.75pt solid var(--accent);
+  padding-bottom: 2pt;
+  margin-bottom: 7pt;
+}
+
+/* ── Summary ──────────────────────────────────────────────────────────────── */
+.summary-text { font-size: 10pt; font-style: italic; line-height: 1.6; }
+
+/* ── Skills ───────────────────────────────────────────────────────────────── */
+.skills-block { }
+.skill-row { display: flex; gap: 8pt; margin-bottom: 3pt; align-items: baseline; }
+.skill-label { font-weight: 700; font-size: 9.5pt; min-width: 80pt; flex-shrink: 0; }
+.skill-values { font-size: 9.5pt; color: var(--muted); }
+
+/* ── Work experience ──────────────────────────────────────────────────────── */
+.job-entry { margin-bottom: 10pt; break-inside: avoid; }
+.job-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.job-title-block { flex: 1; }
+.job-title { font-weight: 700; font-size: 10.5pt; display: block; }
+.job-company { font-size: 10pt; color: var(--muted); font-style: italic; display: block; margin-top: 1pt; }
+.job-dates { font-size: 9pt; color: var(--muted); white-space: nowrap; }
+.bullet-list { padding-left: 16pt; margin-top: 4pt; }
+.bullet-list li { font-size: 9.5pt; margin-bottom: 2pt; }
+.achievements li::marker { content: "▸ "; color: var(--accent); }
+
+/* ── Education ────────────────────────────────────────────────────────────── */
+.edu-entry { margin-bottom: 7pt; break-inside: avoid; }
+.edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+.edu-degree { font-weight: 700; font-size: 10.5pt; flex: 1; }
+.edu-year { font-size: 9pt; color: var(--muted); }
+.edu-institution { font-size: 10pt; font-style: italic; color: var(--muted); margin-top: 1pt; }
+.edu-grade { font-size: 9pt; color: var(--muted); }
+
+/* ── Certifications ───────────────────────────────────────────────────────── */
+.cert-list { list-style: none; padding: 0; }
+.cert-entry { font-size: 9.5pt; margin-bottom: 3pt; }
+
+/* ── Publications — numbered, academic citation style ────────────────────── */
+.pub-list { padding-left: 18pt; }
+.pub-entry {
+  margin-bottom: 8pt;
+  font-size: 9.5pt;
+  break-inside: avoid;
+  line-height: 1.5;
+}
+.pub-title { font-weight: 700; }
+.pub-authors { color: var(--muted); font-style: italic; }
+.pub-journal { font-style: italic; }
+.pub-year { }
+.pub-doi { font-size: 8.5pt; color: var(--muted); display: block; }
+
+/* ── Awards ───────────────────────────────────────────────────────────────── */
+.award-list { list-style: none; padding: 0; }
+.award-entry { font-size: 9.5pt; margin-bottom: 5pt; break-inside: avoid; }
+.award-desc { font-size: 9pt; color: var(--muted); font-style: italic; margin-top: 1.5pt; }
+
+/* ── Languages ────────────────────────────────────────────────────────────── */
+.language-list { display: flex; flex-wrap: wrap; gap: 12pt; }
+.lang-entry { font-size: 9.5pt; }
+
+/* ── Volunteering ─────────────────────────────────────────────────────────── */
+.vol-entry { margin-bottom: 6pt; break-inside: avoid; }
+.vol-org { font-weight: 600; font-size: 10.5pt; }
+.vol-role { font-size: 9.5pt; color: var(--muted); font-style: italic; }
+.vol-desc { font-size: 9.5pt; color: var(--muted); margin-top: 2pt; }
+
+/* ── Licenses ─────────────────────────────────────────────────────────────── */
+.license-list { list-style: none; padding: 0; }
+.license-entry { font-size: 9.5pt; margin-bottom: 3pt; padding: 3pt 8pt; background: var(--light); border-left: 3pt solid var(--accent); }
+
+/* ── Trade qualifications ─────────────────────────────────────────────────── */
+.trade-qual-list { padding-left: 14pt; }
+.trade-qual-list li { font-size: 9.5pt; margin-bottom: 3pt; }
+
+/* ── Projects ─────────────────────────────────────────────────────────────── */
+.project-entry { margin-bottom: 7pt; break-inside: avoid; }
+.project-header { display: flex; justify-content: space-between; align-items: baseline; }
+.project-title { font-weight: 600; font-size: 10.5pt; }
+.project-url { font-size: 8.5pt; color: var(--muted); }
+.project-desc { font-size: 9.5pt; margin: 2pt 0; font-style: italic; }
+.project-tech { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+{{ render_meta(cv.meta) }}
+
+{% for block_name in block_order %}
+  {% if block_name != 'meta' %}
+    {{ dispatch_section(block_name, cv) }}
+  {% endif %}
+{% endfor %}
+
+{% if cv.references_available %}
+<p style="margin-top: 14pt; font-size: 9pt; color: var(--muted); font-style: italic; text-align: center;">
+  References available upon request.
+</p>
+{% endif %}
+
+</body>
+</html>
