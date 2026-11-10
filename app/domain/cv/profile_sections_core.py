@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 
-def render_meta(p: dict, lines: list[str]) -> None:
+
+def render_meta(p: dict[str, Any], lines: list[str]) -> None:
     if p.get("full_name"):
         lines.append(p["full_name"])
     if p.get("email"):
@@ -26,7 +28,7 @@ def render_meta(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_professional_summary(p: dict, lines: list[str]) -> None:
+def render_professional_summary(p: dict[str, Any], lines: list[str]) -> None:
     val = p.get("professional_summary")
     if val:
         lines.append("PROFESSIONAL SUMMARY")
@@ -34,7 +36,7 @@ def render_professional_summary(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_skills(p: dict, lines: list[str]) -> None:
+def render_skills(p: dict[str, Any], lines: list[str]) -> None:
     skills = p.get("skills") or {}
     if not skills:
         return
@@ -52,7 +54,7 @@ def render_skills(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_work_experience(p: dict, lines: list[str]) -> None:
+def render_work_experience(p: dict[str, Any], lines: list[str]) -> None:
     experience = p.get("work_experience") or []
     if not experience:
         return
@@ -83,7 +85,7 @@ def render_work_experience(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_education(p: dict, lines: list[str]) -> None:
+def render_education(p: dict[str, Any], lines: list[str]) -> None:
     education = p.get("education") or []
     if not education:
         return
@@ -105,7 +107,7 @@ def render_education(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_certifications(p: dict, lines: list[str]) -> None:
+def render_certifications(p: dict[str, Any], lines: list[str]) -> None:
     certs = p.get("certifications") or []
     if not certs:
         return
@@ -122,7 +124,7 @@ def render_certifications(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_projects(p: dict, lines: list[str]) -> None:
+def render_projects(p: dict[str, Any], lines: list[str]) -> None:
     projects = p.get("projects") or []
     if not projects:
         return

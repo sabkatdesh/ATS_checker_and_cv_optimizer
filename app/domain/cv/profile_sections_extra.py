@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 
-def render_publications(p: dict, lines: list[str]) -> None:
+
+def render_publications(p: dict[str, Any], lines: list[str]) -> None:
     pubs = p.get("publications") or []
     if not pubs:
         return
@@ -22,7 +24,7 @@ def render_publications(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_licenses(p: dict, lines: list[str]) -> None:
+def render_licenses(p: dict[str, Any], lines: list[str]) -> None:
     licenses = p.get("licenses") or []
     if not licenses:
         return
@@ -39,7 +41,7 @@ def render_licenses(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_clinical_practice(p: dict, lines: list[str]) -> None:
+def render_clinical_practice(p: dict[str, Any], lines: list[str]) -> None:
     clinical = p.get("clinical_practice") or []
     if not clinical:
         return
@@ -62,7 +64,7 @@ def render_clinical_practice(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_trade_qualifications(p: dict, lines: list[str]) -> None:
+def render_trade_qualifications(p: dict[str, Any], lines: list[str]) -> None:
     quals = p.get("trade_qualifications") or []
     if not quals:
         return
@@ -77,7 +79,7 @@ def render_trade_qualifications(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_languages(p: dict, lines: list[str]) -> None:
+def render_languages(p: dict[str, Any], lines: list[str]) -> None:
     langs = p.get("languages") or []
     if not langs:
         return
@@ -90,7 +92,7 @@ def render_languages(p: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def render_volunteering(p: dict, lines: list[str]) -> None:
+def render_volunteering(p: dict[str, Any], lines: list[str]) -> None:
     vols = p.get("volunteering") or []
     if not vols:
         return
@@ -107,7 +109,7 @@ def render_volunteering(p: dict, lines: list[str]) -> None:
         lines.append("")
 
 
-def render_awards(p: dict, lines: list[str]) -> None:
+def render_awards(p: dict[str, Any], lines: list[str]) -> None:
     awards = p.get("awards") or []
     if not awards:
         return

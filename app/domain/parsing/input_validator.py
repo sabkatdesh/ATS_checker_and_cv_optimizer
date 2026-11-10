@@ -131,7 +131,7 @@ def _count_unique_words(text: str) -> int:
     return len(set(re.findall(r"\b\w+\b", text.lower().strip())))
 
 
-def _has_signals(text: str, keywords: list, min_hits: int = 2) -> bool:
+def _has_signals(text: str, keywords: list[str], min_hits: int = 2) -> bool:
     lower = text.lower()
     return sum(1 for kw in keywords if kw in lower) >= min_hits
 

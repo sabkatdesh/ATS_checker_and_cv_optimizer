@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.domain.cv.domain_enum import Domain
 
 # Per-domain, per-seniority budget rules.
@@ -9,7 +11,7 @@ from app.domain.cv.domain_enum import Domain
 # max_roles: max number of work experience entries to include
 # max_skills: max hard_skills list length
 # max_projects / max_publications / max_certs: section item limits
-DOMAIN_BUDGET_RULES: dict[str, dict[str, dict]] = {
+DOMAIN_BUDGET_RULES: dict[str, dict[str, dict[str, Any]]] = {
     Domain.TECH: {
         "fresher": {
             "target_words": 650,

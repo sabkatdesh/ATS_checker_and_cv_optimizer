@@ -12,13 +12,14 @@ Empty blocks are silently skipped — no "LICENSES\n(none)" headings.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from app.domain.cv import profile_sections_core as core_blocks
 from app.domain.cv import profile_sections_extra as extra_blocks
 from app.domain.cv.domain_config import Domain, get_block_order
 from app.domain.cv.profile_domain import detect_domain as _detect_domain_from_text
 
-_RENDERERS: dict[str, Callable[[dict, list[str]], None]] = {
+_RENDERERS: dict[str, Callable[[dict[str, Any], list[str]], None]] = {
     "meta": core_blocks.render_meta,
     "professional_summary": core_blocks.render_professional_summary,
     "skills": core_blocks.render_skills,
@@ -40,7 +41,7 @@ class ProfileBuilder:
     # ── Public API ──────────────────────────────────────────────────────────────
 
     @classmethod
-    def from_profile_dict(cls, profile: dict, domain: Domain | str | None = None) -> str:
+    def from_profile_dict(cls, profile: dict[str, Any], domain: Domain | str | None = None) -> str:
         """
         Convert a cv_profiles row (dict) to plain-text resume string.
 
@@ -72,7 +73,7 @@ class ProfileBuilder:
         return "\n".join(lines)
 
     @classmethod
-    def detect_domain(cls, profile: dict) -> Domain:
+    def detect_domain(cls, profile: dict[str, Any]) -> Domain:
         """
         Heuristic domain classification from profile fields.
         Used when the user has not explicitly selected a domain.
@@ -87,7 +88,7 @@ class ProfileBuilder:
     # ── Internal helpers ────────────────────────────────────────────────────────
 
     @staticmethod
-    def _resolve_domain(profile: dict, domain: Domain | str | None) -> Domain:
+    def _resolve_domain(profile: dict[str, Any], domain: Domain | str | None) -> Domain:
         if domain is not None:
             return Domain(domain) if isinstance(domain, str) else domain
         stored = profile.get("domain")
@@ -99,7 +100,7 @@ class ProfileBuilder:
         return ProfileBuilder.detect_domain(profile)
 
     @staticmethod
-    def _normalise_keys(profile: dict) -> dict:
+    def _normalise_keys(profile: dict[str, Any]) -> dict[str, Any]:
         """Map legacy DB keys to canonical block names."""
         p = dict(profile)
         # 'experience' in old DB → 'work_experience' in block order
@@ -111,7 +112,7 @@ class ProfileBuilder:
         return p
 
     @staticmethod
-    def _build_search_corpus(p: dict) -> str:
+    def _build_search_corpus(p: dict[str, Any]) -> str:
         """Flatten relevant profile fields into a single searchable string."""
         parts: list[str] = []
         for key in (
@@ -132,6 +133,6 @@ class ProfileBuilder:
 # ── Compatibility shim for old callers ──────────────────────────────────────────
 
 
-def profile_to_resume_text(profile: dict) -> str:
+def profile_to_resume_text(profile: dict[str, Any]) -> str:
     """Legacy wrapper. New code should call ProfileBuilder.from_profile_dict()."""
     return ProfileBuilder.from_profile_dict(profile)

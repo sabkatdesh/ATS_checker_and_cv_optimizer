@@ -13,17 +13,18 @@ Usage (class):
 from __future__ import annotations
 
 import re
+from typing import Any
 
 # ── Utilities ─────────────────────────────────────────────────────────────────────
 
 
-def _normalize(text) -> str:
+def _normalize(text: Any) -> str:
     if not text:
         return ""
     return re.sub(r"\s+", " ", str(text).lower().strip())
 
 
-def _tokenize(text: str) -> set:
+def _tokenize(text: str) -> set[str]:
     return set(re.findall(r"\b[a-z0-9\+\#\.]+\b", _normalize(text)))
 
 
@@ -44,7 +45,7 @@ def _flexible_match(a: str, b: str) -> bool:
 # ── Sub-score functions ───────────────────────────────────────────────────────────
 
 
-def _match_must_haves(jd, cv) -> dict:
+def _match_must_haves(jd: Any, cv: Any) -> dict[str, Any]:
     cv_items = (
         cv.skills.hard_skills + cv.skills.tools + cv.skills.frameworks + cv.skills.cloud_platforms
     )
@@ -61,7 +62,7 @@ def _match_must_haves(jd, cv) -> dict:
     }
 
 
-def _match_skills(jd, cv) -> dict:
+def _match_skills(jd: Any, cv: Any) -> dict[str, Any]:
     matched, missing = [], []
     for jd_s in jd.skills.hard_skills:
         if any(_flexible_match(jd_s, cv_s) for cv_s in cv.skills.hard_skills):
@@ -75,7 +76,7 @@ def _match_skills(jd, cv) -> dict:
     }
 
 
-def _match_experience(jd, cv) -> dict:
+def _match_experience(jd: Any, cv: Any) -> dict[str, Any]:
     score = 100
     if jd.experience.min_years and cv.experience_summary.total_years:
         if cv.experience_summary.total_years < jd.experience.min_years:
@@ -91,7 +92,7 @@ def _match_experience(jd, cv) -> dict:
     }
 
 
-def _match_tools(jd, cv) -> dict:
+def _match_tools(jd: Any, cv: Any) -> dict[str, Any]:
     jd_tools = jd.skills.tools + jd.skills.cloud_platforms
     cv_tools = cv.skills.tools + cv.skills.cloud_platforms
     matched, missing = [], []
@@ -103,14 +104,14 @@ def _match_tools(jd, cv) -> dict:
     return {"score": _safe_div(len(matched), len(jd_tools)), "matched": matched, "missing": missing}
 
 
-def _match_education(jd, cv) -> dict:
+def _match_education(jd: Any, cv: Any) -> dict[str, Any]:
     jd_fields = jd.education.fields_of_study
     cv_fields = [e.field_of_study for e in cv.education]
     matched = any(_flexible_match(jf, cf) for jf in jd_fields for cf in cv_fields)
     return {"score": 100 if matched else 50, "jd_fields": jd_fields, "cv_fields": cv_fields}
 
 
-def _match_responsibilities(jd, cv) -> dict:
+def _match_responsibilities(jd: Any, cv: Any) -> dict[str, Any]:
     jd_resp = jd.responsibilities.responsibilities
     cv_resp = [r for exp in cv.work_experience for r in exp.responsibilities]
     matched = [jr for jr in jd_resp if any(_flexible_match(jr, cr) for cr in cv_resp)]
@@ -120,7 +121,7 @@ def _match_responsibilities(jd, cv) -> dict:
 # ── Public API ────────────────────────────────────────────────────────────────────
 
 
-def compute_final_match(jd, cv) -> dict:
+def compute_final_match(jd: Any, cv: Any) -> dict[str, Any]:
     must_have = _match_must_haves(jd, cv)
     skills = _match_skills(jd, cv)
     experience = _match_experience(jd, cv)
@@ -158,5 +159,5 @@ def compute_final_match(jd, cv) -> dict:
 class ATSChecker:
     """Class wrapper for dependency-injection use cases."""
 
-    def compute(self, jd, cv) -> dict:
+    def compute(self, jd: Any, cv: Any) -> dict[str, Any]:
         return compute_final_match(jd, cv)
