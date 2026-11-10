@@ -63,8 +63,8 @@ class ProfileBuilder:
 
         # Medical — licenses/registrations are the strongest signal
         medical_signals = [
-            "bnmc", "bmc", "bmdc", "mbbs", "md ", "registered nurse",
-            "rn ", "physician", "surgeon", "clinical", "ward", "hospital",
+            "bnmc", "bmc", "bmdc", "mbbs", " md ", "registered nurse",
+            " rn ", "physician", "surgeon", "clinical", "ward", "hospital",
             "patient", "diagnosis", "nursing",
         ]
         if any(s in license_text or s in text_corpus for s in medical_signals):

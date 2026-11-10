@@ -12,6 +12,7 @@ import uuid
 import os
 import threading
 import tempfile
+import traceback
 
 from dotenv import load_dotenv
 from supabase import create_client
@@ -24,6 +25,9 @@ from database import (
     get_session,
     get_user_sessions,
     upload_pdf_to_storage,
+    get_cv_templates,
+    get_user_settings,
+    save_user_settings,
     get_coin_balance,
     deduct_coins,
     add_coins,
@@ -47,7 +51,6 @@ load_dotenv()
 
 app = FastAPI(title="CV Optimizer API")
 
-# Allow Streamlit frontend to talk to this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # tighten this after launch
@@ -273,7 +276,14 @@ def start_session(
 
     # Step 4 — Create session record in database
     thread_id = f"thread_{uuid.uuid4().hex}"
-    create_session(user_id, thread_id, body.job_description)
+    create_session(
+        user_id,
+        thread_id,
+        body.job_description,
+        cover_letter_requested=bool(body.cover_letter),
+        cover_letter_tone=body.cover_letter_tone,
+        cover_letter_length=body.cover_letter_length,
+    )
 
     # Step 5 — Run pipeline in background thread
     # We use a thread so the API responds immediately
@@ -504,6 +514,45 @@ def list_sessions(authorization: str = Header(None)):
 
 
 # ============================================================
+# TEMPLATES ENDPOINT
+# ============================================================
+
+@app.get("/templates")
+def list_templates():
+    """Return all available CV templates (public — no auth required)"""
+    templates = get_cv_templates()
+    return {"templates": templates}
+
+
+# ============================================================
+# USER SETTINGS ENDPOINTS
+# ============================================================
+
+class UserSettingsRequest(BaseModel):
+    default_template: Optional[str] = None
+    accent_color: Optional[str] = None
+    bangla_mode: Optional[bool] = None
+    cover_letter_default_tone: Optional[str] = None
+
+
+@app.get("/settings")
+def get_settings(authorization: str = Header(None)):
+    user_id = get_user_id(authorization)
+    settings = get_user_settings(user_id)
+    return {"settings": settings or {}}
+
+
+@app.post("/settings")
+def update_settings(body: UserSettingsRequest, authorization: str = Header(None)):
+    user_id = get_user_id(authorization)
+    data = {k: v for k, v in body.dict().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="No settings provided")
+    save_user_settings(user_id, data)
+    return {"message": "Settings saved"}
+
+
+# ============================================================
 # BILLING ENDPOINTS
 # ============================================================
 
@@ -583,12 +632,16 @@ def _finalize_session(thread_id: str, result: dict, user_id: str, profile: dict 
         return
 
     # Generate PDF using WeasyPrint + Jinja2 templates
-    if result.get("structured_cv"):
+    structured_cv = result.get("structured_cv")
+    if not structured_cv:
+        print(f"[PDF] No structured_cv in pipeline result for {thread_id}. Result keys: {list(result.keys())}")
+    if structured_cv:
         try:
             profile = profile or {}
+            print(f"[PDF] Generating for {thread_id}, template={profile.get('preferred_template','classic')}, domain={result.get('detected_domain','general')}")
             generator = PDFGenerator()
             pdf_bytes = generator.render(
-                cv_data=result["structured_cv"],
+                cv_data=structured_cv,
                 template_id=profile.get("preferred_template", "classic"),
                 accent_color=profile.get("accent_color", "#4361ee"),
                 bangla=bool(profile.get("bangla_mode", False)),
@@ -601,13 +654,15 @@ def _finalize_session(thread_id: str, result: dict, user_id: str, profile: dict 
 
             # Upload to Supabase storage
             pdf_url = upload_pdf_to_storage(thread_id, user_id, local_path)
+            print(f"[PDF] Uploaded successfully for {thread_id}: {pdf_url}")
 
             # Clean up local file
             if os.path.exists(local_path):
                 os.remove(local_path)
 
         except Exception as e:
-            print(f"PDF generation failed for {thread_id}: {e}")
+            print(f"[PDF] Generation failed for {thread_id}: {e}")
+            print(traceback.format_exc())
 
     # ── Cover letter PDF (optional) ─────────────────────────────────────────────
     cover_letter_pdf_url = None
