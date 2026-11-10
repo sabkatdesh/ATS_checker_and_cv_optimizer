@@ -45,7 +45,10 @@ def test_options_coerces_invalid_values(client, backend):
     _session(backend)
     r = _options(client, {"tone": "loud", "length": "huge"})
     assert r.status_code == 200
-    assert r.json() == {"status": "resumed", "message": "Generating cover letter. Keep polling /status."}
+    assert r.json() == {
+        "status": "resumed",
+        "message": "Generating cover letter. Keep polling /status.",
+    }
     assert ("resume_cover_letter", ("t1", "formal", "standard"), {}) in backend.pipeline.calls
 
 
@@ -75,7 +78,7 @@ def test_pdf_missing_404(client, backend):
     assert r.status_code == 404
     assert r.json() == {
         "detail": "No cover letter PDF found for this session. "
-                  "Either it was not requested or generation failed."
+        "Either it was not requested or generation failed."
     }
 
 

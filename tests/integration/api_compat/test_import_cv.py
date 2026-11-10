@@ -24,9 +24,7 @@ def test_short_after_strip_is_400(client):
 def test_too_long_400(client):
     r = _post(client, "a" * 15001)
     assert r.status_code == 400
-    assert r.json() == {
-        "detail": "CV text is too long. Please paste up to 15,000 characters."
-    }
+    assert r.json() == {"detail": "CV text is too long. Please paste up to 15,000 characters."}
 
 
 def test_llm_error_is_500_with_message(client, backend):

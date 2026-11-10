@@ -1,8 +1,8 @@
 import re
 from types import SimpleNamespace
 
-from services.profile_builder import ProfileBuilder
 from core.parsers.input_validator import validate_jd
+from services.profile_builder import ProfileBuilder
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
 
@@ -14,7 +14,9 @@ JD = (
 
 
 def _start(client, **body):
-    return client.post("/sessions/start", json={"job_description": JD, **body}, headers=auth_header())
+    return client.post(
+        "/sessions/start", json={"job_description": JD, **body}, headers=auth_header()
+    )
 
 
 def _ready(backend, balance=5):
@@ -62,8 +64,11 @@ def test_start_creates_session_with_cover_letter_args(client, backend):
     _start(client, cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
     call = [c for c in backend.store.calls if c[0] == "create_session"][0]
     assert call[2] == {
-        "template_id": "classic", "domain": None, "cover_letter_requested": True,
-        "cover_letter_tone": "formal", "cover_letter_length": "short",
+        "template_id": "classic",
+        "domain": None,
+        "cover_letter_requested": True,
+        "cover_letter_tone": "formal",
+        "cover_letter_length": "short",
     }
 
 
@@ -71,7 +76,8 @@ def test_start_pauses_at_hitl(client, backend):
     _ready(backend)
     backend.pipeline.next_nodes = ["hitl_node"]
     backend.pipeline.values = {
-        "gaps_identified": ["g1"], "eligibility_verdict": SimpleNamespace(score=55),
+        "gaps_identified": ["g1"],
+        "eligibility_verdict": SimpleNamespace(score=55),
     }
     row = _row(backend, _start(client))
     assert row["status"] == "awaiting_hitl"

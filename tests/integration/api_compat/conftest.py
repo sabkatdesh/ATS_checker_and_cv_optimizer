@@ -1,4 +1,5 @@
 """Harness for API characterization tests. Legacy wiring lives in _wire_legacy only."""
+
 import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -22,10 +23,20 @@ _ENV_DEFAULTS = {
 }
 
 _DB_NAMES = [
-    "get_cv_profile", "save_cv_profile", "create_session", "update_session",
-    "get_session", "get_user_sessions", "upload_pdf_to_storage", "get_cv_templates",
-    "get_user_settings", "save_user_settings", "get_coin_balance", "deduct_coins",
-    "add_coins", "get_coin_transactions",
+    "get_cv_profile",
+    "save_cv_profile",
+    "create_session",
+    "update_session",
+    "get_session",
+    "get_user_sessions",
+    "upload_pdf_to_storage",
+    "get_cv_templates",
+    "get_user_settings",
+    "save_user_settings",
+    "get_coin_balance",
+    "deduct_coins",
+    "add_coins",
+    "get_coin_transactions",
 ]
 
 
@@ -53,7 +64,8 @@ def _wire_legacy(backend: FakeBackend, monkeypatch, api) -> None:
     for name in _DB_NAMES:
         monkeypatch.setattr(api, name, getattr(backend.store, name))
     monkeypatch.setattr(
-        api, "supabase_client",
+        api,
+        "supabase_client",
         SimpleNamespace(auth=SimpleNamespace(get_user=backend.auth.legacy_get_user)),
     )
     monkeypatch.setattr(api, "run_pipeline_for_user", backend.pipeline.run)
@@ -73,7 +85,10 @@ def backend() -> FakeBackend:
     FakeCoverLetterRenderer.calls.clear()
     FakeCoverLetterRenderer.raise_on_render = None
     return FakeBackend(
-        store=MemoryStore(), auth=FakeAuth(), pipeline=FakePipeline(), llm=FakeStructuredLLM(),
+        store=MemoryStore(),
+        auth=FakeAuth(),
+        pipeline=FakePipeline(),
+        llm=FakeStructuredLLM(),
     )
 
 

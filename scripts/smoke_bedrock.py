@@ -7,6 +7,7 @@
 Usage:  uv run scripts/smoke_bedrock.py
 Uses the default AWS credential chain (e.g. ~/.aws profile) and AWS_REGION (default us-east-1).
 """
+
 from __future__ import annotations
 
 import os
@@ -24,7 +25,9 @@ def main() -> int:
     client = boto3.client(
         "bedrock-runtime",
         region_name=REGION,
-        config=Config(connect_timeout=5, read_timeout=60, retries={"max_attempts": 3, "mode": "adaptive"}),
+        config=Config(
+            connect_timeout=5, read_timeout=60, retries={"max_attempts": 3, "mode": "adaptive"}
+        ),
     )
     started = time.perf_counter()
     resp = client.converse(
@@ -36,7 +39,9 @@ def main() -> int:
     text = resp["output"]["message"]["content"][0]["text"].strip()
     usage = resp["usage"]
     print(f"model={MODEL_ID} region={REGION} latency={ms}ms stop={resp['stopReason']}")
-    print(f"reply={text!r} input_tokens={usage['inputTokens']} output_tokens={usage['outputTokens']}")
+    print(
+        f"reply={text!r} input_tokens={usage['inputTokens']} output_tokens={usage['outputTokens']}"
+    )
     return 0 if text else 1
 
 

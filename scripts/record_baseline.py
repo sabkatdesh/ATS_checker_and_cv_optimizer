@@ -8,8 +8,8 @@ Usage:
 
 Outputs to: data/test_set/baselines/{id}_baseline.json
 """
+
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,18 +29,21 @@ def load_test_pair(filename: str) -> dict:
 
 def run_pipeline_on_pair(pair: dict) -> dict:
     """Run the pipeline synchronously and return the final state."""
-    from main_pipeline_hitl_supabase import run_pipeline_for_user, get_pipeline_state
     import asyncio
+
+    from main_pipeline_hitl_supabase import get_pipeline_state, run_pipeline_for_user
 
     user_id = "baseline_test_user"
     thread_id = f"baseline_{pair['id']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-    asyncio.run(run_pipeline_for_user(
-        user_id=user_id,
-        thread_id=thread_id,
-        jd_text=pair["jd_text"],
-        cv_text=pair["cv_text"],
-    ))
+    asyncio.run(
+        run_pipeline_for_user(
+            user_id=user_id,
+            thread_id=thread_id,
+            jd_text=pair["jd_text"],
+            cv_text=pair["cv_text"],
+        )
+    )
 
     state = asyncio.run(get_pipeline_state(thread_id))
     return state

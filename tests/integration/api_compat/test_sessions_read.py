@@ -16,7 +16,13 @@ def test_status_403(client, backend):
 
 
 def test_status_returns_row_verbatim(client, backend):
-    row = {"thread_id": "t1", "user_id": USER_A, "status": "complete", "ats_score": 80, "extra": [1]}
+    row = {
+        "thread_id": "t1",
+        "user_id": USER_A,
+        "status": "complete",
+        "ats_score": 80,
+        "extra": [1],
+    }
     backend.store.sessions["t1"] = row
     r = client.get("/sessions/t1/status", headers=auth_header())
     assert r.status_code == 200

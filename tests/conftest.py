@@ -1,8 +1,8 @@
 """
 Shared fixtures for all tests.
 """
+
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -23,21 +23,26 @@ def load_test_pair(name: str) -> dict:
 def tech_junior():
     return load_test_pair("tech_junior")
 
+
 @pytest.fixture
 def tech_senior():
     return load_test_pair("tech_senior")
+
 
 @pytest.fixture
 def medical_nurse():
     return load_test_pair("medical_nurse")
 
+
 @pytest.fixture
 def education_teacher():
     return load_test_pair("education_teacher")
 
+
 @pytest.fixture
 def trades_electrician():
     return load_test_pair("trades_electrician")
+
 
 @pytest.fixture
 def finance_analyst():
@@ -45,6 +50,12 @@ def finance_analyst():
 
 
 ALL_TEST_PAIRS = [
-    "tech_junior", "tech_senior", "tech_fresher", "tech_poor_format",
-    "medical_nurse", "education_teacher", "trades_electrician", "finance_analyst",
+    "tech_junior",
+    "tech_senior",
+    "tech_fresher",
+    "tech_poor_format",
+    "medical_nurse",
+    "education_teacher",
+    "trades_electrician",
+    "finance_analyst",
 ]

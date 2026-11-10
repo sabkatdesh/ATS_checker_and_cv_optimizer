@@ -1,5 +1,6 @@
 """In-memory stand-in for database.py; method names and args mirror it."""
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 
 
 class MemoryStore:
@@ -29,22 +30,39 @@ class MemoryStore:
         self.profiles[user_id] = data
         return [data]
 
-    def create_session(self, user_id, thread_id, job_description, template_id="classic",
-                       domain=None, cover_letter_requested=False, cover_letter_tone=None,
-                       cover_letter_length=None):
-        self._enter("create_session", (user_id, thread_id, job_description), {
-            "template_id": template_id, "domain": domain,
-            "cover_letter_requested": cover_letter_requested,
-            "cover_letter_tone": cover_letter_tone,
-            "cover_letter_length": cover_letter_length,
-        })
+    def create_session(
+        self,
+        user_id,
+        thread_id,
+        job_description,
+        template_id="classic",
+        domain=None,
+        cover_letter_requested=False,
+        cover_letter_tone=None,
+        cover_letter_length=None,
+    ):
+        self._enter(
+            "create_session",
+            (user_id, thread_id, job_description),
+            {
+                "template_id": template_id,
+                "domain": domain,
+                "cover_letter_requested": cover_letter_requested,
+                "cover_letter_tone": cover_letter_tone,
+                "cover_letter_length": cover_letter_length,
+            },
+        )
         row = {
-            "thread_id": thread_id, "user_id": user_id, "job_description": job_description,
-            "template_id": template_id, "domain": domain, "status": "running",
+            "thread_id": thread_id,
+            "user_id": user_id,
+            "job_description": job_description,
+            "template_id": template_id,
+            "domain": domain,
+            "status": "running",
             "cover_letter_requested": cover_letter_requested,
             "cover_letter_tone": cover_letter_tone,
             "cover_letter_length": cover_letter_length,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         self.sessions[thread_id] = row
         return row

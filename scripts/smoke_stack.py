@@ -8,6 +8,7 @@ Usage:  uv run scripts/smoke_stack.py
 Reads DB__DSN, AUTH__SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, REDIS__URL from .env.
 Prints only status lines; never prints secrets.
 """
+
 from __future__ import annotations
 
 import os

@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main, "m*-*"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - run: uv run pre-commit run --all-files
+
+  types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - run: uv run mypy
+      # Task 11 adds: uv run mypy --strict app/domain app/ports
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b
+      - run: uv sync --locked
+      - run: uv run pytest -q

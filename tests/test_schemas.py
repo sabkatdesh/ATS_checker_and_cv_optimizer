@@ -2,12 +2,13 @@
 test_schemas.py — Parse all test CV texts through UniversalCVStructured.
 Assert no crashes and required fields are populated.
 """
+
 import json
+
 import pytest
-from pathlib import Path
 
 from core.schemas.universal_cv import UniversalCVStructured
-from tests.conftest import TEST_SET_DIR, ALL_TEST_PAIRS
+from tests.conftest import ALL_TEST_PAIRS, TEST_SET_DIR
 
 
 def _cv_text_from_pair(data: dict) -> str:

@@ -71,7 +71,7 @@ Branch naming convention:
 #### 3. Make Your Changes
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Make changes to files
 # Edit code, add features, fix bugs
@@ -84,13 +84,10 @@ streamlit run streamlit_app.py
 #### 4. Test Your Changes
 ```bash
 # Run existing tests
-pytest tests/
+uv run pytest -q
 
 # Test specific module
-pytest tests/test_ats_checker.py
-
-# Test with coverage
-pytest --cov=. tests/
+uv run pytest tests/test_ats_checker.py
 ```
 
 #### 5. Commit Your Changes
@@ -190,6 +187,7 @@ Always use type hints:
 def validate_jd(text: str) -> ValidationResult:
     pass
 
+
 # ❌ Bad
 def validate_jd(text):
     pass
@@ -223,20 +221,26 @@ touch tests/test_your_feature.py
 import pytest
 from your_module import your_function
 
+
 def test_your_function_success():
     """Test that function works correctly."""
     result = your_function("input")
     assert result == "expected_output"
+
 
 def test_your_function_error():
     """Test that function handles errors."""
     with pytest.raises(ValueError):
         your_function(invalid_input)
 
-@pytest.mark.parametrize("input,expected", [
-    ("case1", "result1"),
-    ("case2", "result2"),
-])
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ("case1", "result1"),
+        ("case2", "result2"),
+    ],
+)
 def test_multiple_cases(input, expected):
     """Test multiple cases."""
     assert your_function(input) == expected
@@ -273,21 +277,21 @@ Every function should have a docstring:
 def function_name(param1: str, param2: int) -> bool:
     """
     One-line description of what the function does.
-    
-    Longer description if needed. Explain the logic, edge cases, 
+
+    Longer description if needed. Explain the logic, edge cases,
     performance considerations, etc.
-    
+
     Args:
         param1: Description of param1
         param2: Description of param2
-    
+
     Returns:
         Description of return value
-    
+
     Raises:
         ValueError: If param1 is empty
         TypeError: If param2 is not an integer
-    
+
     Example:
         >>> result = function_name("test", 42)
         >>> print(result)

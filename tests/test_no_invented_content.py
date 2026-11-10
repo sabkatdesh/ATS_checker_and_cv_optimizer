@@ -4,13 +4,11 @@ test_no_invented_content.py — Anti-hallucination guard.
 These tests verify the pipeline never invents skills, companies, or dates
 that weren't in the original profile.
 """
-import pytest
-from unittest.mock import patch, MagicMock
 
-from core.parsers.input_validator import validate_jd, validate_cv
-
+from core.parsers.input_validator import validate_jd
 
 # ── Input validator — edge cases ──────────────────────────────────────────────
+
 
 def test_gibberish_jd_rejected():
     result = validate_jd("aaaa bbbb cccc dddd aaaa aaaa aaaa aaaa")
@@ -19,7 +17,7 @@ def test_gibberish_jd_rejected():
 
 
 def test_repeated_single_word_rejected():
-    text = ("job " * 200)
+    text = "job " * 200
     result = validate_jd(text)
     assert not result.is_valid
 
@@ -36,6 +34,7 @@ _VALID_JD = (
     "attendance and learning budget. This is a full-time permanent position at a growing technology "
     "company based in Dhaka, Bangladesh with an international client base."
 )
+
 
 def test_valid_jd_accepted():
     result = validate_jd(_VALID_JD)
@@ -107,6 +106,7 @@ def test_bangla_jd_accepted():
 
 # ── No-invention rule — structural checks ─────────────────────────────────────
 
+
 def test_no_skills_invented_marker():
     """
     This is a meta-test that documents the no-invention rule.
@@ -116,12 +116,13 @@ def test_no_skills_invented_marker():
     # If a CV has no Python experience and a JD requires Python,
     # the rewritten CV must NOT contain "Python".
     # Full pipeline test requires LLM — assert the rule is documented instead.
-    rule = (
+    rule = (  # noqa: F841
         "CRITICAL: You may rewrite and reorder existing facts only. "
         "Never invent job titles, dates, metrics, company names, certifications, "
         "or technologies that are not already present in the user's profile."
     )
     from core.pipeline.prompts import REWRITE_PROMPT
+
     prompt_text = REWRITE_PROMPT.template
     assert any(
         keyword in prompt_text.lower()

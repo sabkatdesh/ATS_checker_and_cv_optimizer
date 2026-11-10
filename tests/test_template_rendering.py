@@ -4,20 +4,21 @@ test_template_rendering.py — Render all 6 CV templates and assert output is va
 Requires WeasyPrint + GTK (Windows) or pango (Linux).
 Skips gracefully if WeasyPrint is not available.
 """
+
 import pytest
 
 try:
-    import weasyprint
+    import weasyprint  # noqa: F401
+
     WEASYPRINT_AVAILABLE = True
 except Exception:
     WEASYPRINT_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
-    not WEASYPRINT_AVAILABLE,
-    reason="WeasyPrint not installed or GTK runtime missing"
+    not WEASYPRINT_AVAILABLE, reason="WeasyPrint not installed or GTK runtime missing"
 )
 
-from services.pdf_generator import PDFGenerator, VALID_TEMPLATES
+from services.pdf_generator import VALID_TEMPLATES, PDFGenerator  # noqa: E402
 
 FIXTURE_CV = {
     "meta": {
