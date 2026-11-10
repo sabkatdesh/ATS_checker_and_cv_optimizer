@@ -88,7 +88,7 @@ class MemoryStore:
         self._enter("deduct_coins", (user_id, amount, description), {})
         if self.balances.get(user_id, 0) < amount:
             return False
-        self.balances[user_id] -= amount
+        self.balances[user_id] = self.balances.get(user_id, 0) - amount
         return True
 
     def add_coins(self, user_id, amount, description):

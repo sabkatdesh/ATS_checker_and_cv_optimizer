@@ -22,10 +22,12 @@ PROTECTED = [
 
 
 @pytest.mark.parametrize("method,path,body", PROTECTED)
-def test_protected_route_without_header_is_401(client, method, path, body):
+def test_protected_route_without_header_is_401(client, backend, method, path, body):
     r = client.request(method, path, json=body)
     assert r.status_code == 401
     assert r.json() == {"detail": "Not logged in"}
+    assert backend.store.calls == []
+    assert backend.pipeline.calls == []
 
 
 def test_non_bearer_header_is_401(client):

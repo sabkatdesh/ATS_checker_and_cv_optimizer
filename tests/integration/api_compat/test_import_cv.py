@@ -18,6 +18,7 @@ def test_too_short_400(client):
 def test_short_after_strip_is_400(client):
     r = _post(client, "a" * 99 + " " * 50)
     assert r.status_code == 400
+    assert r.json() == {"detail": "CV text is too short to parse."}
 
 
 def test_too_long_400(client):
