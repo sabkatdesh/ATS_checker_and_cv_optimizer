@@ -51,7 +51,8 @@ class Container:
         cover_letter_factory: Callable[[], CoverLetterRenderer] | None = None,
     ) -> None:
         self.settings = settings
-        self._lock = threading.Lock()
+        # Reentrant: a default builder may read another lazy property (e.g. pipeline -> store).
+        self._lock = threading.RLock()
         self._store = store
         self._auth = auth
         self._pipeline = pipeline

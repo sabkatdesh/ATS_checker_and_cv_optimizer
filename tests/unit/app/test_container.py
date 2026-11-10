@@ -88,3 +88,21 @@ def test_inline_runner_runs_synchronously():
     ran: list[int] = []
     InlineRunner().submit(lambda: ran.append(1))
     assert ran == [1]
+
+
+def test_builder_reading_another_property_does_not_deadlock(monkeypatch):
+    import app.container as mod
+
+    c = Container(AppSettings(_env_file=None), store=object())  # type: ignore[arg-type]
+    seen: list[object] = []
+
+    def pipeline_builder(settings):
+        seen.append(c.store)
+        return object()
+
+    monkeypatch.setattr(mod, "_default_pipeline", pipeline_builder)
+    t = threading.Thread(target=lambda: c.pipeline, daemon=True)
+    t.start()
+    t.join(timeout=5)
+    assert not t.is_alive()
+    assert len(seen) == 1
