@@ -22,6 +22,10 @@ def scrub_event(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
             }
     for exc in (event.get("exception") or {}).get("values", []):
         exc["value"] = REDACTED
+        for frame in (exc.get("stacktrace") or {}).get("frames", []):
+            frame.pop("vars", None)
+    for key in ("message", "logentry", "contexts"):
+        event.pop(key, None)
     if "breadcrumbs" in event:
         event["breadcrumbs"] = redact_value("breadcrumbs", event["breadcrumbs"])
     if "extra" in event:
@@ -37,6 +41,7 @@ def init_sentry(settings: AppSettings) -> bool:
         environment=settings.env,
         release=settings.obs.release,
         send_default_pii=False,
+        include_local_variables=False,
         max_request_body_size="never",
         traces_sample_rate=0.0,
         before_send=scrub_event,  # type: ignore[arg-type]

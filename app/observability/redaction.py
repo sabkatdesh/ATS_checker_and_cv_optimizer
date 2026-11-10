@@ -75,7 +75,9 @@ def redact_value(key: str, value: object) -> object:
         return {str(k): redact_value(str(k), v) for k, v in value.items()}
     if isinstance(value, list | tuple):
         return [redact_value(key, v) for v in value]
-    return value
+    if value is None or isinstance(value, bool | int | float):
+        return value
+    return f"<{type(value).__name__}>"
 
 
 def redact_processor(

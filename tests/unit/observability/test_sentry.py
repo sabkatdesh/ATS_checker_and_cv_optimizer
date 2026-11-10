@@ -41,3 +41,17 @@ def test_scrub_removes_body_headers_and_exception_values():
     assert out["request"]["headers"] == {"Accept": "*/*"}
     assert out["exception"]["values"][0]["value"] == REDACTED
     assert out["extra"]["email"] == REDACTED
+
+
+def test_scrub_drops_frame_vars_and_messages():
+    event = {
+        "message": "cv text",
+        "logentry": {"message": "cv text"},
+        "exception": {
+            "values": [{"value": "x", "stacktrace": {"frames": [{"vars": {"cv": "x"}}]}}]
+        },
+    }
+    out = scrub_event(event, {})
+    assert "message" not in out
+    assert "logentry" not in out
+    assert "vars" not in out["exception"]["values"][0]["stacktrace"]["frames"][0]

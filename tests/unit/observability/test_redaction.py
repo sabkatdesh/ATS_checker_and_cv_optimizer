@@ -67,3 +67,8 @@ def test_exception_message_dropped():
     assert "ValueError" in out
     assert "test.person" not in out
     assert json.loads(out.splitlines()[-1])["exception"]["type"] == "ValueError"
+
+
+def test_arbitrary_objects_become_type_names():
+    out = _redact(err=ValueError("cv says a@b.co"))
+    assert out["err"] == "<ValueError>"
