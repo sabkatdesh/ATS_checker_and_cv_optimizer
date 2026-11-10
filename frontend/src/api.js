@@ -1,10 +1,9 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function headers(token) {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }
+  const h = { 'Content-Type': 'application/json' }
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
 async function request(method, path, token, body) {
@@ -31,6 +30,11 @@ export const api = {
   saveCoverLetter: (token, threadId, text) =>
     request('POST', `/sessions/${threadId}/cover-letter`, token, { text }),
   getSessions: (token) => request('GET', '/sessions', token),
+
+  getTemplates: () => request('GET', '/templates', null),
+
+  getSettings: (token) => request('GET', '/settings', token),
+  saveSettings: (token, body) => request('POST', '/settings', token, body),
 
   getBalance: (token) => request('GET', '/billing/balance', token),
   getBillingHistory: (token) => request('GET', '/billing/history', token),

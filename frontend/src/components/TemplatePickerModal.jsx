@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Check } from 'lucide-react'
 
 const TEMPLATES = [
-  { id: 'classic',       name: 'Classic',       desc: 'Single-column, ATS-safe. Any profession.',             ats: true,  domains: 'All' },
-  { id: 'modern',        name: 'Modern',        desc: 'Two-column sidebar. Tech, finance, corporate.',         ats: false, domains: 'Tech · Finance' },
-  { id: 'compact',       name: 'Compact',       desc: 'Dense single-page. Recent graduates.',                  ats: true,  domains: 'All' },
-  { id: 'academic',      name: 'Academic',      desc: 'Long-form with publications. Research and teaching.',   ats: false, domains: 'Education · Medical' },
-  { id: 'trades',        name: 'Trades',        desc: 'Licenses and certs front-loaded. Skilled trades.',      ats: false, domains: 'Trades' },
-  { id: 'creative',      name: 'Creative',      desc: 'Bold header, portfolio-style. Design and marketing.',   ats: false, domains: 'Creative' },
+  { id: 'classic',  name: 'Classic',  desc: 'Single-column, ATS-safe.',             ats: true,  domains: 'All professions' },
+  { id: 'modern',   name: 'Modern',   desc: 'Two-column sidebar layout.',            ats: false, domains: 'Tech · Finance' },
+  { id: 'compact',  name: 'Compact',  desc: 'Dense single-page for graduates.',      ats: true,  domains: 'All professions' },
+  { id: 'academic', name: 'Academic', desc: 'Long-form with publications section.',  ats: false, domains: 'Education · Medical' },
+  { id: 'trades',   name: 'Trades',   desc: 'Licences front-loaded.',                ats: false, domains: 'Trades' },
+  { id: 'creative', name: 'Creative', desc: 'Bold header, portfolio-style.',         ats: false, domains: 'Design · Marketing' },
 ]
 
 const SWATCHES = [
@@ -14,40 +16,115 @@ const SWATCHES = [
   '#f59e0b', '#ef4444', '#ec4899', '#1e2139',
 ]
 
-function TemplateMiniPreview({ id }) {
+// Rich mini CV previews — each template renders a distinct layout
+// accent is passed as a prop and used directly in inline styles
+function TemplateMiniCV({ id, accent }) {
+  const line = (w, h = 3, bg = '#e5e7eb', style = {}) => (
+    <div style={{ height: h, width: w, background: bg, borderRadius: 2, flexShrink: 0, ...style }} />
+  )
+
   if (id === 'modern') {
     return (
-      <div style={{ display: 'flex', gap: 5, padding: 8, height: '100%' }}>
-        <div style={{ width: '30%', background: '#e0e7ff', borderRadius: 3 }} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 4 }}>
-          <div className="tpl-line header" style={{ background: '#4361ee', height: 8, width: '80%' }} />
-          <div className="tpl-line" />
-          <div className="tpl-line short" />
-          <div className="tpl-line" />
-          <div className="tpl-line short" />
+      <div style={{ display: 'flex', height: '100%', fontSize: 0 }}>
+        {/* sidebar */}
+        <div style={{ width: '32%', background: accent, opacity: .15, display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 5px' }}>
+          <div style={{ width: 24, height: 24, borderRadius: '50%', background: accent, opacity: .6, margin: '0 auto 4px' }} />
+          {[80, 70, 90, 60, 75].map((w, i) => (
+            <div key={i} style={{ height: 3, width: `${w}%`, background: '#fff', borderRadius: 2, opacity: .5 }} />
+          ))}
+        </div>
+        {/* main */}
+        <div style={{ flex: 1, padding: '8px 7px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ height: 7, width: '75%', background: accent, borderRadius: 2 }} />
+          <div style={{ height: 3.5, width: '50%', background: '#cbd5e1', borderRadius: 2 }} />
+          <div style={{ height: 1, background: accent, opacity: .3, margin: '3px 0' }} />
+          {[95, 80, 65, 90, 70, 55].map((w, i) => (
+            <div key={i} style={{ height: 3, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+          ))}
         </div>
       </div>
     )
   }
+
   if (id === 'creative') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', padding: 8, height: '100%', gap: 5 }}>
-        <div style={{ height: 22, background: '#4361ee', borderRadius: 3, marginBottom: 4 }} />
-        <div className="tpl-line" />
-        <div className="tpl-line short" />
-        <div className="tpl-line" />
-        <div className="tpl-line short" />
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: 0 }}>
+        {/* bold header bar */}
+        <div style={{ background: accent, padding: '8px 10px', flexShrink: 0 }}>
+          <div style={{ height: 7, width: '60%', background: 'rgba(255,255,255,.9)', borderRadius: 2, marginBottom: 4 }} />
+          <div style={{ height: 3.5, width: '40%', background: 'rgba(255,255,255,.55)', borderRadius: 2 }} />
+        </div>
+        {/* body */}
+        <div style={{ flex: 1, padding: '7px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ height: 4, width: '45%', background: accent, opacity: .6, borderRadius: 2 }} />
+          {[90, 75, 85, 60, 70].map((w, i) => (
+            <div key={i} style={{ height: 3, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+          ))}
+        </div>
       </div>
     )
   }
+
+  if (id === 'academic') {
+    return (
+      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3, height: '100%', fontSize: 0 }}>
+        <div style={{ height: 6, width: '70%', background: accent, borderRadius: 2 }} />
+        <div style={{ height: 3.5, width: '55%', background: '#cbd5e1', borderRadius: 2 }} />
+        <div style={{ height: 3, width: '80%', background: '#e5e7eb', borderRadius: 2 }} />
+        <div style={{ height: 1, background: '#e5e7eb', margin: '3px 0' }} />
+        <div style={{ height: 4.5, width: '35%', background: accent, opacity: .5, borderRadius: 2 }} />
+        {[90, 80, 70, 85, 60].map((w, i) => (
+          <div key={i} style={{ height: 3, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+        ))}
+      </div>
+    )
+  }
+
+  if (id === 'trades') {
+    return (
+      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3, height: '100%', fontSize: 0 }}>
+        <div style={{ height: 6, width: '60%', background: accent, borderRadius: 2 }} />
+        <div style={{ height: 3.5, width: '45%', background: '#cbd5e1', borderRadius: 2 }} />
+        <div style={{ height: 1, background: '#e5e7eb', margin: '3px 0' }} />
+        {/* licence chips */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+          {['45%', '35%', '40%'].map((w, i) => (
+            <div key={i} style={{ height: 12, width: w, background: accent, opacity: .18, borderRadius: 10 }} />
+          ))}
+        </div>
+        {[90, 75, 80, 65].map((w, i) => (
+          <div key={i} style={{ height: 3, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+        ))}
+      </div>
+    )
+  }
+
+  if (id === 'compact') {
+    return (
+      <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: 2.5, height: '100%', fontSize: 0 }}>
+        <div style={{ height: 5.5, width: '55%', background: accent, borderRadius: 2 }} />
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ height: 3, width: '30%', background: '#cbd5e1', borderRadius: 2 }} />
+          <div style={{ height: 3, width: '25%', background: '#cbd5e1', borderRadius: 2 }} />
+        </div>
+        <div style={{ height: 1, background: accent, opacity: .3, margin: '2px 0' }} />
+        {[95, 85, 80, 90, 75, 85, 70].map((w, i) => (
+          <div key={i} style={{ height: 2.5, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+        ))}
+      </div>
+    )
+  }
+
+  // classic (default)
   return (
-    <div className="template-preview-lines" style={{ padding: '12px 0' }}>
-      <div className="tpl-line header" />
-      <div className="tpl-line" />
-      <div className="tpl-line short" />
-      <div className="tpl-line" />
-      <div className="tpl-line" />
-      <div className="tpl-line short" />
+    <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3, height: '100%', fontSize: 0 }}>
+      <div style={{ height: 7, width: '65%', background: accent, borderRadius: 2 }} />
+      <div style={{ height: 3.5, width: '50%', background: '#cbd5e1', borderRadius: 2 }} />
+      <div style={{ height: 1, background: accent, opacity: .35, margin: '3px 0' }} />
+      <div style={{ height: 4, width: '30%', background: accent, opacity: .55, borderRadius: 2 }} />
+      {[90, 80, 70, 95, 75, 60].map((w, i) => (
+        <div key={i} style={{ height: 3, width: `${w}%`, background: '#e5e7eb', borderRadius: 2 }} />
+      ))}
     </div>
   )
 }
@@ -57,22 +134,26 @@ export default function TemplatePickerModal({ current, currentColor, onSelect, o
   const [color, setColor] = useState(currentColor)
   const [customColor, setCustomColor] = useState(currentColor)
 
-  function handleSwatch(c) {
-    setColor(c)
-    setCustomColor(c)
-  }
-
-  function handleCustomColor(e) {
+  function handleSwatch(c) { setColor(c); setCustomColor(c) }
+  function handleCustomHex(e) {
     setCustomColor(e.target.value)
     if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setColor(e.target.value)
   }
 
   return (
-    <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+    <div
+      className="modal-backdrop"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        className="modal"
+        initial={{ opacity: 0, scale: .95, y: 12 }}
+        animate={{ opacity: 1, scale: 1,   y: 0,  transition: { duration: .22, ease: [.4, 0, .2, 1] } }}
+        exit={{    opacity: 0, scale: .97,  y: 8,  transition: { duration: .15 } }}
+      >
         <div className="modal-header">
           <span className="modal-title">Choose a template</span>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="template-grid">
@@ -83,20 +164,23 @@ export default function TemplatePickerModal({ current, currentColor, onSelect, o
               onClick={() => setSelected(t.id)}
             >
               {t.ats && <span className="ats-badge">ATS-safe</span>}
+              <div className="template-check"><Check size={12} /></div>
               <div className="template-thumb">
-                <TemplateMiniPreview id={t.id} />
+                <TemplateMiniCV id={t.id} accent={color} />
               </div>
-              <div className="template-name">{t.name}</div>
-              <div className="template-desc">{t.desc}</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>{t.domains}</div>
+              <div className="template-info">
+                <div className="template-name">{t.name}</div>
+                <div className="template-desc">{t.desc}</div>
+                <div className="template-domains">{t.domains}</div>
+              </div>
             </div>
           ))}
         </div>
 
         <hr className="divider" />
 
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--text)' }}>Accent colour</div>
+        <div className="color-section">
+          <div className="color-section-title">Accent colour</div>
           <div className="swatch-row">
             {SWATCHES.map(s => (
               <div
@@ -108,30 +192,31 @@ export default function TemplatePickerModal({ current, currentColor, onSelect, o
               />
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="color-custom-row">
             <input
               type="color"
               value={color}
               onChange={e => { setColor(e.target.value); setCustomColor(e.target.value) }}
-              style={{ width: 32, height: 32, padding: 2, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}
             />
             <input
               type="text"
               value={customColor}
-              onChange={handleCustomColor}
+              onChange={handleCustomHex}
               maxLength={7}
-              style={{ width: 90, padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 13 }}
               placeholder="#4361ee"
             />
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Custom hex</span>
+            <span className="color-custom-label">Custom hex</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div className="modal-actions">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => onSelect(selected, color)}>Apply</button>
+          <button className="btn btn-primary" onClick={() => onSelect(selected, color)}>
+            <Check size={14} />
+            Apply
+          </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
