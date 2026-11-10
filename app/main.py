@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import install_error_handlers
-from app.api.routers import health, legacy, profiles, templates
+from app.api.routers import health, legacy, profiles, templates, user_settings
 from app.container import Container, build_container
 
 
@@ -21,6 +21,7 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(profiles.router)
     app.include_router(templates.router)
+    app.include_router(user_settings.router)
     app.include_router(legacy.router)
     return app
 

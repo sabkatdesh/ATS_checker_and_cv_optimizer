@@ -45,13 +45,6 @@ class AddCoinsRequest(BaseModel):
     description: str = "Manual top-up"
 
 
-class UserSettingsRequest(BaseModel):
-    default_template: str | None = None
-    accent_color: str | None = None
-    bangla_mode: bool | None = None
-    cover_letter_default_tone: str | None = None
-
-
 @router.get("/")
 def health_check():
     """Simple check to confirm API is running"""
@@ -335,27 +328,6 @@ def list_sessions(authorization: str = Header(None), c: Container = Depends(get_
     user_id = require_user_id(c, authorization)
     sessions = c.store.get_user_sessions(user_id)
     return {"sessions": sessions}
-
-
-@router.get("/settings")
-def get_settings(authorization: str = Header(None), c: Container = Depends(get_container)):
-    user_id = require_user_id(c, authorization)
-    settings = c.store.get_user_settings(user_id)
-    return {"settings": settings or {}}
-
-
-@router.post("/settings")
-def update_settings(
-    body: UserSettingsRequest,
-    authorization: str = Header(None),
-    c: Container = Depends(get_container),
-):
-    user_id = require_user_id(c, authorization)
-    data = {k: v for k, v in body.dict().items() if v is not None}
-    if not data:
-        raise HTTPException(status_code=400, detail="No settings provided")
-    c.store.save_user_settings(user_id, data)
-    return {"message": "Settings saved"}
 
 
 @router.get("/billing/balance")
