@@ -56,5 +56,5 @@ ignore_missing_imports = true
 files = ["app"]
 
 [[tool.mypy.overrides]]
-module = ["services.*", "core.*", "database"]
+module = ["services.*", "core.*"]
 follow_imports = "silent"

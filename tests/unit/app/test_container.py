@@ -61,7 +61,7 @@ def test_lazy_store_built_once_across_threads(monkeypatch):
     count = 0
     guard = threading.Lock()
 
-    def builder(settings):
+    def builder(settings, supabase):
         nonlocal count
         with guard:
             count += 1
@@ -106,3 +106,42 @@ def test_builder_reading_another_property_does_not_deadlock(monkeypatch):
     t.join(timeout=5)
     assert not t.is_alive()
     assert len(seen) == 1
+
+
+def test_missing_supabase_config_fails_on_first_use_not_build(monkeypatch):
+    import pytest
+
+    from app.config.settings import ConfigError
+    from app.container import build_container
+
+    for name in (
+        "SUPABASE_URL",
+        "SUPABASE_SECRET_KEY",
+        "SUPABASE_SERVICE_KEY",
+        "AUTH__SUPABASE_URL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    c = build_container(AppSettings(_env_file=None))
+    with pytest.raises(ConfigError, match="Database access needs AUTH__SUPABASE_URL"):
+        _ = c.store
+    with pytest.raises(ConfigError, match="SUPABASE_SECRET_KEY"):
+        _ = c.auth
+
+
+def test_store_and_auth_share_one_supabase_client(monkeypatch):
+    import app.container as mod
+
+    made: list[object] = []
+
+    def fake_make(url, key):
+        made.append(object())
+        return made[-1]
+
+    monkeypatch.setattr(mod, "make_supabase_client", fake_make)
+    c = Container(
+        AppSettings(
+            _env_file=None, auth={"supabase_url": "https://x.supabase.co"}, supabase_secret_key="k"
+        )
+    )
+    assert c.store is not None and c.auth is not None
+    assert len(made) == 1

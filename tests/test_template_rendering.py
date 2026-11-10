@@ -18,7 +18,7 @@ pytestmark = pytest.mark.skipif(
     not WEASYPRINT_AVAILABLE, reason="WeasyPrint not installed or GTK runtime missing"
 )
 
-from services.pdf_generator import VALID_TEMPLATES, PDFGenerator  # noqa: E402
+from app.rendering.cv_pdf import VALID_TEMPLATES, PDFGenerator  # noqa: E402
 
 FIXTURE_CV = {
     "meta": {

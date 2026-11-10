@@ -13,19 +13,20 @@ WeasyPrint on Windows requires the GTK runtime:
 On Linux:
     sudo apt-get install libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Any
 
 import jinja2
 
-from core.schemas.domain_config import get_block_order
+from app.domain.cv.domain_config import get_block_order
 
 # ── Directory paths ───────────────────────────────────────────────────────────
 
-_ROOT = Path(__file__).parent.parent
+_ROOT = Path(__file__).resolve().parents[2]
 _TEMPLATES_DIR = _ROOT / "templates" / "cv"
 _FONTS_DIR = _ROOT / "templates" / "fonts"
 
@@ -65,14 +66,14 @@ class PDFGenerator:
     def __init__(self) -> None:
         self._env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
-            autoescape=False,        # PDF renderer, not a browser — no XSS risk
+            autoescape=False,  # noqa: S701  PDF renderer, not a browser
             undefined=jinja2.Undefined,
         )
         self._env.filters["month_year"] = _month_year
 
         # Lazy-load WeasyPrint so import failures produce a clear runtime error
-        self._wp_html = None
-        self._wp_font_config = None
+        self._wp_html: Any = None
+        self._wp_font_config: Any = None
         self._wp_error: str | None = None
         self._load_weasyprint()
 
@@ -80,6 +81,7 @@ class PDFGenerator:
         try:
             from weasyprint import HTML
             from weasyprint.text.fonts import FontConfiguration
+
             self._wp_html = HTML
             self._wp_font_config = FontConfiguration
         except (ImportError, OSError) as exc:
@@ -97,7 +99,7 @@ class PDFGenerator:
 
     def render(
         self,
-        cv_data: Union[dict, object],
+        cv_data: dict | object,
         template_id: str = "classic",
         accent_color: str = "#4361ee",
         bangla: bool = False,
@@ -155,7 +157,7 @@ class PDFGenerator:
     def render_to_file(
         self,
         path: str,
-        cv_data: Union[dict, object],
+        cv_data: dict | object,
         **kwargs,
     ) -> None:
         """Convenience wrapper — renders and writes to a file path."""
@@ -188,9 +190,17 @@ def _ensure_defaults(cv: dict) -> dict:
     cv["experience_summary"].setdefault("seniority", "unknown")
 
     for list_key in (
-        "work_experience", "education", "certifications", "projects",
-        "publications", "licenses", "clinical_practice", "trade_qualifications",
-        "languages", "volunteering", "awards",
+        "work_experience",
+        "education",
+        "certifications",
+        "projects",
+        "publications",
+        "licenses",
+        "clinical_practice",
+        "trade_qualifications",
+        "languages",
+        "volunteering",
+        "awards",
     ):
         cv.setdefault(list_key, [])
         if cv[list_key] is None:

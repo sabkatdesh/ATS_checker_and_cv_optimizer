@@ -10,16 +10,17 @@ Usage:
     pdf_bytes = service.render_to_pdf(cl_result, tone="formal", candidate_name="Jane Doe")
     plain_text = service.to_plain_text(cl_result, candidate_name="Jane Doe")
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
+from typing import Any
 
 import jinja2
 
-from core.schemas.cover_letter_schemas import CoverLetterStructured
+from app.domain.cv.cover_letter import CoverLetterStructured
 
-_ROOT = Path(__file__).parent.parent
+_ROOT = Path(__file__).resolve().parents[2]
 _CL_TEMPLATES_DIR = _ROOT / "templates" / "cover_letter"
 
 VALID_TONES = {"formal", "conversational"}
@@ -29,11 +30,11 @@ class CoverLetterService:
     def __init__(self) -> None:
         self._env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(_CL_TEMPLATES_DIR)),
-            autoescape=False,
+            autoescape=False,  # noqa: S701  PDF renderer, not a browser
             undefined=jinja2.Undefined,
         )
-        self._wp_html = None
-        self._wp_font_config = None
+        self._wp_html: Any = None
+        self._wp_font_config: Any = None
         self._wp_error: str | None = None
         self._load_weasyprint()
 
@@ -41,6 +42,7 @@ class CoverLetterService:
         try:
             from weasyprint import HTML
             from weasyprint.text.fonts import FontConfiguration
+
             self._wp_html = HTML
             self._wp_font_config = FontConfiguration
         except (ImportError, OSError) as exc:
@@ -57,7 +59,7 @@ class CoverLetterService:
 
     def render_to_pdf(
         self,
-        cl_data: Union[CoverLetterStructured, dict],
+        cl_data: CoverLetterStructured | dict,
         tone: str = "formal",
         candidate_name: str = "",
         bangla: bool = False,
@@ -106,7 +108,7 @@ class CoverLetterService:
 
     def to_plain_text(
         self,
-        cl_data: Union[CoverLetterStructured, dict],
+        cl_data: CoverLetterStructured | dict,
         candidate_name: str = "",
     ) -> str:
         """Export cover letter as plain text (for editable textarea in frontend)."""

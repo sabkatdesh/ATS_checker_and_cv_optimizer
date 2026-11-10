@@ -4,29 +4,43 @@ import threading
 from collections.abc import Callable
 
 from app.adapters.background.thread_runner import ThreadRunner
-from app.adapters.legacy_bridge import (
-    LegacyModuleStore,
-    LegacyPipeline,
-    LegacyTokenVerifier,
-    legacy_cover_letter,
-    legacy_llm,
-    legacy_pdf,
-)
-from app.config.settings import AppSettings, load_settings
+from app.adapters.db.supabase_client import make_supabase_client
+from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
+from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
+from app.adapters.legacy_bridge import LegacyPipeline
+from app.adapters.llm.azure_legacy import build_azure_client
+from app.config.settings import AppSettings, ConfigError, load_settings
 from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
 from app.ports.legacy_store import LegacyStore
 from app.ports.llm_legacy import StructuredLLM
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
+from supabase import Client
 
 
-def _default_store(settings: AppSettings) -> LegacyStore:
-    return LegacyModuleStore()
+def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> LegacyStore:
+    return SupabaseLegacyStore(supabase())
 
 
-def _default_auth(settings: AppSettings) -> TokenVerifier:
-    return LegacyTokenVerifier()
+def _default_auth(settings: AppSettings, supabase: Callable[[], Client]) -> TokenVerifier:
+    return SupabaseTokenVerifier(supabase())
+
+
+def _default_llm(settings: AppSettings) -> StructuredLLM:
+    return build_azure_client(settings)  # type: ignore[return-value]
+
+
+def _default_pdf() -> CvPdfRenderer:
+    from app.rendering.cv_pdf import PDFGenerator
+
+    return PDFGenerator()
+
+
+def _default_cover_letter() -> CoverLetterRenderer:
+    from app.rendering.cover_letter_pdf import CoverLetterService
+
+    return CoverLetterService()
 
 
 def _default_pipeline(settings: AppSettings) -> PipelineRunner:
@@ -57,22 +71,36 @@ class Container:
         self._auth = auth
         self._pipeline = pipeline
         self._runner = runner
-        self._llm_factory = llm_factory or legacy_llm
-        self._pdf_factory = pdf_factory or legacy_pdf
-        self._cover_letter_factory = cover_letter_factory or legacy_cover_letter
+        self._supabase: Client | None = None
+        self._llm_factory = llm_factory or (lambda: _default_llm(self.settings))
+        self._pdf_factory = pdf_factory or _default_pdf
+        self._cover_letter_factory = cover_letter_factory or _default_cover_letter
+
+    def _supabase_client(self) -> Client:
+        """One Supabase client shared by the default store and token verifier."""
+        with self._lock:
+            if self._supabase is None:
+                url, key = self.settings.supabase_url, self.settings.supabase_secret_key
+                if not url or key is None:
+                    raise ConfigError(
+                        "Database access needs AUTH__SUPABASE_URL (or SUPABASE_URL) "
+                        "and SUPABASE_SECRET_KEY"
+                    )
+                self._supabase = make_supabase_client(url, key)
+            return self._supabase
 
     @property
     def store(self) -> LegacyStore:
         with self._lock:
             if self._store is None:
-                self._store = _default_store(self.settings)
+                self._store = _default_store(self.settings, self._supabase_client)
             return self._store
 
     @property
     def auth(self) -> TokenVerifier:
         with self._lock:
             if self._auth is None:
-                self._auth = _default_auth(self.settings)
+                self._auth = _default_auth(self.settings, self._supabase_client)
             return self._auth
 
     @property
