@@ -44,11 +44,11 @@ class _AttemptCancel(CancelToken):
         return super().is_cancelled or self._caller.is_cancelled
 
 
-async def _in_daemon_thread(fn: Callable[[], RawCompletion]) -> RawCompletion:
+async def in_daemon_thread[R](fn: Callable[[], R]) -> R:
     loop = asyncio.get_running_loop()
-    future: asyncio.Future[RawCompletion] = loop.create_future()
+    future: asyncio.Future[R] = loop.create_future()
 
-    def deliver(ok: RawCompletion | None, err: BaseException | None) -> None:
+    def deliver(ok: R | None, err: BaseException | None) -> None:
         if future.done():  # the caller gave up (cancel or deadline)
             return
         if err is not None:
@@ -57,7 +57,7 @@ async def _in_daemon_thread(fn: Callable[[], RawCompletion]) -> RawCompletion:
             future.set_result(ok)  # type: ignore[arg-type]
 
     def run() -> None:
-        ok: RawCompletion | None = None
+        ok: R | None = None
         err: BaseException | None = None
         try:
             ok = fn()
@@ -120,7 +120,7 @@ class BedrockConverseTransport:
     async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
         attempt = _AttemptCancel(cancel)
         try:
-            return await _in_daemon_thread(lambda: self._call(wire, attempt))
+            return await in_daemon_thread(lambda: self._call(wire, attempt))
         except asyncio.CancelledError:  # deadline or caller cancel: stop reading the stream
             attempt.cancel()
             raise

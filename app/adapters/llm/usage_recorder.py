@@ -90,3 +90,50 @@ class UsageRecorder:
             fallback_used=rec.fallback_used,
         )
         return rec
+
+    def record_embedding(
+        self,
+        *,
+        provider: str,
+        model: str,
+        usage: Usage,
+        latency_ms: int,
+        attempts: int,
+        error: LLMError | None = None,
+    ) -> LlmCallRecord:
+        """Record one embed call (all its texts) under step and prompt id "embed"."""
+        cost = (
+            self._prices.cost(provider, model, usage)
+            if self._prices.has(provider, model)
+            else Decimal(0)
+        )
+        rec = LlmCallRecord(
+            at=self._clock(),
+            step="embed",
+            prompt_id="embed",
+            prompt_version=1,
+            provider=provider,
+            model=model,
+            status="error" if error else "ok",
+            error_kind=error.kind if error else None,
+            usage=usage,
+            cost_usd=cost,
+            latency_ms=latency_ms,
+            attempts=attempts,
+            repaired=False,
+            fallback_used=False,
+        )
+        self._sink.write(rec)
+        structlog.get_logger("llm").info(
+            "llm.call",
+            step="embed",
+            provider=provider,
+            model=model,
+            status=rec.status,
+            error_kind=rec.error_kind,
+            tokens=usage.input_tokens,
+            cost_usd=str(cost),
+            latency_ms=latency_ms,
+            attempts=attempts,
+        )
+        return rec
