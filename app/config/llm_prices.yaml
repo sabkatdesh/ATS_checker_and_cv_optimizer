@@ -1,0 +1,14 @@
+# USD per 1M tokens: provider -> model -> prices.
+# UNVERIFIED: Sonnet 4.6 Bedrock prices are the list prices; the AWS pricing page could not
+# be machine-read (rate tables not rendered), so any us.* geo-profile premium is not confirmed.
+bedrock:
+  us.anthropic.claude-sonnet-4-6:
+    {input_per_m: "3.00", output_per_m: "15.00", cache_read_per_m: "0.30", cache_write_per_m: "3.75"}
+  global.anthropic.claude-sonnet-4-6:
+    {input_per_m: "3.00", output_per_m: "15.00", cache_read_per_m: "0.30", cache_write_per_m: "3.75"}
+bedrock_titan:
+  amazon.titan-embed-text-v2:0:
+    {input_per_m: "0.02", output_per_m: "0"}
+fake:
+  fake-1:
+    {input_per_m: "0", output_per_m: "0"}

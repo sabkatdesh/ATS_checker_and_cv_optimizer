@@ -16,6 +16,8 @@ from pydantic import (
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic_settings.exceptions import SettingsError
 
+from app.config.llm_settings import LlmSettings
+
 Env = Literal["dev", "test", "staging", "prod"]
 
 _ORIGIN_RE = re.compile(r"^https?://[A-Za-z0-9.-]+(:\d{1,5})?$")
@@ -81,6 +83,7 @@ class AppSettings(BaseSettings):
     api: ApiSettings = Field(default_factory=ApiSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
     obs: ObsSettings = Field(default_factory=ObsSettings)
+    llm: LlmSettings = Field(default_factory=LlmSettings)
     sentry_dsn: SecretStr | None = None
     supabase_url_legacy: str | None = Field(default=None, validation_alias="SUPABASE_URL")
     supabase_secret_key: SecretStr | None = Field(

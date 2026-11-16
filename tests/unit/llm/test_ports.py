@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import time
 
@@ -52,8 +53,6 @@ def test_error_str_format() -> None:
 
 
 def test_cancel_token_wait_returns_after_cancel_from_other_thread() -> None:
-    import asyncio
-
     token = CancelToken()
     assert not token.is_cancelled
     threading.Timer(0.05, token.cancel).start()
@@ -61,3 +60,8 @@ def test_cancel_token_wait_returns_after_cancel_from_other_thread() -> None:
     asyncio.run(token.wait())
     assert token.is_cancelled
     assert time.monotonic() - start < 0.3
+
+
+def test_usage_rejects_negative_tokens() -> None:
+    with pytest.raises(ValidationError):
+        Usage(input_tokens=-1)
