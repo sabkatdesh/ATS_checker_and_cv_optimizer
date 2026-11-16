@@ -1,0 +1,29 @@
+Senior Backend Engineer - Northwind Logistics Ltd (fictional)
+Location: Dhaka, Bangladesh (hybrid, three days on site)
+Employment type: Full-time, permanent
+
+About the role
+Northwind Logistics Ltd runs a freight tracking platform used by regional shipping agents. We are hiring a Senior Backend Engineer to own the services that ingest shipment events, calculate delivery estimates and expose them to partner systems.
+
+Responsibilities
+- Design and maintain Python services built on FastAPI and PostgreSQL.
+- Build event ingestion pipelines using queues and background workers.
+- Improve API latency and reliability, including caching and database indexing.
+- Write automated tests and review code from other engineers.
+- Work with product managers to turn partner requirements into clear technical plans.
+- Take part in an on-call rotation and write post-incident reviews.
+
+Requirements
+- At least 5 years of professional experience in backend development.
+- Strong Python skills and solid knowledge of SQL and relational schema design.
+- Experience with REST API design, Docker and a cloud provider such as AWS.
+- Familiarity with message queues such as RabbitMQ or SQS.
+- Bachelor's degree in Computer Science, Engineering or a related field.
+
+Nice to have
+- Experience with Redis, Terraform or Kubernetes.
+- Prior work in logistics, supply chain or marketplace products.
+- Good written English for partner documentation.
+
+Benefits
+Competitive salary, annual bonus, health insurance, learning budget and flexible hours.

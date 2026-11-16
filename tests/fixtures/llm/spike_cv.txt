@@ -1,0 +1,35 @@
+Rahim Example (fictional candidate)
+Email: rahim.example@example.test | Phone: +880 1000 000000 | Location: Chattogram, Bangladesh
+
+PROFESSIONAL SUMMARY
+Backend developer with six years of experience building web services in Python. Comfortable with databases, APIs and keeping production systems running.
+
+SKILLS
+Python, Django, Flask, PostgreSQL, MySQL, Docker, Git, Linux, REST APIs, Celery, Redis, Jenkins, unit testing.
+
+WORK EXPERIENCE
+Software Engineer, Bluewave Systems Ltd (fictional), Chattogram
+March 2021 - Present
+- Built and maintained Django REST services handling order data for retail clients.
+- Moved nightly import jobs to Celery workers, cutting processing time from three hours to forty minutes.
+- Added database indexes and query tuning that reduced the slowest endpoint from 2.4 seconds to 600 milliseconds.
+- Wrote unit and integration tests and raised test coverage from 35 percent to 70 percent.
+- Mentored two junior developers and ran weekly code reviews.
+
+Junior Developer, Greenfield Apps (fictional), Dhaka
+July 2018 - February 2021
+- Developed Flask APIs and admin dashboards for small business customers.
+- Deployed applications with Docker on virtual servers and wrote simple Jenkins pipelines.
+- Fixed production bugs and wrote short incident notes for the team.
+
+EDUCATION
+BSc in Computer Science and Engineering, Example Institute of Technology, 2018
+
+CERTIFICATIONS
+AWS Certified Cloud Practitioner, 2022
+
+PROJECTS
+Parcel Tracker (personal project): a small Flask application that tracks parcel status using public courier APIs, deployed with Docker.
+
+LANGUAGES
+Bengali (native), English (professional working proficiency)
