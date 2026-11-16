@@ -3,6 +3,8 @@
 import time
 from collections.abc import Callable
 
+import structlog
+
 from app.adapters.llm.registry import ProviderRegistry
 from app.adapters.llm.usage_recorder import UsageRecorder
 from app.config.llm_routes import RouteTable
@@ -36,6 +38,7 @@ class LLMRouter:
             return await self._call(req, primary, cancel, fallback_used=False)
         except LLMError as err:
             fallback = self._table.fallback_for(req.step)
+            # A caller who cancelled wants the call to stop, not a second route billed for it.
             if fallback is None or not _falls_back(err) or cancel.is_cancelled:
                 raise
             first = err
@@ -61,15 +64,20 @@ class LLMRouter:
             provider = self._providers.get(route.provider)
             result = await provider.complete(req, route, cancel)
         except LLMError as err:
-            self._recorder.record(
-                req,
-                route,
-                result=None,
-                error=err,
-                latency_ms=int((self._clock() - start) * 1000),
-                fallback_used=fallback_used,
-                attempts=err.attempts,
-            )
+            try:
+                self._recorder.record(
+                    req,
+                    route,
+                    result=None,
+                    error=err,
+                    latency_ms=int((self._clock() - start) * 1000),
+                    fallback_used=fallback_used,
+                    attempts=err.attempts,
+                )
+            except Exception:  # a broken sink must not hide the LLM error; log no content
+                structlog.get_logger("llm").warning(
+                    "llm.usage_record_failed", step=req.step, provider=route.provider
+                )
             raise
         if fallback_used:
             result = result.model_copy(update={"fallback_used": True})

@@ -61,7 +61,7 @@ class ProviderRegistry:
         self._breakers = breakers
         self._retry = retry
         self._factories = dict(DEFAULT_FACTORIES if factories is None else factories)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._providers: dict[str, LLMProvider] = {}
 
     def get(self, name: str) -> LLMProvider:
