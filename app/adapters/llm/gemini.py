@@ -1,6 +1,7 @@
 """Gemini generateContent transport (prompt-mode JSON; no native schema)."""
 
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from pydantic import SecretStr
@@ -43,10 +44,12 @@ def parse_generate(resp: dict[str, Any]) -> RawCompletion:
         text = "".join(str(p.get("text", "")) for p in parts if isinstance(p, dict))
         reason = str(candidate.get("finishReason") or "")
         meta = resp.get("usageMetadata") or {}
-        usage = Usage(
-            input_tokens=int(meta.get("promptTokenCount") or 0),
-            output_tokens=int(meta.get("candidatesTokenCount") or 0),
-            cache_read_tokens=int(meta.get("cachedContentTokenCount") or 0),
+        cached = int(meta.get("cachedContentTokenCount") or 0)
+        usage = Usage(  # promptTokenCount includes cached; thinking tokens bill as output
+            input_tokens=max(0, int(meta.get("promptTokenCount") or 0) - cached),
+            output_tokens=int(meta.get("candidatesTokenCount") or 0)
+            + int(meta.get("thoughtsTokenCount") or 0),
+            cache_read_tokens=cached,
         )
     except (TypeError, AttributeError, ValueError):
         raise LLMUnavailable("malformed response", provider=PROVIDER) from None
@@ -71,7 +74,7 @@ class GeminiTransport:
     async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
         key = secret_value(self._api_key, provider=PROVIDER, model=wire.model)
         data = await post_json(
-            f"{BASE_URL}/{wire.model}:generateContent",
+            f"{BASE_URL}/{quote(wire.model, safe='')}:generateContent",
             headers={"x-goog-api-key": key},
             body=generate_body(wire),
             timeout_s=wire.timeout_s,

@@ -38,7 +38,7 @@ def status_error(response: httpx.Response, *, provider: str, model: str) -> LLME
         )
     if status in (401, 403):
         return LLMAuthError(detail, provider=provider, model=model)
-    if status >= 500:
+    if status >= 500 or status in (408, 425):
         return LLMUnavailable(detail, provider=provider, model=model)
     return LLMBadRequest(detail, provider=provider, model=model)
 
@@ -58,6 +58,8 @@ async def post_json(
             response = await client.post(url, headers=headers, json=body)
     except httpx.TimeoutException:
         raise LLMTimeout("timeout", provider=provider, model=model) from None
+    except httpx.InvalidURL:
+        raise LLMBadRequest("invalid url", provider=provider, model=model) from None
     except httpx.HTTPError:
         raise LLMUnavailable("transport error", provider=provider, model=model) from None
     if response.status_code >= 400:

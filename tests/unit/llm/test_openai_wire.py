@@ -61,7 +61,7 @@ def test_parse_finish_reasons():
         "prompt_tokens_details": {"cached_tokens": 4},
     }
     usage = parse_chat(raw).usage
-    assert (usage.input_tokens, usage.output_tokens, usage.cache_read_tokens) == (7, 3, 4)
+    assert (usage.input_tokens, usage.output_tokens, usage.cache_read_tokens) == (3, 3, 4)
 
 
 def _mock() -> httpx.MockTransport:

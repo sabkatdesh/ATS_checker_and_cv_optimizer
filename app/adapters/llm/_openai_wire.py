@@ -34,10 +34,11 @@ def parse_chat(resp: dict[str, Any], *, provider: str = "openai") -> RawCompleti
             text = "".join(p.get("text", "") for p in text if isinstance(p, dict))
         usage = resp.get("usage") or {}
         details = usage.get("prompt_tokens_details") or {}
-        parsed = Usage(
-            input_tokens=int(usage.get("prompt_tokens") or 0),
+        cached = int(details.get("cached_tokens") or 0)
+        parsed = Usage(  # prompt_tokens includes the cached ones; Usage keeps them disjoint
+            input_tokens=max(0, int(usage.get("prompt_tokens") or 0) - cached),
             output_tokens=int(usage.get("completion_tokens") or 0),
-            cache_read_tokens=int(details.get("cached_tokens") or 0),
+            cache_read_tokens=cached,
         )
     except (KeyError, IndexError, TypeError, AttributeError, ValueError):
         raise LLMUnavailable("malformed response", provider=provider) from None
