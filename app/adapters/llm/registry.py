@@ -42,12 +42,33 @@ def _azure_openai(settings: AppSettings) -> Transport:
     return build_azure_transport(settings)
 
 
+def _anthropic(settings: AppSettings) -> Transport:
+    from app.adapters.llm.anthropic_api import build_anthropic_transport
+
+    return build_anthropic_transport(settings)
+
+
+def _gemini(settings: AppSettings) -> Transport:
+    from app.adapters.llm.gemini import build_gemini_transport
+
+    return build_gemini_transport(settings)
+
+
+def _ollama(settings: AppSettings) -> Transport:
+    from app.adapters.llm.ollama import build_ollama_transport
+
+    return build_ollama_transport(settings)
+
+
 # One line per adapter; each factory imports its adapter lazily.
 DEFAULT_FACTORIES: Mapping[str, TransportFactory] = {
     "fake": _fake,
     "bedrock": _bedrock,
     "openai": _openai,
     "azure_openai": _azure_openai,
+    "anthropic": _anthropic,
+    "gemini": _gemini,
+    "ollama": _ollama,
 }
 
 

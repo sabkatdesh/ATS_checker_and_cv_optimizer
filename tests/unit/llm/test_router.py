@@ -165,5 +165,5 @@ def test_missing_credentials_surface_on_first_call_not_build():
 def test_default_registry_serves_fake_and_names_unbuilt_providers():
     registry = ProviderRegistry(AppSettings(), prices=PRICES, breakers=BreakerRegistry())
     assert isinstance(registry.get("fake"), FakeProvider)
-    with pytest.raises(LLMBadRequest, match="anthropic"):
-        registry.get("anthropic")
+    with pytest.raises(LLMBadRequest, match="mistral"):
+        registry.get("mistral")
