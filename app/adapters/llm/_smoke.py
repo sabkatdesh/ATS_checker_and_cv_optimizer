@@ -3,7 +3,7 @@
     uv run python -m app.adapters.llm.bedrock_converse          # prints the cost estimate only
     uv run python -m app.adapters.llm.bedrock_converse --yes    # makes the real call
 
-The router is built directly from settings (the container does not expose it yet) and the
+The router is built directly from settings (not via the container, to cap the route) and the
 jd_extract route is used with max_tokens capped at 1500 and its fallback disabled. Only a
 short parsed summary is printed, never model text.
 """

@@ -19,6 +19,7 @@ from app.observability.sentry import init_sentry
 
 def create_app(container: Container | None = None) -> FastAPI:
     container = container or build_container()
+    container.validate_llm_config()
     configure_logging(container.settings.obs)
     init_sentry(container.settings)
     app = FastAPI(title="CV Optimizer API")

@@ -116,17 +116,14 @@ def test_container_builds_pipeline_lazily(monkeypatch):
     import app.container as container_mod
 
     calls: list[int] = []
-    fake = _fake()
+    real = container_mod.build_chains
 
-    class _Client:
-        llm = fake
-
-    def fake_build(settings):
+    def spy(llm):
         calls.append(1)
-        return _Client()
+        return real(llm)
 
-    monkeypatch.setattr(container_mod, "build_azure_client", fake_build)
-    c = Container(AppSettings(_env_file=None))
+    monkeypatch.setattr(container_mod, "build_chains", spy)
+    c = Container(AppSettings(_env_file=None, llm={"default_provider": "fake"}))
     assert calls == []
     first = c.pipeline
     assert isinstance(first, PipelineService)

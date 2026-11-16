@@ -7,6 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from app.config.settings import AppSettings
+
+# Hermetic: no test reads the developer's .env, including the module-level app in app.main.
+AppSettings.model_config["env_file"] = None
+
 TEST_SET_DIR = Path(__file__).parent.parent / "data" / "test_set"
 
 
