@@ -24,9 +24,16 @@ def _fake(_settings: AppSettings) -> Transport:
     return FakeTransport()
 
 
+def _bedrock(settings: AppSettings) -> Transport:
+    from app.adapters.llm.bedrock_converse import build_bedrock_transport
+
+    return build_bedrock_transport(settings)
+
+
 # One line per adapter; each factory imports its adapter lazily.
 DEFAULT_FACTORIES: Mapping[str, TransportFactory] = {
     "fake": _fake,
+    "bedrock": _bedrock,
 }
 
 

@@ -22,9 +22,10 @@ from app.ports.llm_errors import (
     LLMTimeout,
 )
 from tests.contract.llm import harness as h
+from tests.contract.llm.harnesses.bedrock import BedrockHarness
 from tests.contract.llm.harnesses.fake import FakeHarness
 
-HARNESSES: list[type] = [FakeHarness]  # later adapter tasks append their harness here
+HARNESSES: list[type] = [FakeHarness, BedrockHarness]  # adapter tasks append here
 
 SENTINEL = "SENTINEL-CV-7f3a"
 MODEL = "contract-model"
