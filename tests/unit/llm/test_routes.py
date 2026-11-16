@@ -132,3 +132,37 @@ def test_override_returns_new_table() -> None:
     assert t2.resolve("rewrite").timeout_s == 5
     assert t.resolve("rewrite").max_tokens == 8000
     assert t2.resolve("jd_extract") == t.resolve("jd_extract")
+
+
+@pytest.mark.parametrize("fb", [{"provider": "bedrock"}, {"model": SONNET}, "oops", ["x"]])
+def test_malformed_fallback_fails_with_config_error(tmp_path: Path, fb: object) -> None:
+    d = _doc()
+    d["defaults"]["fallback"] = fb
+    with pytest.raises(ConfigError, match="fallback"):
+        _load(routes_file=_yaml(tmp_path, d))
+
+
+@pytest.mark.parametrize("where", ["defaults", "step"])
+@pytest.mark.parametrize("bad", [["a", "b"], "text", 5])
+def test_non_mapping_defaults_or_step_fails(tmp_path: Path, where: str, bad: object) -> None:
+    d = _doc()
+    if where == "defaults":
+        d["defaults"] = bad
+    else:
+        d["steps"]["rewrite"] = bad
+    with pytest.raises(ConfigError, match="defaults|steps.rewrite"):
+        _load(routes_file=_yaml(tmp_path, d))
+
+
+def test_non_mapping_embeddings_fails(tmp_path: Path) -> None:
+    d = _doc()
+    d["embeddings"] = ["x"]
+    with pytest.raises(ConfigError, match="embeddings"):
+        _load(routes_file=_yaml(tmp_path, d))
+
+
+def test_env_default_model_only_overrides_model_keeps_fallback(tmp_path: Path) -> None:
+    t = _load(default_model=GLOBAL)
+    assert t.resolve("rewrite").model == GLOBAL
+    assert t.resolve("rewrite").provider == "bedrock"
+    assert t.fallback_for("rewrite") is not None

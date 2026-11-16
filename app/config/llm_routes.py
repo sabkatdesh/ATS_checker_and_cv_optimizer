@@ -116,6 +116,13 @@ def _build(
     fb_spec = merged.get("fallback")
     fb = None
     if fb_spec:
+        fb_where = f"{where}.fallback"
+        if not isinstance(fb_spec, dict):
+            raise ConfigError(f"{fb_where}: must be a mapping with provider and model")
+        for key in ("provider", "model"):
+            if not isinstance(fb_spec.get(key), str):
+                raise ConfigError(f"{fb_where}.{key}: missing or not a string")
+        # A fallback inherits the primary's structured_mode, timeouts, tokens and stream.
         fb = route.model_copy(update={"provider": fb_spec["provider"], "model": fb_spec["model"]})
         _check(fb.provider, fb.model, f"{where}.fallback", prices)
     return route, fb
@@ -130,14 +137,21 @@ def load_route_table(llm: LlmSettings, prices: PriceTable) -> RouteTable:
     missing = KNOWN_STEPS - steps.keys()
     if missing:
         raise ConfigError(f"steps: missing {', '.join(sorted(missing))}")
-    d = _apply_env(doc.get("defaults") or {}, llm)
+    defaults = doc.get("defaults")
+    if defaults is None:
+        defaults = {}
+    if not isinstance(defaults, dict):
+        raise ConfigError("defaults: must be a mapping")
+    d = _apply_env(defaults, llm)
     routes: dict[str, Route] = {}
     fallbacks: dict[str, Route | None] = {}
     for name, spec in steps.items():
+        if spec is not None and not isinstance(spec, dict):
+            raise ConfigError(f"steps.{name}: must be a mapping")
         routes[name], fallbacks[name] = _build(name, spec or {}, d, prices)
     try:
         emb = EmbeddingRoute(**doc["embeddings"])
-    except (ValidationError, KeyError, TypeError):
+    except (ValidationError, KeyError, TypeError):  # TypeError: not a mapping
         raise ConfigError("embeddings: invalid or missing") from None
     if emb.provider not in _EMBED_PROVIDERS:
         raise ConfigError(f"embeddings: unknown provider {emb.provider!r}")
