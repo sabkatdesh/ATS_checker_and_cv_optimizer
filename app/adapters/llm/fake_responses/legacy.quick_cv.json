@@ -1,0 +1,11 @@
+{
+  "domain": "tech",
+  "summary": "Software engineer with Python and API experience.",
+  "tools": ["Python", "FastAPI", "PostgreSQL"],
+  "Job": "Software Engineer",
+  "project": "Built a document processing service for a small logistics firm.",
+  "hidden_tools": ["Docker"],
+  "experience": 4,
+  "education": ["BSc Computer Science"],
+  "subject": ["Computer Science"]
+}

@@ -1,0 +1,6 @@
+{
+  "score": 60,
+  "verdict": "Partially Align 60%",
+  "reason": ["Core Python and API skills match the role."],
+  "gaps_to_consider": ["Limited Kubernetes depth"]
+}

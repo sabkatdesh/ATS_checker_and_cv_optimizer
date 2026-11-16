@@ -1,0 +1,48 @@
+{
+  "domain": "tech",
+  "meta": {
+    "full_name": "Jane Example",
+    "location": "Dhaka",
+    "email": "jane@example.com",
+    "phone": "+8801000000000",
+    "linkedin": "linkedin.com/in/jane-example",
+    "optional_links": {}
+  },
+  "professional_summary": "Software engineer with four years of Python and API experience.",
+  "skills": {
+    "hard_skills": ["API design"],
+    "soft_skills": ["Communication"],
+    "tools": ["Python", "PostgreSQL"],
+    "frameworks": ["FastAPI"],
+    "cloud_platforms": []
+  },
+  "experience_summary": {
+    "total_years": 4,
+    "seniority": "mid",
+    "role_type": "IC",
+    "relevant_years": 4
+  },
+  "work_experience": [
+    {
+      "job_title": "Software Engineer",
+      "company_name": "Example Logistics",
+      "employment_type": "full_time",
+      "start_date": "2021-03-01",
+      "end_date": null,
+      "responsibilities": ["Built REST services"],
+      "achievements": ["Cut document processing time by 40%"],
+      "tools_used": ["Python", "FastAPI"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BSc",
+      "field_of_study": "Computer Science",
+      "institution": "Example University",
+      "graduation_year": 2020,
+      "grade": null
+    }
+  ],
+  "certifications": [],
+  "projects": []
+}
