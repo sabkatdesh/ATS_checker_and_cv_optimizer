@@ -27,6 +27,7 @@ from app.ports.llm_errors import (
     LLMOutputTruncated,
     LLMRefused,
     LLMTimeout,
+    LLMUnavailable,
 )
 
 Stop = Literal["end", "max_tokens", "refused", "other"]
@@ -59,7 +60,8 @@ class Transport(Protocol):
     supports_native_schema: bool
 
     async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
-        """Raises LLMError subclasses only."""
+        """Raise only fresh LLMError instances (one per failure, never shared) and let
+        asyncio.CancelledError propagate. Anything else is reported as LLMUnavailable."""
         ...
 
 
@@ -83,6 +85,19 @@ async def _first_of[R](work: Awaitable[R], cancel: CancelToken) -> R:
 class _Tally:
     attempts: int = 0
     usage: Usage = dataclasses.field(default_factory=Usage)
+
+
+def _enrich(err: LLMError, tally: _Tally, provider: str, model: str) -> None:
+    """Add call totals once; an instance seen again (a shared error) is left as it is."""
+    if getattr(err, "_enriched", False):
+        return
+    err._enriched = True  # type: ignore[attr-defined]
+    err.usage = tally.usage + (err.usage or Usage())
+    err.attempts = tally.attempts
+    if err.provider is None:
+        err.provider = provider
+    if err.model is None:
+        err.model = model
 
 
 class BaseProvider:
@@ -128,10 +143,7 @@ class BaseProvider:
                     output = self._parse_again(raw.text, schema, route)
                     repaired = True
         except LLMError as err:
-            err.usage = tally.usage + (err.usage or Usage())
-            err.attempts = tally.attempts
-            if err.provider is None:
-                err.provider, err.model = self.name, route.model
+            _enrich(err, tally, self.name, route.model)
             raise
         return LLMResult[T](
             output=output,
@@ -207,6 +219,11 @@ class BaseProvider:
             if err.trips_breaker:
                 outcome = "failure"
             raise
+        except Exception:  # transport bug: keep none of its text; CancelledError still propagates
+            outcome = "failure"
+            raise LLMUnavailable(
+                "unexpected transport error", provider=self.name, model=wire.model
+            ) from None
         finally:
             if outcome == "success":
                 breaker.record_success(generation)

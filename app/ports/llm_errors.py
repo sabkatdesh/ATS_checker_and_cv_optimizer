@@ -26,7 +26,11 @@ class LLMError(Exception):
         self.model = model
         self.usage = usage
         self.retry_after_s = retry_after_s
-        super().__init__(f"{self.kind} provider={provider} model={model}: {detail}")
+        super().__init__(detail)
+
+    def __str__(self) -> str:
+        # Computed on demand so provider/model filled in later by an adapter show up.
+        return f"{self.kind} provider={self.provider} model={self.model}: {self.detail}"
 
 
 class LLMTimeout(LLMError):

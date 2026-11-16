@@ -217,12 +217,13 @@ def test_retries_infra_errors_and_reports_attempts() -> None:
 
 def test_failures_trip_breaker_only_for_infra_errors() -> None:
     breakers = BreakerRegistry()
-    p = provider(Script(*[LLMBadRequest("bad")] * 5, *[ok("x", stop="refused")] * 5), breakers)
+    bad = [LLMBadRequest("bad") for _ in range(5)]
+    p = provider(Script(*bad, *[ok("x", stop="refused")] * 5), breakers)
     for _ in range(10):
         with pytest.raises((LLMBadRequest, LLMRefused)):
             call(p, route(max_attempts=1))
     assert breakers.get("bedrock", "m1").state == "closed"
-    p2 = provider(Script(*[LLMUnavailable("down")] * 5), breakers)
+    p2 = provider(Script(*[LLMUnavailable("down") for _ in range(5)]), breakers)
     for _ in range(5):
         with pytest.raises(LLMUnavailable):
             call(p2, route(max_attempts=1))
@@ -260,3 +261,78 @@ def test_half_open_probe_released_on_non_tripping_end(outcome: str) -> None:
             call(provider(Script(LLMBadRequest("bad")), breakers), route())
     assert b.state == "half_open"
     b.before_call()  # the probe slot is free again
+
+
+class Boom(Script):
+    async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
+        self.wires.append(wire)
+        raise RuntimeError("SENTINEL-CV")
+
+
+def test_unexpected_transport_error_becomes_unavailable_and_trips() -> None:
+    breakers = BreakerRegistry()
+    b = breakers.get("bedrock", "m1")
+    for _ in range(4):
+        b.record_failure()
+    with pytest.raises(LLMUnavailable) as ei:
+        call(provider(Boom(), breakers), route(max_attempts=1))
+    err = ei.value
+    assert type(err) is LLMUnavailable and err.__cause__ is None
+    assert "SENTINEL" not in str(err) and "SENTINEL" not in repr(err)
+    assert b.state == "open"
+
+
+def test_timeout_records_breaker_failure() -> None:
+    breakers = BreakerRegistry()
+    b = breakers.get("bedrock", "m1")
+    for _ in range(4):
+        b.record_failure()
+    with pytest.raises(LLMTimeout):
+        call(provider(Script(HANG), breakers), route(timeout_s=0.1, max_attempts=1))
+    assert b.state == "open"
+
+
+def _half_open_registry() -> tuple[BreakerRegistry, Clock]:
+    clock = Clock()
+    breakers = BreakerRegistry(clock=clock)
+    for _ in range(5):
+        breakers.get("bedrock", "m1").record_failure()
+    clock.now += 30
+    return breakers, clock
+
+
+def test_half_open_probe_success_closes_breaker() -> None:
+    breakers, _ = _half_open_registry()
+    res = call(provider(Script(ok('{"x": 1}')), breakers), route())
+    assert res.output == Out(x=1) and breakers.get("bedrock", "m1").state == "closed"
+
+
+def test_probe_released_when_repair_call_fails_with_caller_error() -> None:
+    breakers, clock = _half_open_registry()
+    b = breakers.get("bedrock", "m1")
+    b.record_success()  # closed again: the first send is admitted as an ordinary call
+
+    class TripsDuringFirstSend(Script):
+        async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
+            if not self.wires:  # the breaker opens and cools down while the first send runs
+                for _ in range(5):
+                    b.record_failure()
+                clock.now += 30
+            return await super().send(wire, cancel)
+
+    t = TripsDuringFirstSend(ok("not json"), LLMBadRequest("bad"))
+    with pytest.raises(LLMBadRequest):
+        call(provider(t, breakers), route())
+    assert len(t.wires) == 2  # the repair call was the half-open probe
+    assert b.state == "half_open"  # stale first-send success did not close it
+    b.before_call()  # and the probe slot was released
+
+
+def test_shared_error_instance_is_not_enriched_twice() -> None:
+    shared = LLMBadRequest("bad")
+    p = provider(Script(shared, shared))
+    for _ in range(2):
+        with pytest.raises(LLMBadRequest):
+            call(p, route(), req(schema=None))
+    assert shared.attempts == 1 and shared.usage == Usage()
+    assert str(shared) == "bad_request provider=bedrock model=m1: bad"

@@ -73,3 +73,9 @@ def test_error_attempts_defaults_none_and_is_keyword_only() -> None:
     assert LLMTimeout("t", attempts=3).attempts == 3
     all_failed = LLMAllRoutesFailed("x", kinds=("timeout",), attempts=2)
     assert all_failed.attempts == 2
+
+
+def test_error_str_reflects_later_enrichment() -> None:
+    err = LLMTimeout("deadline exceeded")
+    err.provider, err.model = "bedrock", "m"
+    assert str(err) == "timeout provider=bedrock model=m: deadline exceeded"

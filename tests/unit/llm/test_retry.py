@@ -151,3 +151,36 @@ def test_expired_deadline_raises_timeout_without_calling_attempt() -> None:
     with pytest.raises(LLMTimeout):
         run(ft, flaky([], calls), seconds=0.0)
     assert calls == []
+
+
+def test_deadline_rechecked_after_backoff_reraises_last_error() -> None:
+    ft, calls = FakeTime(), []
+
+    async def oversleep(s: float) -> None:
+        ft.now += s + 10  # the sleep overran the deadline
+
+    errs = [LLMThrottled("a"), LLMThrottled("b")]
+    with pytest.raises(LLMThrottled) as ei:
+        asyncio.run(
+            call_with_retry(
+                flaky(errs, calls),
+                policy=RetryPolicy(sleep=oversleep, rand=lambda: 1.0),
+                deadline=Deadline(5.0, ft.clock),
+                cancel=CancelToken(),
+                on_failure=lambda _e: None,
+            )
+        )
+    assert len(calls) == 1 and ei.value is errs[0]
+
+
+def test_cancellable_sleep_leaves_no_pending_tasks() -> None:
+    from app.adapters.llm._retry import _cancellable_sleep
+
+    async def go() -> None:
+        cancel = CancelToken()
+        asyncio.get_running_loop().call_later(0.05, cancel.cancel)
+        with pytest.raises(LLMCancelled):
+            await _cancellable_sleep(RetryPolicy(), 3600, cancel)
+        assert asyncio.all_tasks() == {asyncio.current_task()}
+
+    asyncio.run(go())

@@ -48,6 +48,7 @@ async def _cancellable_sleep(policy: RetryPolicy, delay: float, cancel: CancelTo
         for task in (sleeper, waiter):
             if not task.done():
                 task.cancel()
+        await asyncio.gather(sleeper, waiter, return_exceptions=True)
     if cancel.is_cancelled:
         raise LLMCancelled("cancelled during backoff")
     sleeper.result()
@@ -62,15 +63,17 @@ async def call_with_retry[R](
     on_failure: Callable[[LLMError], None],
 ) -> tuple[R, int]:
     attempt = 0
-    if deadline.expired:
-        raise LLMTimeout("deadline exceeded")
+    last: LLMError | None = None
     while True:
         if cancel.is_cancelled:
             raise LLMCancelled("cancelled before attempt")
+        if deadline.expired:  # never start an attempt with no time left
+            raise last if last is not None else LLMTimeout("deadline exceeded")
         attempt += 1
         try:
             return await attempt_fn(deadline.remaining()), attempt
         except LLMError as err:
+            last = err
             on_failure(err)
             if not err.retryable or attempt >= policy.max_attempts:
                 raise
