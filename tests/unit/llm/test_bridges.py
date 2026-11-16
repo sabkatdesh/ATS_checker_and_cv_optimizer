@@ -250,3 +250,10 @@ def test_adapters_import_no_pipeline_and_only_the_bridge_imports_langchain():
         if _LANGCHAIN_IMPORT.search(text) and path.name != "langchain_bridge.py":
             offenders.append(f"langchain:{path.name}")
     assert offenders == []
+
+
+def test_create_app_boots_with_provider_matching_routes_file():
+    from app.main import create_app
+
+    settings = AppSettings(_env_file=None, llm={"default_provider": "bedrock"})
+    assert create_app(Container(settings)) is not None

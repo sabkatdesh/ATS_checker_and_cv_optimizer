@@ -166,3 +166,29 @@ def test_env_default_model_only_overrides_model_keeps_fallback(tmp_path: Path) -
     assert t.resolve("rewrite").model == GLOBAL
     assert t.resolve("rewrite").provider == "bedrock"
     assert t.fallback_for("rewrite") is not None
+
+
+def test_env_default_provider_matching_file_is_a_no_op() -> None:
+    plain, same = _load(), _load(default_provider="bedrock")
+    for step in KNOWN_STEPS:
+        assert same.resolve(step) == plain.resolve(step)
+        assert same.fallback_for(step) == plain.fallback_for(step)
+    assert same.fallback_for("rewrite") is not None
+
+
+def test_env_default_provider_matching_file_still_takes_default_model() -> None:
+    t = _load(default_provider="bedrock", default_model=GLOBAL)
+    assert (t.resolve("rewrite").provider, t.resolve("rewrite").model) == ("bedrock", GLOBAL)
+    assert t.fallback_for("rewrite") is not None
+
+
+def test_different_provider_without_model_error_names_both_and_no_secrets() -> None:
+    from pydantic import SecretStr
+
+    secret = "sk-very-secret-value"
+    settings = LlmSettings(default_provider="anthropic", anthropic_api_key=SecretStr(secret))
+    with pytest.raises(ConfigError) as info:
+        load_route_table(settings, _prices())
+    msg = str(info.value)
+    assert "LLM__DEFAULT_MODEL" in msg and "anthropic" in msg and "bedrock" in msg
+    assert secret not in msg

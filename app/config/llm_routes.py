@@ -71,13 +71,20 @@ def _read_yaml(llm: LlmSettings) -> dict[str, Any]:
 
 
 def _apply_env(defaults: dict[str, Any], llm: LlmSettings) -> dict[str, Any]:
+    """fake -> fake-1, no fallback. The file's own provider is a no-op (LLM__DEFAULT_MODEL may
+    still replace the model). Any other provider needs LLM__DEFAULT_MODEL and drops the fallback.
+    """
     d = dict(defaults)
-    if llm.default_provider == "fake":
+    provider = llm.default_provider
+    if provider == "fake":
         d.update(provider="fake", model="fake-1", fallback=None)
-    elif llm.default_provider:
+    elif provider and provider != d.get("provider"):
         if not llm.default_model:
-            raise ConfigError("LLM__DEFAULT_PROVIDER requires LLM__DEFAULT_MODEL")
-        d.update(provider=llm.default_provider, model=llm.default_model, fallback=None)
+            raise ConfigError(
+                f"LLM__DEFAULT_PROVIDER={provider!r} differs from the routes file provider "
+                f"{d.get('provider')!r} and requires LLM__DEFAULT_MODEL"
+            )
+        d.update(provider=provider, model=llm.default_model, fallback=None)
     elif llm.default_model:
         d["model"] = llm.default_model
     return d
