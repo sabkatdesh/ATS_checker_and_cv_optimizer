@@ -110,3 +110,15 @@ def test_log_event_has_no_content_keys():
     assert len(logs) == 1 and logs[0]["event"] == "llm.call"
     assert set(logs[0]) <= ALLOWED
     assert "SECRET" not in str(logs[0])
+
+
+def test_error_record_uses_given_attempts() -> None:
+    rec = _recorder(MemoryUsageSink()).record(
+        _req(), _route(), result=None, error=LLMTimeout("t"), latency_ms=1,
+        fallback_used=False, attempts=3,
+    )  # fmt: skip
+    assert rec.attempts == 3
+    default = _recorder(MemoryUsageSink()).record(
+        _req(), _route(), result=None, error=LLMTimeout("t"), latency_ms=1, fallback_used=False
+    )
+    assert default.attempts == 1

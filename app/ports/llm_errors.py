@@ -18,8 +18,10 @@ class LLMError(Exception):
         model: str | None = None,
         usage: Usage | None = None,
         retry_after_s: float | None = None,
+        attempts: int | None = None,
     ) -> None:
         self.detail = detail
+        self.attempts = attempts
         self.provider = provider
         self.model = model
         self.usage = usage
@@ -65,9 +67,15 @@ class LLMAllRoutesFailed(LLMUnavailable):
         model: str | None = None,
         usage: Usage | None = None,
         retry_after_s: float | None = None,
+        attempts: int | None = None,
     ) -> None:
         super().__init__(
-            detail, provider=provider, model=model, usage=usage, retry_after_s=retry_after_s
+            detail,
+            provider=provider,
+            model=model,
+            usage=usage,
+            retry_after_s=retry_after_s,
+            attempts=attempts,
         )
         self.kinds = kinds
 

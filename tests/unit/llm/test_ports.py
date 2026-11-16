@@ -7,6 +7,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.ports.llm import CallMeta, CancelToken, LLMRequest, Message, Usage
 from app.ports.llm_errors import (
+    LLMAllRoutesFailed,
     LLMBadRequest,
     LLMCircuitOpen,
     LLMOutputInvalid,
@@ -65,3 +66,10 @@ def test_cancel_token_wait_returns_after_cancel_from_other_thread() -> None:
 def test_usage_rejects_negative_tokens() -> None:
     with pytest.raises(ValidationError):
         Usage(input_tokens=-1)
+
+
+def test_error_attempts_defaults_none_and_is_keyword_only() -> None:
+    assert LLMTimeout("t").attempts is None
+    assert LLMTimeout("t", attempts=3).attempts == 3
+    all_failed = LLMAllRoutesFailed("x", kinds=("timeout",), attempts=2)
+    assert all_failed.attempts == 2

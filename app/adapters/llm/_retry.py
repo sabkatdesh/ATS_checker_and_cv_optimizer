@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from app.ports.llm import CancelToken
-from app.ports.llm_errors import LLMCancelled, LLMError
+from app.ports.llm_errors import LLMCancelled, LLMError, LLMTimeout
 
 
 @dataclass(frozen=True)
@@ -62,6 +62,8 @@ async def call_with_retry[R](
     on_failure: Callable[[LLMError], None],
 ) -> tuple[R, int]:
     attempt = 0
+    if deadline.expired:
+        raise LLMTimeout("deadline exceeded")
     while True:
         if cancel.is_cancelled:
             raise LLMCancelled("cancelled before attempt")

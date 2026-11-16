@@ -122,3 +122,50 @@ def test_thread_safety_smoke() -> None:
         t.join()
     assert not errors
     assert b.state == "open"
+
+
+def _half_open() -> tuple[CircuitBreaker, Clock]:
+    b, clock = make()
+    trip(b)
+    clock.now += 30
+    assert b.state == "half_open"
+    return b, clock
+
+
+def test_release_probe_frees_half_open_slot_without_outcome() -> None:
+    b, _ = _half_open()
+    gen = b.before_call()
+    with pytest.raises(LLMCircuitOpen):
+        b.before_call()
+    b.release_probe(gen)
+    assert b.state == "half_open"
+    b.before_call()  # slot is free again
+
+
+def test_release_probe_is_noop_when_not_the_probe() -> None:
+    b, _ = make()
+    stale = b.before_call()  # admitted while closed
+    trip(b)
+    b.release_probe(stale)
+    assert b.state == "open"
+    b2, _ = _half_open()
+    probe = b2.before_call()
+    b2.release_probe(stale)  # an older generation never frees the probe
+    with pytest.raises(LLMCircuitOpen):
+        b2.before_call()
+    b2.record_success(probe)
+    assert b2.state == "closed"
+
+
+def test_stale_outcomes_do_not_close_or_reopen_half_open() -> None:
+    b, clock = make()
+    stale = b.before_call()
+    trip(b)
+    clock.now += 30
+    probe = b.before_call()
+    b.record_success(stale)
+    assert b.state == "half_open"
+    b.record_failure(stale)
+    assert b.state == "half_open"
+    b.record_failure(probe)
+    assert b.state == "open"

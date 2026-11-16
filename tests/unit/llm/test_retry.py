@@ -142,3 +142,12 @@ def test_on_failure_called_per_failed_attempt() -> None:
     errs = [LLMThrottled("a"), LLMUnavailable("b")]
     run(ft, flaky(errs, calls), failures=seen)
     assert seen == errs
+
+
+def test_expired_deadline_raises_timeout_without_calling_attempt() -> None:
+    from app.ports.llm_errors import LLMTimeout
+
+    ft, calls = FakeTime(), []
+    with pytest.raises(LLMTimeout):
+        run(ft, flaky([], calls), seconds=0.0)
+    assert calls == []

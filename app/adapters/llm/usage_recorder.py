@@ -36,11 +36,12 @@ class UsageRecorder:
         error: LLMError | None,
         latency_ms: int,
         fallback_used: bool,
+        attempts: int | None = None,
     ) -> LlmCallRecord:
         if result is not None:
             usage, cost = result.usage, result.cost_usd
             provider, model = result.provider, result.model
-            attempts, repaired = result.attempts, result.repaired
+            n_attempts, repaired = result.attempts, result.repaired
             status, error_kind = "ok", None
         else:
             usage = (error.usage if error else None) or Usage()
@@ -50,7 +51,7 @@ class UsageRecorder:
                 if self._prices.has(provider, model)
                 else Decimal(0)
             )
-            attempts, repaired = 1, False
+            n_attempts, repaired = (attempts if attempts is not None else 1), False
             status, error_kind = "error", error.kind if error else "error"
         meta = req.metadata
         rec = LlmCallRecord(
@@ -65,7 +66,7 @@ class UsageRecorder:
             usage=usage,
             cost_usd=cost,
             latency_ms=latency_ms,
-            attempts=attempts,
+            attempts=n_attempts,
             repaired=repaired,
             fallback_used=fallback_used,
             user_id=meta.user_id,
