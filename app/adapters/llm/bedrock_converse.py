@@ -3,7 +3,9 @@
 The boto3 client is built on first use (so a missing credential shows up as LLMAuthError on the
 first call, not at boot) and shared across threads. Each blocking boto3 call runs on its own
 daemon thread: on cancel the awaiting task is abandoned at once, the thread ends when botocore's
-read timeout fires, and neither the event loop nor interpreter shutdown waits for it.
+read timeout fires, and neither the event loop nor interpreter shutdown waits for it. An
+abandoned attempt (cancel or deadline) also sets a per-call stop flag, so a stream stops being
+read at its next event.
 """
 
 import asyncio
@@ -17,6 +19,7 @@ from botocore.config import Config
 from app.adapters.llm._base import RawCompletion, WireRequest
 from app.adapters.llm._bedrock_wire import (
     PROVIDER,
+    TRANSPORT_ERRORS,
     accumulate_stream,
     build_converse_kwargs,
     map_error,
@@ -27,6 +30,18 @@ from app.ports.llm import CancelToken
 from app.ports.llm_errors import LLMError
 
 CONNECT_TIMEOUT_S = 5
+
+
+class _AttemptCancel(CancelToken):
+    """Set when this attempt is abandoned; also reports the caller's token."""
+
+    def __init__(self, caller: CancelToken) -> None:
+        super().__init__()
+        self._caller = caller
+
+    @property
+    def is_cancelled(self) -> bool:
+        return super().is_cancelled or self._caller.is_cancelled
 
 
 async def _in_daemon_thread(fn: Callable[[], RawCompletion]) -> RawCompletion:
@@ -99,11 +114,16 @@ class BedrockConverseTransport:
             if err.model is None:
                 err.model = wire.model
             raise
-        except Exception as exc:  # boto3/botocore failure: keep the code, drop the message
+        except TRANSPORT_ERRORS as exc:  # AWS/HTTP failure: keep the code, drop the message
             raise map_error(exc, model=wire.model) from None
 
     async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
-        return await _in_daemon_thread(lambda: self._call(wire, cancel))
+        attempt = _AttemptCancel(cancel)
+        try:
+            return await _in_daemon_thread(lambda: self._call(wire, attempt))
+        except asyncio.CancelledError:  # deadline or caller cancel: stop reading the stream
+            attempt.cancel()
+            raise
 
 
 def build_bedrock_transport(settings: AppSettings) -> BedrockConverseTransport:

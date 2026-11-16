@@ -7,10 +7,22 @@ from botocore.exceptions import (
     ClientError,
     ConnectionClosedError,
     ConnectTimeoutError,
+    CredentialRetrievalError,
     EndpointConnectionError,
+    EventStreamError,
+    HTTPClientError,
     NoCredentialsError,
+    NoRegionError,
+    PartialCredentialsError,
+    ProxyConnectionError,
     ReadTimeoutError,
+    ResponseStreamingError,
+    SSLError,
+    TokenRetrievalError,
 )
+from botocore.exceptions import ConnectionError as BotoConnectionError
+from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeout
 
 from app.adapters.llm._base import WireRequest
 from app.adapters.llm._bedrock_wire import (
@@ -168,13 +180,6 @@ def test_stream_stops_on_cancel():
     assert len(seen) == 2
 
 
-def test_stream_exception_event_is_mapped():
-    events = [{"throttlingException": {"message": SECRET}}]
-    with pytest.raises(LLMThrottled) as exc:
-        accumulate_stream(events, CancelToken())
-    assert SECRET not in str(exc.value) and exc.value.detail == "ThrottlingException"
-
-
 ERROR_TABLE = [
     (client_error("ThrottlingException", 429), LLMThrottled),
     (client_error("ServiceQuotaExceededException", 400), LLMThrottled),
@@ -194,6 +199,38 @@ ERROR_TABLE = [
     (NoCredentialsError(), LLMAuthError),
     (EndpointConnectionError(endpoint_url="https://bedrock"), LLMUnavailable),
     (ConnectionClosedError(endpoint_url="https://bedrock"), LLMUnavailable),
+    (client_error("NewThrottle", 429), LLMThrottled),
+    (client_error("NewAuth", 401), LLMAuthError),
+    (client_error("NewForbidden", 403), LLMAuthError),
+    (client_error("NewTeapot", 418), LLMBadRequest),
+    (client_error("NoStatus", 0), LLMUnavailable),
+    (
+        EventStreamError({"Error": {"Code": "throttlingException", "Message": SECRET}}, "S"),
+        LLMThrottled,
+    ),
+    (
+        EventStreamError({"Error": {"Code": "validationException", "Message": SECRET}}, "S"),
+        LLMBadRequest,
+    ),
+    (
+        EventStreamError({"Error": {"Code": "internalServerException", "Message": SECRET}}, "S"),
+        LLMUnavailable,
+    ),
+    (
+        EventStreamError({"Error": {"Code": "modelTimeoutException", "Message": SECRET}}, "S"),
+        LLMTimeout,
+    ),
+    (PartialCredentialsError(provider="env", cred_var=SECRET), LLMAuthError),
+    (CredentialRetrievalError(provider="sso", error_msg=SECRET), LLMAuthError),
+    (TokenRetrievalError(provider="sso", error_msg=SECRET), LLMAuthError),
+    (NoRegionError(), LLMBadRequest),
+    (BotoConnectionError(error=SECRET), LLMUnavailable),
+    (HTTPClientError(error=SECRET), LLMUnavailable),
+    (ResponseStreamingError(error=SECRET), LLMUnavailable),
+    (ProxyConnectionError(proxy_url="http://p", error=SECRET), LLMUnavailable),
+    (SSLError(endpoint_url="https://bedrock", error=SECRET), LLMUnavailable),
+    (Urllib3ReadTimeout(None, "https://bedrock", SECRET), LLMTimeout),  # type: ignore[arg-type]
+    (ProtocolError(SECRET), LLMUnavailable),
     (RuntimeError(SECRET), LLMUnavailable),
 ]
 

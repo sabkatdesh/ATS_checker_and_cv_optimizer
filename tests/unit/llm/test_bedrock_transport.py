@@ -106,3 +106,4 @@ def test_smoke_dry_run_prints_cost_and_makes_no_call(monkeypatch, capsys):
     assert _smoke.main([]) == 0
     out = capsys.readouterr().out
     assert "estimated cost" in out and "max_tokens=1500" in out and "no call made" in out
+    assert "fallback: disabled" in out

@@ -10,13 +10,20 @@ from collections.abc import Iterable
 from typing import Any
 
 from botocore.exceptions import (
+    BotoCoreError,
     ClientError,
-    ConnectionClosedError,
     ConnectTimeoutError,
-    EndpointConnectionError,
+    CredentialRetrievalError,
+    HTTPClientError,
     NoCredentialsError,
+    NoRegionError,
+    PartialCredentialsError,
     ReadTimeoutError,
+    TokenRetrievalError,
 )
+from botocore.exceptions import ConnectionError as BotoConnectionError
+from urllib3.exceptions import HTTPError as Urllib3HTTPError
+from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeout
 
 from app.adapters.llm._base import RawCompletion, Stop, WireRequest
 from app.ports.llm import CancelToken, Usage
@@ -57,13 +64,23 @@ _CODES: dict[str, type[LLMError]] = {
     "ExpiredTokenException": LLMAuthError,
 }
 
+# Checked in order: timeouts before the connection errors they subclass.
 _EXCEPTIONS: tuple[tuple[type[Exception], type[LLMError]], ...] = (
     (ReadTimeoutError, LLMTimeout),
     (ConnectTimeoutError, LLMTimeout),
+    (Urllib3ReadTimeout, LLMTimeout),  # raised raw while reading an event stream
     (NoCredentialsError, LLMAuthError),
-    (EndpointConnectionError, LLMUnavailable),
-    (ConnectionClosedError, LLMUnavailable),
+    (PartialCredentialsError, LLMAuthError),
+    (CredentialRetrievalError, LLMAuthError),
+    (TokenRetrievalError, LLMAuthError),
+    (NoRegionError, LLMBadRequest),
+    (BotoConnectionError, LLMUnavailable),  # incl. endpoint, proxy and SSL errors
+    (HTTPClientError, LLMUnavailable),  # incl. connection closed, response streaming
+    (Urllib3HTTPError, LLMUnavailable),
 )
+
+# What the transport maps; anything else is a bug and is left to the base provider.
+TRANSPORT_ERRORS: tuple[type[Exception], ...] = (BotoCoreError, ClientError, Urllib3HTTPError)
 
 _SAFE_CODE = re.compile(r"^[A-Za-z][A-Za-z0-9.]{0,63}$")
 
@@ -136,10 +153,6 @@ def accumulate_stream(events: Iterable[dict[str, Any]], cancel: CancelToken) -> 
     for event in events:
         if cancel.is_cancelled:
             raise LLMCancelled("cancelled", provider=PROVIDER)
-        for key in event:
-            if key.endswith("Exception"):
-                code = key[0].upper() + key[1:]
-                raise _CODES.get(code, LLMUnavailable)(_safe(code), provider=PROVIDER)
         if "contentBlockDelta" in event:
             text = (event["contentBlockDelta"].get("delta") or {}).get("text")
             if isinstance(text, str):
@@ -157,6 +170,16 @@ def _safe(code: str) -> str:
     return code if _SAFE_CODE.fullmatch(code) else "unrecognised error code"
 
 
+def _by_status(status: int) -> type[LLMError]:
+    if status == 429:
+        return LLMThrottled
+    if status in (401, 403):
+        return LLMAuthError
+    if 400 <= status < 500:
+        return LLMBadRequest
+    return LLMUnavailable  # 5xx, or no status at all (event-stream errors)
+
+
 def map_error(exc: Exception, *, model: str) -> LLMError:
     """A fresh LLMError for a boto3/botocore failure; detail is the error code only."""
     if isinstance(exc, LLMError):
@@ -164,13 +187,12 @@ def map_error(exc: Exception, *, model: str) -> LLMError:
     if isinstance(exc, ClientError):
         error = exc.response.get("Error") or {}
         code = str(error.get("Code") or "")
+        code = code[:1].upper() + code[1:]  # stream errors use the member name: throttlingException
         meta = exc.response.get("ResponseMetadata") or {}
         status = int(meta.get("HTTPStatusCode") or 0)
-        cls = _CODES.get(code)
-        if cls is None:
-            cls = LLMUnavailable if status >= 500 or status == 0 else LLMBadRequest
+        cls = _CODES.get(code) or _by_status(status)
         return cls(_safe(code), provider=PROVIDER, model=model)
     for exc_type, cls in _EXCEPTIONS:
         if isinstance(exc, exc_type):
-            return cls(exc_type.__name__, provider=PROVIDER, model=model)
+            return cls(type(exc).__name__, provider=PROVIDER, model=model)
     return LLMUnavailable("unexpected transport error", provider=PROVIDER, model=model)

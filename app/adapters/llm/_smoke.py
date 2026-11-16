@@ -4,8 +4,8 @@
     uv run python -m app.adapters.llm.bedrock_converse --yes    # makes the real call
 
 The router is built directly from settings (the container does not expose it yet) and the
-jd_extract route is used with max_tokens capped at 1500. Only a short parsed summary is
-printed, never model text.
+jd_extract route is used with max_tokens capped at 1500 and its fallback disabled. Only a
+short parsed summary is printed, never model text.
 """
 
 import argparse
@@ -20,7 +20,7 @@ from app.adapters.llm.registry import ProviderRegistry
 from app.adapters.llm.router import LLMRouter
 from app.adapters.llm.usage_recorder import UsageRecorder
 from app.adapters.usage.memory_sink import MemoryUsageSink
-from app.config.llm_routes import load_route_table
+from app.config.llm_routes import RouteTable, load_route_table
 from app.config.settings import load_settings
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.ports.llm import CallMeta, LLMRequest, Message, Usage
@@ -58,15 +58,18 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = load_settings()
     prices = PriceTable.from_file(settings.llm.prices_file)
-    table = load_route_table(settings.llm, prices)
-    table = table.override(STEP, max_tokens=min(table.resolve(STEP).max_tokens, MAX_TOKENS))
-    route = table.resolve(STEP)
+    full = load_route_table(settings.llm, prices)
+    primary = full.resolve(STEP)
+    route = primary.model_copy(update={"max_tokens": min(primary.max_tokens, MAX_TOKENS)})
+    # Only the capped jd_extract route, with no fallback, so the cost bound below holds.
+    table = RouteTable({STEP: route}, {STEP: None}, full.embeddings)
     instruction = json_instruction(JobDescriptionStructured.model_json_schema())
     est_in = estimate_tokens(SYSTEM + instruction + SAMPLE_JD) + 50
     one_call = prices.cost(
         route.provider, route.model, Usage(input_tokens=est_in, output_tokens=route.max_tokens)
     )
     _say(f"route: {route.provider}/{route.model} max_tokens={route.max_tokens}")
+    _say("fallback: disabled for this run")
     _say(f"estimated cost: ~${one_call} per call, at most ${one_call * 2} with one repair")
     if not args.yes:
         _say("dry run: no call made. Re-run with --yes to call Bedrock.")
