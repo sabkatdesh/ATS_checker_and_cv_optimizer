@@ -95,3 +95,35 @@ def test_json_instruction_contains_schema_and_no_user_text():
     text = json_instruction(schema)
     assert json.dumps(schema) in text
     assert "JSON" in text
+
+
+class KeywordNamedFields(BaseModel):
+    minimum: int
+    maxItems: list[str]  # noqa: N815
+    properties: str
+
+
+def test_field_names_matching_stripped_keywords_survive():
+    schema = provider_schema(KeywordNamedFields)
+    assert set(schema["properties"]) == {"minimum", "maxItems", "properties"}
+    assert set(schema["required"]) == set(schema["properties"])
+
+
+def test_defs_names_are_not_filtered():
+    class Outer(BaseModel):
+        inner: KeywordNamedFields
+
+    schema = provider_schema(Outer)
+    assert set(schema["$defs"]["KeywordNamedFields"]["properties"]) == {
+        "minimum",
+        "maxItems",
+        "properties",
+    }
+
+
+def test_additional_properties_schema_is_overwritten_with_false():
+    class WithMap(BaseModel):
+        tags: dict[str, int]
+
+    schema = provider_schema(WithMap)
+    assert schema["properties"]["tags"]["additionalProperties"] is False

@@ -29,9 +29,20 @@ _MAX_ERROR_LINES = 10
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
+_NAME_MAPS = frozenset({"properties", "$defs"})
+
+
 def _clean(node: Any, strip: frozenset[str]) -> Any:
     if isinstance(node, dict):
-        out = {k: _clean(v, strip) for k, v in node.items() if k not in strip}
+        out: dict[str, Any] = {}
+        for key, value in node.items():
+            if key in strip:
+                continue
+            if key in _NAME_MAPS and isinstance(value, dict):
+                # name -> schema maps: never filter the names, only clean the schemas
+                out[key] = {name: _clean(sub, strip) for name, sub in value.items()}
+            else:
+                out[key] = _clean(value, strip)
         if out.get("type") == "object":
             out["additionalProperties"] = False
         return out
@@ -43,6 +54,12 @@ def _clean(node: Any, strip: frozenset[str]) -> Any:
 def provider_schema(
     model: type[BaseModel], *, strip: frozenset[str] = STRIP_KEYWORDS
 ) -> dict[str, Any]:
+    """JSON schema for provider constrained decoding.
+
+    Removes `strip` keywords (enforced later by Pydantic) and sets additionalProperties=false on
+    every object, which overwrites a schema-valued additionalProperties: dict[str, X] fields
+    become empty objects, so avoid them in provider-bound models.
+    """
     schema: dict[str, Any] = _clean(model.model_json_schema(), strip)
     return schema
 
