@@ -68,3 +68,20 @@ def test_failing_recorder_does_not_mask_the_llm_error():
     router._recorder = Broken()
     with pytest.raises(LLMBadRequest):
         _run(router)
+
+
+def test_failing_recorder_does_not_fail_a_successful_call():
+    from structlog.testing import capture_logs
+
+    class Broken:
+        def record(self, *_a, **_k):
+            raise RuntimeError("sink down")
+
+    router, _, _ = _router()
+    router._recorder = Broken()
+    with capture_logs() as logs:
+        result = _run(router)
+    assert result.output == "ok"
+    warn = [e for e in logs if e["event"] == "llm.usage_record_failed"]
+    assert warn and warn[0]["log_level"] == "warning"
+    assert "sink down" not in str(logs)

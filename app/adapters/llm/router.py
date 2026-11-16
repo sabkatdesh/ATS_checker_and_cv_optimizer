@@ -64,24 +64,20 @@ class LLMRouter:
             provider = self._providers.get(route.provider)
             result = await provider.complete(req, route, cancel)
         except LLMError as err:
-            try:
-                self._recorder.record(
-                    req,
-                    route,
-                    result=None,
-                    error=err,
-                    latency_ms=int((self._clock() - start) * 1000),
-                    fallback_used=fallback_used,
-                    attempts=err.attempts,
-                )
-            except Exception:  # a broken sink must not hide the LLM error; log no content
-                structlog.get_logger("llm").warning(
-                    "llm.usage_record_failed", step=req.step, provider=route.provider
-                )
+            self._safe_record(
+                req,
+                route,
+                result=None,
+                error=err,
+                latency_ms=int((self._clock() - start) * 1000),
+                fallback_used=fallback_used,
+                attempts=err.attempts,
+            )
             raise
         if fallback_used:
             result = result.model_copy(update={"fallback_used": True})
-        self._recorder.record(
+        # A successful (paid) call is returned even when its usage record cannot be written.
+        self._safe_record(
             req,
             route,
             result=result,
@@ -90,3 +86,29 @@ class LLMRouter:
             fallback_used=fallback_used,
         )
         return result
+
+    def _safe_record(
+        self,
+        req: LLMRequest[T],
+        route: Route,
+        *,
+        result: LLMResult[T] | None,
+        error: LLMError | None,
+        latency_ms: int,
+        fallback_used: bool,
+        attempts: int | None = None,
+    ) -> None:
+        try:
+            self._recorder.record(
+                req,
+                route,
+                result=result,
+                error=error,
+                latency_ms=latency_ms,
+                fallback_used=fallback_used,
+                attempts=attempts,
+            )
+        except Exception:  # a broken sink must not change the call's outcome; log no content
+            structlog.get_logger("llm").warning(
+                "llm.usage_record_failed", step=req.step, provider=route.provider
+            )
