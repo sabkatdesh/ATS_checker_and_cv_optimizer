@@ -2,7 +2,7 @@ import asyncio
 from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.adapters.llm._breaker import BreakerRegistry
 from app.adapters.llm._pricing import ModelPrice, PriceTable
@@ -10,7 +10,7 @@ from app.adapters.llm._retry import RetryPolicy
 from app.adapters.llm.fake import Fail, Hang, Reply, build_fake_provider
 from app.domain.match.schemas import Match
 from app.ports.llm import CallMeta, CancelToken, LLMRequest, Message, Route, Usage
-from app.ports.llm_errors import LLMThrottled
+from app.ports.llm_errors import LLMBadRequest, LLMThrottled
 
 
 class Needs(BaseModel):
@@ -102,3 +102,43 @@ def test_hang_that_is_not_cancelled_falls_through_to_default():
 @pytest.mark.parametrize("bad", ["../../pyproject", "a/b", "a\\b"])
 def test_defaults_lookup_rejects_path_separators(bad):
     assert _run(_provider(), _req(bad)).output == "{}"
+
+
+class Constrained(BaseModel):
+    code: str = Field(min_length=3)
+
+
+def test_transport_used_without_provider_fails_loudly():
+    from app.adapters.llm.fake import FakeTransport
+
+    transport = FakeTransport()
+    from app.adapters.llm._base import WireRequest
+
+    w = WireRequest(
+        system="",
+        messages=(Message(role="user", content="hi"),),
+        model="m",
+        max_tokens=10,
+        temperature=None,
+        json_schema=None,
+        schema_name=None,
+        cache_prefix=False,
+        stream=False,
+        timeout_s=1,
+    )
+    with pytest.raises(RuntimeError, match="FakeTransport must be used through FakeProvider"):
+        asyncio.run(transport.send(w, CancelToken()))
+    assert transport.sent == []
+
+
+def test_default_instance_names_schema_when_constraints_block_it():
+    from app.adapters.llm.fake import default_instance
+
+    with pytest.raises(LLMBadRequest, match="Constrained") as info:
+        default_instance(Constrained)
+    assert "min_length" not in str(info.value) and "''" not in str(info.value)
+
+
+def test_constrained_schema_without_script_surfaces_named_error_through_provider():
+    with pytest.raises(LLMBadRequest, match="Constrained"):
+        _run(_provider(), _req("unknown.key", Constrained))

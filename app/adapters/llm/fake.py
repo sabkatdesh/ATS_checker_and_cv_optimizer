@@ -1,6 +1,8 @@
 """Offline LLM provider: scripted outcomes, canned legacy responses, schema default instances.
 
 Deterministic and network-free, so the pipeline and the contract suite can run without a model.
+A scripted Hang that is not cancelled from outside sleeps, then falls through to the default
+response for its key (canned file, schema default instance, or "{}").
 """
 
 import asyncio
@@ -18,7 +20,7 @@ from app.adapters.llm._breaker import BreakerRegistry
 from app.adapters.llm._pricing import PriceTable
 from app.adapters.llm._retry import RetryPolicy
 from app.ports.llm import CancelToken, LLMRequest, LLMResult, Route, T, Usage
-from app.ports.llm_errors import LLMError
+from app.ports.llm_errors import LLMBadRequest, LLMError
 
 DEFAULT_DIR = Path(__file__).parent / "fake_responses"
 _SAFE_KEY = re.compile(r"^[A-Za-z0-9_.\-]+$")
@@ -83,11 +85,17 @@ def _example(node: Any, defs: dict[str, Any]) -> Any:
 
 
 def default_instance(schema: type[BaseModel]) -> BaseModel:
+    """Smallest valid instance; raises LLMBadRequest naming the schema (never field values)."""
     try:
         return schema()
     except ValidationError:
         raw = schema.model_json_schema()
-        return schema.model_validate(_example(raw, raw.get("$defs", {})))
+        try:
+            return schema.model_validate(_example(raw, raw.get("$defs", {})))
+        except ValidationError:
+            raise LLMBadRequest(
+                f"fake cannot build a default {schema.__name__}; script a Reply for this key"
+            ) from None
 
 
 class FakeTransport:
@@ -112,9 +120,11 @@ class FakeTransport:
         self._script[key].extend(outcomes)
 
     async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
-        self.sent.append(wire)
         info = _current.get()
-        key = info.key if info else ""
+        if info is None:
+            raise RuntimeError("FakeTransport must be used through FakeProvider")
+        self.sent.append(wire)
+        key = info.key
         if self._latency_s > 0:
             await asyncio.sleep(self._latency_s)
         queue = self._script.get(key)
@@ -129,13 +139,13 @@ class FakeTransport:
         usage = Usage(input_tokens=10, output_tokens=5)
         return RawCompletion(self._default_text(info), "end", "end", usage)
 
-    def _default_text(self, info: "_CallInfo | None") -> str:
-        key = info.key if info else ""
+    def _default_text(self, info: _CallInfo) -> str:
+        key = info.key
         if self._defaults_dir is not None and _SAFE_KEY.match(key):
             path = self._defaults_dir / f"{key}.json"
             if path.is_file():
                 return path.read_text(encoding="utf-8")
-        if info and info.schema is not None:
+        if info.schema is not None:
             return default_instance(info.schema).model_dump_json()
         return "{}"
 

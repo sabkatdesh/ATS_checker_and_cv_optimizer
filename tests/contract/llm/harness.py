@@ -64,6 +64,8 @@ Outcome = Ok | Throttle | ServerError | Timeout | Refusal | Hang | BadRequest | 
 
 
 class ContractHarness(Protocol):
+    """Harness classes are instantiated with no arguments (one fresh instance per test)."""
+
     name: str
     supports_native: bool
 
