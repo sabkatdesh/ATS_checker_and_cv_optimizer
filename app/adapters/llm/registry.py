@@ -30,10 +30,24 @@ def _bedrock(settings: AppSettings) -> Transport:
     return build_bedrock_transport(settings)
 
 
+def _openai(settings: AppSettings) -> Transport:
+    from app.adapters.llm.openai_api import build_openai_transport
+
+    return build_openai_transport(settings)
+
+
+def _azure_openai(settings: AppSettings) -> Transport:
+    from app.adapters.llm.azure_openai import build_azure_transport
+
+    return build_azure_transport(settings)
+
+
 # One line per adapter; each factory imports its adapter lazily.
 DEFAULT_FACTORIES: Mapping[str, TransportFactory] = {
     "fake": _fake,
     "bedrock": _bedrock,
+    "openai": _openai,
+    "azure_openai": _azure_openai,
 }
 
 

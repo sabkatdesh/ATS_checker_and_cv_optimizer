@@ -22,10 +22,17 @@ from app.ports.llm_errors import (
     LLMTimeout,
 )
 from tests.contract.llm import harness as h
+from tests.contract.llm.harnesses.azure_openai import AzureOpenAIHarness
 from tests.contract.llm.harnesses.bedrock import BedrockHarness
 from tests.contract.llm.harnesses.fake import FakeHarness
+from tests.contract.llm.harnesses.openai import OpenAIHarness
 
-HARNESSES: list[type] = [FakeHarness, BedrockHarness]  # adapter tasks append here
+HARNESSES: list[type] = [
+    FakeHarness,
+    BedrockHarness,
+    OpenAIHarness,
+    AzureOpenAIHarness,
+]  # adapter tasks append here
 
 SENTINEL = "SENTINEL-CV-7f3a"
 MODEL = "contract-model"
