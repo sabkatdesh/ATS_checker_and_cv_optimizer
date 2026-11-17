@@ -37,7 +37,7 @@ from app.ports.llm import CallMeta, LLMRequest, Message, Usage  # noqa: E402
 from app.ports.llm_errors import LLMError  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures" / "llm"
-CAP_USD = Decimal("0.10")
+CAP_USD = Decimal("0.20")
 CAPS = {"jd_extract": 1500, "gap_questions": 800, "rewrite": 2500}
 EMBED_RESERVE = Decimal("0.0001")
 MARGIN = 1.3  # chars/4 under-counts JSON and prose; pad the input estimate
@@ -111,10 +111,11 @@ def capped_table(full: RouteTable) -> RouteTable:
 
 def worst_case(
     reqs: list[LLMRequest[Any]], table: RouteTable, full: RouteTable, prices: PriceTable
-) -> tuple[Decimal, list[str]]:
+) -> tuple[dict[str, Decimal], list[str]]:
     """Per call: main + one repair (repair input also carries the bad answer). The fallback
     route, if it were enabled, would repeat both; its figure is printed for comparison only."""
-    total, rows = Decimal(0), []
+    per_call: dict[str, Decimal] = {}
+    rows: list[str] = []
     for req in reqs:
         route = table.resolve(req.step)
         cap, tin = route.max_tokens, est_input_tokens(req)
@@ -126,33 +127,48 @@ def worst_case(
         if fb is not None:
             fb_cost = prices.cost(fb.provider, fb.model, Usage(input_tokens=tin, output_tokens=cap))
             fb_cost += prices.cost(fb.provider, fb.model, repair_in)
-        total += main + repair
+        per_call[req.step] = main + repair
         rows.append(
             f"plan {req.step:14s} in~{tin:5d} cap={cap:5d} main ${main:.4f} +repair ${repair:.4f}"
             f" (fallback, disabled, would add ${fb_cost:.4f})"
         )
-    return total + EMBED_RESERVE, rows
+    per_call["embed"] = EMBED_RESERVE
+    return per_call, rows
 
 
-async def run(router: LLMRouter, container: Container, reqs: list[LLMRequest[Any]]) -> Decimal:
+async def run(
+    router: LLMRouter,
+    container: Container,
+    reqs: list[LLMRequest[Any]],
+    worst: dict[str, Decimal],
+) -> Decimal:
     say("\nstep | valid | repaired | stop | latency_ms | in | out | cache_r/w | cost")
     total = Decimal(0)
+    spent = Decimal(0)
     for req in reqs:
+        if spent + worst[req.step] > CAP_USD:
+            say(f"{req.step} | SKIPPED: spent ${spent:.4f} + worst ${worst[req.step]:.4f} > cap")
+            continue
         try:
             res = await router.complete(req)
         except LLMError as err:
             u = err.usage or Usage()
+            spent += worst[req.step]  # unknown billing: assume the worst for the guard
             say(f"{req.step} | FAILED kind={err.kind} attempts={err.attempts} detail={err.detail}")
             say(f"  usage in={u.input_tokens} out={u.output_tokens}")
             continue
         u = res.usage
         valid = req.output_schema is not None and isinstance(res.output, req.output_schema)
         total += res.cost_usd
+        spent += res.cost_usd
         say(
             f"{req.step} | valid={valid} | repaired={res.repaired} | stop={res.stop_reason} | "
             f"{res.latency_ms} | {u.input_tokens} | {u.output_tokens} | "
             f"{u.cache_read_tokens}/{u.cache_write_tokens} | ${res.cost_usd:.5f}"
         )
+    if spent + worst["embed"] > CAP_USD:
+        say("embed | SKIPPED: ceiling")
+        return total
     title = (FIXTURES / "spike_jd.txt").read_text(encoding="utf-8").splitlines()[0]
     started = time.perf_counter()
     try:
@@ -177,16 +193,17 @@ def main() -> int:
     for row in rows:
         say(row)
     say(f"max_tokens caps: {CAPS}; fallback: DISABLED for this run")
-    say(f"worst-case total ${worst:.4f} incl. embed reserve (cap ${CAP_USD})")
-    if worst >= CAP_USD:
-        say("ABORT: worst case is not below the cap")
+    say(f"sum of per-call worst cases ${sum(worst.values()):.4f}; ceiling ${CAP_USD}")
+    say("run is gated per call: each call is skipped if spent + its worst case > ceiling")
+    if max(worst.values()) > CAP_USD:
+        say("ABORT: a single call's worst case exceeds the ceiling")
         return 2
     if args.dry_run:
         say("dry run: no network call made")
         return 0
     providers = ProviderRegistry(settings, prices=prices, breakers=BreakerRegistry())
     router = LLMRouter(table, providers, container.usage)
-    total = asyncio.run(run(router, container, reqs))
+    total = asyncio.run(run(router, container, reqs, worst))
     records = container.usage_sink.records()  # type: ignore[attr-defined]
     say(f"\nllm cost total ${total:.5f}")
     say(f"usage records: {len(records)} (expected 4)")
