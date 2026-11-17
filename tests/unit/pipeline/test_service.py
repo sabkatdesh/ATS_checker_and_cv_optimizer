@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 import structlog
-from langgraph.checkpoint.memory import MemorySaver
 from structlog.testing import capture_logs
 
 from app.config.settings import AppSettings
@@ -16,6 +15,7 @@ from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
@@ -36,7 +36,7 @@ def _service() -> tuple[object, PipelineService]:
             "rewrite": [RewrittenCV(), RewrittenCV()],
         }
     )
-    return gw, PipelineService(build_graph(deps, MemorySaver()))
+    return gw, PipelineService(build_graph(deps, new_checkpointer()))
 
 
 def _run(svc: PipelineService, tid: str = "t1") -> dict:
@@ -106,7 +106,7 @@ def test_stage_events_carry_no_text():
 def test_pipeline_parse_failure_does_not_leak():
     secret = "SENTINEL secret cv line"
     _, deps = deps_for({"jd_extract": [LLMOutputInvalid(f"bad reply: {secret}")]})
-    svc = PipelineService(build_graph(deps, MemorySaver()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()))
     with capture_logs() as logs, pytest.raises(PipelineStepFailed) as exc:
         _run(svc)
     assert exc.value.code == "LLM_OUTPUT_INVALID"

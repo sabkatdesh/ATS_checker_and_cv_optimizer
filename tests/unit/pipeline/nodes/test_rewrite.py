@@ -91,11 +91,11 @@ def test_second_pass_without_ats_applying_sends_no_feedback():
     assert "<ats_feedback>\n" not in gw.requests[0].messages[0].content
 
 
-def test_rewrite_prompt_version_2_recorded():
+def test_rewrite_prompt_version_3_recorded():
     gw, deps = deps_for({"rewrite": [RewrittenCV()]})
     run(rewrite(_state(), deps=deps, ctx=ctx()))
     req = gw.requests[0]
-    assert req.metadata.prompt_version == 2
+    assert req.metadata.prompt_version == 3
     assert "gaps_unaddressed" in req.system and "change_log" in req.system
     assert "Never add employers, titles, dates, degrees, certifications, tools or skills" in (
         req.system
@@ -117,3 +117,9 @@ def test_rewrite_keeping_every_section_has_no_warning():
     _, deps = deps_for({"rewrite": [draft]})
     out = run(rewrite(_state(), deps=deps, ctx=ctx()))
     assert "warnings" not in out
+
+
+def test_rewrite_prompt_asks_for_verbatim_identifying_fields():
+    gw, deps = deps_for({"rewrite": [RewrittenCV()]})
+    run(rewrite(_state(), deps=deps, ctx=ctx()))
+    assert "copied verbatim" in gw.requests[0].system

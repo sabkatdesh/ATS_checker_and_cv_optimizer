@@ -126,3 +126,31 @@ def test_change_log_and_gaps_survive_restore():
 def _shouted(entry: dict[str, Any]) -> dict[str, Any]:
     """Same entry under a differently cased, padded key: still the same normalised key."""
     return {k: f"  {v.upper()} " if isinstance(v, str) else v for k, v in entry.items()}
+
+
+def test_reworded_protected_entry_is_not_duplicated():
+    source = UniversalCVStructured.model_validate(
+        {"education": [{"degree": "B.Sc. in CSE", "institution": "Example University"}]}
+    )
+    output = RewrittenCV.model_validate(
+        {"education": [{"degree": "BSc in CSE", "institution": "Example University"}]}
+    )
+    restored, names = restore_dropped(source, output)
+    assert names == [] and len(restored.education) == 1
+
+
+def test_clearly_different_protected_entry_is_restored():
+    source = UniversalCVStructured.model_validate(
+        {
+            "education": [
+                {"degree": "BSc in CSE", "institution": "Example University"},
+                {"degree": "HSC", "institution": "Example College"},
+            ]
+        }
+    )
+    output = RewrittenCV.model_validate(
+        {"education": [{"degree": "BSc in CSE", "institution": "Example University"}]}
+    )
+    restored, names = restore_dropped(source, output)
+    assert names == ["education"]
+    assert [e.degree for e in restored.education] == ["BSc in CSE", "HSC"]

@@ -3,9 +3,6 @@
 import threading
 from collections.abc import Callable
 
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
@@ -16,6 +13,7 @@ from app.adapters.llm.usage_recorder import UsageRecorder
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
 from app.config.settings import AppSettings, ConfigError, load_settings
+from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.graph import build_graph
 from app.pipeline.prompts.loader import PromptLibrary
@@ -58,7 +56,7 @@ def _default_cover_letter() -> CoverLetterRenderer:
 
 def _default_pipeline(settings: AppSettings, gateway: LLMGateway) -> PipelineRunner:
     deps = PipelineDeps(gateway=gateway, prompts=PromptLibrary(), settings=settings.pipeline)
-    return PipelineService(build_graph(deps, MemorySaver(serde=JsonPlusSerializer())))
+    return PipelineService(build_graph(deps, new_checkpointer()))
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:

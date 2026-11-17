@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from pydantic import BaseModel
 
 from app.domain.common import SeniorityLevel
+from app.domain.cv.entry_match import unmatched_source_entries
 from app.domain.cv.universal_cv import UniversalCVStructured
 
 if TYPE_CHECKING:
@@ -43,19 +43,6 @@ PROTECTED_SECTIONS: tuple[SectionName, ...] = (
 _CONTACT_FIELDS = ("full_name", "location", "email", "phone", "linkedin", "optional_links")
 
 
-def _norm(value: Any) -> str:
-    return " ".join(str(value or "").lower().split())
-
-
-_ENTRY_KEY: dict[str, Callable[[Any], tuple[str, ...]]] = {
-    "education": lambda e: (_norm(e.degree), _norm(e.institution)),
-    "licenses": lambda e: (_norm(e.name),),
-    "certifications": lambda e: (_norm(e.name),),
-    "clinical_practice": lambda e: (_norm(e.setting), _norm(e.institution)),
-    "trade_qualifications": lambda e: (_norm(e.qualification),),
-}
-
-
 def _filled(value: Any) -> bool:
     if isinstance(value, SeniorityLevel):
         return value != SeniorityLevel.UNKNOWN
@@ -82,9 +69,7 @@ def _restore_meta(source: UniversalCVStructured, output: RewrittenCV) -> dict[st
 
 
 def _restore_entries(source: list[Any], output: list[Any], section: str) -> list[Any] | None:
-    key = _ENTRY_KEY[section]
-    kept = {key(e) for e in output}
-    missing = [copy.deepcopy(e) for e in source if key(e) not in kept]
+    missing = [copy.deepcopy(e) for e in unmatched_source_entries(section, source, output)]
     return [*output, *missing] if missing else None
 
 

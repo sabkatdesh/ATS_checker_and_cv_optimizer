@@ -83,9 +83,7 @@ def test_rewritten_cv_is_a_universal_cv_with_a_change_log():
     "entry",
     [
         {"section": "not_a_section", "reason": "x"},
-        {"section": "projects", "reason": "x" * 201},
-        {"section": "projects", "reason": "x", "before": "y" * 201},
-        {"section": "projects", "reason": "x", "after": "y" * 201},
+        {"section": "projects"},
     ],
 )
 def test_change_log_entry_limits(entry):
@@ -101,3 +99,12 @@ def test_rewrite_entry_models_are_gone():
     import app.domain.cv.rewrite as rewrite
 
     assert not [n for n in dir(rewrite) if n.startswith("Rewrite") and n != "RewrittenCV"]
+
+
+def test_change_log_text_is_truncated_not_rejected():
+    from app.domain.cv.rewrite import ChangeLogEntry
+
+    entry = ChangeLogEntry.model_validate(
+        {"section": "projects", "before": "b" * 500, "after": "a" * 201, "reason": "r" * 300}
+    )
+    assert entry.before == "b" * 200 and entry.after == "a" * 200 and entry.reason == "r" * 200

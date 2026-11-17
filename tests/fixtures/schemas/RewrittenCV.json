@@ -153,7 +153,6 @@
         "after": {
           "anyOf": [
             {
-              "maxLength": 200,
               "type": "string"
             },
             {
@@ -166,7 +165,6 @@
         "before": {
           "anyOf": [
             {
-              "maxLength": 200,
               "type": "string"
             },
             {
@@ -189,7 +187,6 @@
           "title": "Entry Id"
         },
         "reason": {
-          "maxLength": 200,
           "title": "Reason",
           "type": "string"
         },

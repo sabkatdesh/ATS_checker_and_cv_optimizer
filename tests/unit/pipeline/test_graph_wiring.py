@@ -1,5 +1,4 @@
-from langgraph.checkpoint.memory import MemorySaver
-
+from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from tests.pipeline.helpers import deps_for
 
@@ -33,7 +32,7 @@ EDGES = {
 
 def _graph():
     _, deps = deps_for({})
-    return build_graph(deps, MemorySaver()).get_graph()
+    return build_graph(deps, new_checkpointer()).get_graph()
 
 
 def test_node_names():

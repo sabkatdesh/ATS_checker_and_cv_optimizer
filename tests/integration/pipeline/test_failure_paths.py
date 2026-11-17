@@ -4,13 +4,13 @@ import json
 import logging
 
 import pytest
-from langgraph.checkpoint.memory import MemorySaver
 from structlog.testing import capture_logs
 
 from app.adapters.background.inline_runner import InlineRunner
 from app.config.settings import AppSettings
 from app.container import Container
 from app.domain.match.schemas import Eligibility
+from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.ports.llm_errors import LLMOutputInvalid, LLMRefused
@@ -35,7 +35,7 @@ def _container(script: dict[str, list[Outcome]]) -> Container:
         AppSettings(_env_file=None, env="test"),
         store=store,
         auth=FakeAuth(),
-        pipeline=PipelineService(build_graph(deps, MemorySaver())),
+        pipeline=PipelineService(build_graph(deps, new_checkpointer())),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
