@@ -1,9 +1,13 @@
 import json
 
+import pytest
+
 from app.domain.cv.domain_config import Domain
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.domain.match.schemas import Match
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.nodes.eligibility import eligibility
+from app.ports.llm_errors import LLMOutputInvalid
 from tests.pipeline.helpers import ctx, deps_for, persona_cv, run, tech_jd
 
 
@@ -47,3 +51,11 @@ def test_domain_cv_wins_then_jd_then_general():
         out = run(eligibility(_state(cv_d, jd_d), deps=deps, ctx=ctx()))
         assert out["domain"] == want
         assert f"Profession domain: {want}." in gw.requests[0].messages[0].content
+
+
+def test_eligibility_invalid_output_fails_the_job_for_now():
+    _, deps = deps_for({"eligibility": [LLMOutputInvalid("x")]})
+    state = {"source_cv": persona_cv(), "jd": tech_jd()}
+    with pytest.raises(PipelineStepFailed) as exc:
+        run(eligibility(state, deps=deps, ctx=ctx()))
+    assert (exc.value.step, exc.value.code) == ("eligibility", "LLM_OUTPUT_INVALID")

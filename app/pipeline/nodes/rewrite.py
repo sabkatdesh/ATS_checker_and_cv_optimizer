@@ -8,6 +8,7 @@ from app.pipeline.blocks import DataTag
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.llm_call import call_step
+from app.pipeline.policy import run_required
 from app.pipeline.prompts.domain_guidance import get_domain_guidance
 from app.pipeline.state import PipelineState
 
@@ -47,13 +48,17 @@ def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
 
 
 async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) -> dict[str, Any]:
-    cv = await call_step(
-        deps,
-        ctx,
-        step="rewrite",
-        schema=RewrittenCV,
-        blocks=_blocks(state),
-        task_params=_task_params(state),
-        cache_prefix=True,
+    cv = await run_required(
+        "rewrite",
+        call_step(
+            deps,
+            ctx,
+            step="rewrite",
+            schema=RewrittenCV,
+            blocks=_blocks(state),
+            task_params=_task_params(state),
+            cache_prefix=True,
+        ),
     )
+
     return {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}

@@ -1,5 +1,10 @@
+import traceback
+
+import pytest
+
 from app.domain.ats.checker import compute_final_match
 from app.domain.cv.rewrite import RewrittenCV
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.nodes.ats_score import ats_score
 from tests.pipeline.helpers import ctx, deps_for, persona_cv, run, tech_jd
 
@@ -33,3 +38,16 @@ def test_ats_score_non_ats_domain_is_simplified():
     assert out["ats"]["overall_score"] == 100
     assert out["ats"]["section_scores"] == {}
     assert out["ats_before"] == out["ats"]
+
+
+def test_scorer_exception_surfaces_as_internal_failure(monkeypatch):
+    def boom(jd, cv):
+        raise ValueError("SENTINEL secret cv text")
+
+    monkeypatch.setattr("app.pipeline.nodes.ats_score.compute_final_match", boom)
+    _, deps = deps_for({})
+    state = {"domain": "tech", "jd": tech_jd(), "source_cv": persona_cv()}
+    with pytest.raises(PipelineStepFailed) as exc:
+        run(ats_score(state, deps=deps, ctx=ctx()))
+    assert (exc.value.step, exc.value.code) == ("ats_score", "INTERNAL")
+    assert "SENTINEL" not in "".join(traceback.format_exception(exc.value))

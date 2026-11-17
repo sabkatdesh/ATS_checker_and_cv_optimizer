@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 import pytest
@@ -13,12 +14,13 @@ from structlog.testing import capture_logs
 from app.config.settings import AppSettings
 from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
-from app.domain.match.schemas import Match, SummaryCV
-from app.domain.parsing.safe_parser import safe_llm_parse
+from app.domain.match.schemas import Match
 from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
+from app.ports.llm_errors import LLMOutputInvalid
 from tests.pipeline.helpers import deps_for, persona_cv, tech_jd
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -101,13 +103,18 @@ def test_stage_events_carry_no_text():
         assert secret not in blob
 
 
-def test_parse_fail_log_has_no_raw_text():
-    garbage = "secret cv line nothing parseable here"
-    with capture_logs() as logs:
-        safe_llm_parse(garbage, SummaryCV, SummaryCV())
-    assert logs
-    assert any(entry["event"] == "llm.parse_failed" for entry in logs)
-    assert "secret cv line" not in json.dumps(logs, default=str)
+def test_pipeline_parse_failure_does_not_leak():
+    secret = "SENTINEL secret cv line"
+    _, deps = deps_for({"jd_extract": [LLMOutputInvalid(f"bad reply: {secret}")]})
+    svc = PipelineService(build_graph(deps, MemorySaver()))
+    with capture_logs() as logs, pytest.raises(PipelineStepFailed) as exc:
+        _run(svc)
+    assert exc.value.code == "LLM_OUTPUT_INVALID"
+    summary = svc.summary("t1")
+    assert summary is not None and summary.error_code == "LLM_OUTPUT_INVALID"
+    shown = "".join(traceback.format_exception(exc.value)) + repr(exc.value) + str(exc.value)
+    shown += json.dumps(logs, default=str) + summary.model_dump_json()
+    assert secret not in shown and "SENTINEL" not in shown
 
 
 def test_container_builds_pipeline_lazily(monkeypatch):

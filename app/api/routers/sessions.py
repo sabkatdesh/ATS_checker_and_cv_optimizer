@@ -1,6 +1,8 @@
 import uuid
 from functools import partial
+from typing import Any
 
+import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.api.deps import get_container, require_user_id
@@ -11,6 +13,17 @@ from app.domain.parsing.input_validator import validate_jd
 from app.services.generation import resume_after_answers, run_new_session
 
 router = APIRouter()
+_log = structlog.get_logger("pipeline")
+
+
+def _pipeline_summary(c: Container, thread_id: str) -> dict[str, Any] | None:
+    """The status poll must not fail because the summary could not be built."""
+    try:
+        summary = c.pipeline.summary(thread_id)
+        return summary.model_dump(mode="json") if summary else None
+    except Exception as exc:
+        _log.error("pipeline.summary_failed", error_type=type(exc).__name__)
+        return None
 
 
 @router.post("/sessions/start")
@@ -143,8 +156,7 @@ def session_status(
     if session["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
-    summary = c.pipeline.summary(thread_id)
-    return {**session, "pipeline": summary.model_dump(mode="json") if summary else None}
+    return {**session, "pipeline": _pipeline_summary(c, thread_id)}
 
 
 @router.get("/sessions")

@@ -45,8 +45,23 @@ def test_status_adds_pipeline_summary(client, backend):
         "ats_before": None,
         "ats_after": None,
         "warnings": [],
+        "error_code": None,
     }
     assert ("summary", ("t1",), {}) in backend.pipeline.calls
+
+
+def test_status_survives_a_failing_summary(client, backend):
+    from structlog.testing import capture_logs
+
+    row = {"thread_id": "t1", "user_id": USER_A, "status": "running"}
+    backend.store.sessions["t1"] = row
+    backend.pipeline.summary_error = RuntimeError("SENTINEL secret cv text")
+    with capture_logs() as logs:
+        r = client.get("/sessions/t1/status", headers=auth_header())
+    assert r.status_code == 200
+    assert r.json() == {**row, "pipeline": None}
+    failed = [e for e in logs if e["event"] == "pipeline.summary_failed"]
+    assert len(failed) == 1 and "SENTINEL" not in str(logs)
 
 
 def test_list_sessions(client, backend):

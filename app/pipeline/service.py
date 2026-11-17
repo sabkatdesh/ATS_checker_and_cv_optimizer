@@ -6,6 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from app.adapters.llm._sync import run_sync
+from app.pipeline.errors import ErrorCode, PipelineStepFailed
 from app.pipeline.state import PipelineState, RunOptions
 from app.pipeline.summary import SessionSummary, summarize
 
@@ -19,9 +20,16 @@ def _config(thread_id: str) -> Any:
 class PipelineService:
     def __init__(self, graph: CompiledStateGraph) -> None:
         self._graph = graph
+        # The failed node leaves no checkpoint write, so the code is kept beside the graph.
+        self._failures: dict[str, ErrorCode] = {}
 
     def _invoke(self, payload: Any, thread_id: str) -> JsonDict:
-        run_sync(self._graph.ainvoke(payload, _config(thread_id)))
+        try:
+            run_sync(self._graph.ainvoke(payload, _config(thread_id)))
+        except PipelineStepFailed as failure:
+            self._failures[thread_id] = failure.code
+            raise
+        self._failures.pop(thread_id, None)
         return dict(self._graph.get_state(_config(thread_id)).values)
 
     def run(
@@ -60,4 +68,6 @@ class PipelineService:
         return self.resume(thread_id, {"tone": tone, "length": length})
 
     def summary(self, thread_id: str) -> SessionSummary | None:
-        return summarize(self._graph.get_state(_config(thread_id)).values)
+        return summarize(
+            self._graph.get_state(_config(thread_id)).values, self._failures.get(thread_id)
+        )

@@ -10,6 +10,7 @@ class FakePipeline:
         self.values: dict = {}
         self.result: dict = {}
         self.summary_value: SessionSummary | None = None
+        self.summary_error: Exception | None = None
         self.error: Exception | None = None
         self.calls: list[tuple[str, tuple, dict]] = []
 
@@ -44,4 +45,6 @@ class FakePipeline:
 
     def summary(self, thread_id: str) -> SessionSummary | None:
         self.calls.append(("summary", (thread_id,), {}))
+        if self.summary_error is not None:
+            raise self.summary_error
         return self.summary_value

@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.pipeline.errors import ErrorCode
 from app.pipeline.warnings import WarningCode
 
 
@@ -21,6 +22,7 @@ class SessionSummary(BaseModel, frozen=True):
     ats_before: int | None = None
     ats_after: int | None = None
     warnings: list[WarningCode] = Field(default_factory=list)
+    error_code: ErrorCode | None = None
 
 
 def ats_score_of(ats: Any) -> int | None:
@@ -31,9 +33,11 @@ def ats_score_of(ats: Any) -> int | None:
     return None if raw is None else round(raw)
 
 
-def summarize(values: Mapping[str, Any]) -> SessionSummary | None:
+def summarize(
+    values: Mapping[str, Any], error_code: ErrorCode | None = None
+) -> SessionSummary | None:
     if not values:
-        return None
+        return None if error_code is None else SessionSummary(error_code=error_code)
     jd = values.get("jd")
     eligibility = values.get("eligibility")
     return SessionSummary(
@@ -45,4 +49,5 @@ def summarize(values: Mapping[str, Any]) -> SessionSummary | None:
         ats_before=ats_score_of(values.get("ats_before")),
         ats_after=ats_score_of(values.get("ats")),
         warnings=[w.code for w in values.get("warnings", [])],
+        error_code=error_code,
     )

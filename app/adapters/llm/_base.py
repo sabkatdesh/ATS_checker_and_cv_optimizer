@@ -15,6 +15,8 @@ from app.adapters.llm._call_state import CallState, enrich, first_of
 from app.adapters.llm._pricing import PriceTable
 from app.adapters.llm._retry import Deadline, RetryPolicy, call_with_retry
 from app.adapters.llm._structured import (
+    REPAIR_TEXT,
+    TRUNCATION_REPAIR_TEXT,
     json_instruction,
     parse_structured,
     provider_schema,
@@ -97,17 +99,27 @@ class BaseProvider:
             if schema is None:
                 output = raw.text
             else:
-                try:
-                    output = parse_structured(raw.text, schema)
-                except LLMOutputInvalid as bad:
+                bad: LLMOutputInvalid | None = None
+                if raw.stop == "max_tokens":
+                    bad = LLMOutputTruncated(
+                        "structured output hit max_tokens", provider=self.name, model=route.model
+                    )
+                    lead, note = TRUNCATION_REPAIR_TEXT, ""
+                else:
+                    try:
+                        output = parse_structured(raw.text, schema)
+                    except LLMOutputInvalid as invalid:
+                        bad = invalid
+                        lead, note = REPAIR_TEXT, invalid.detail
+                if bad is not None:
                     if state.deadline.expired:  # no time left for the repair
                         raise bad
-                    turns = repair_turns(list(wire.messages), raw.text, bad.detail)
+                    turns = repair_turns(list(wire.messages), raw.text, note, lead=lead)
                     raw = await self._send(
                         dataclasses.replace(wire, messages=tuple(turns)), route, cancel, state
                     )
                     self._classify(raw, route, structured=True)
-                    output = self._parse_again(raw.text, schema, route)
+                    output = self._parse_again(raw, schema, route)
                     repaired = True
         except LLMError as err:
             enrich(err, state, self.name, route.model)
@@ -203,13 +215,15 @@ class BaseProvider:
         p, m = self.name, route.model
         if raw.stop == "refused":
             raise LLMRefused("model refused", provider=p, model=m)
-        if structured and raw.stop == "max_tokens":
-            raise LLMOutputTruncated("structured output hit max_tokens", provider=p, model=m)
         if not structured and not raw.text.strip():
             raise LLMOutputInvalid("empty response", provider=p, model=m)
 
-    def _parse_again(self, text: str, schema: type[T], route: Route) -> T:
+    def _parse_again(self, raw: RawCompletion, schema: type[T], route: Route) -> T:
+        if raw.stop == "max_tokens":
+            raise LLMOutputTruncated(
+                "structured output hit max_tokens", provider=self.name, model=route.model
+            )
         try:
-            return parse_structured(text, schema)
+            return parse_structured(raw.text, schema)
         except LLMOutputInvalid as bad:
             raise LLMOutputInvalid(bad.detail, provider=self.name, model=route.model) from None

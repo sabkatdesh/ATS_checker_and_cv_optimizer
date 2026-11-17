@@ -11,7 +11,6 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured, SummaryJD
 from app.domain.match.schemas import Match, SummaryCV
-from app.domain.parsing.safe_parser import safe_llm_parse
 from app.domain.questions.schemas import GapQuestions
 
 CASES = {
@@ -35,12 +34,6 @@ def test_canned_response_validates_strictly(chain, model):
     parsed = model.model_validate_json(_text(chain))
     assert parsed.model_dump(exclude_defaults=True), "canned response must carry real content"
     assert set(json.loads(_text(chain))) <= set(model.model_fields)
-
-
-@pytest.mark.parametrize(("chain", "model"), CASES.items())
-def test_canned_response_passes_legacy_parser_without_fallback(chain, model):
-    fallback = model.model_construct()
-    assert safe_llm_parse(_text(chain), model, fallback) is not fallback
 
 
 def test_verdict_has_the_eligible_score():

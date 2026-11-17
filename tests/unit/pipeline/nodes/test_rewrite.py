@@ -1,7 +1,11 @@
+import pytest
+
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.questions.schemas import GapAnswers
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.nodes.rewrite import rewrite
 from app.pipeline.prompts.domain_guidance import get_domain_guidance
+from app.ports.llm_errors import LLMRefused
 from tests.pipeline.helpers import ctx, deps_for, persona_cv, run, tech_jd
 
 
@@ -39,3 +43,10 @@ def test_rewrite_second_pass_sends_previous_draft_without_empty_answers():
     content = gw.requests[0].messages[0].content
     assert "<previous_draft>\n" + first.model_dump_json() + "\n</previous_draft>" in content
     assert "<answers>\n" not in content
+
+
+def test_rewrite_refusal_fails_the_job():
+    _, deps = deps_for({"rewrite": [LLMRefused("x")]})
+    with pytest.raises(PipelineStepFailed) as exc:
+        run(rewrite(_state(), deps=deps, ctx=ctx()))
+    assert (exc.value.step, exc.value.code) == ("rewrite", "CONTENT_REFUSED")

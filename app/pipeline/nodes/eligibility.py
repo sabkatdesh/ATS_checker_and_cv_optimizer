@@ -9,6 +9,7 @@ from app.domain.match.schemas import Match
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.llm_call import call_step
+from app.pipeline.policy import run_required
 from app.pipeline.state import PipelineState
 
 
@@ -25,13 +26,17 @@ async def eligibility(
 ) -> dict[str, Any]:
     cv, jd = state["source_cv"], state["jd"]
     domain = reconcile_domain(cv, jd)
-    verdict = await call_step(
-        deps,
-        ctx,
-        step="eligibility",
-        schema=Match,
-        blocks=[("job_requirements", jd.model_dump_json()), ("cv", cv.model_dump_json())],
-        task_params={"domain": domain},
+    verdict = await run_required(
+        "eligibility",
+        call_step(
+            deps,
+            ctx,
+            step="eligibility",
+            schema=Match,
+            blocks=[("job_requirements", jd.model_dump_json()), ("cv", cv.model_dump_json())],
+            task_params={"domain": domain},
+        ),
     )
+
     eligible = (verdict.score or 0) >= deps.settings.eligibility_threshold
     return {"domain": domain, "eligibility": verdict, "eligible": eligible}

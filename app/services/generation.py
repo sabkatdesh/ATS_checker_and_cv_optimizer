@@ -1,12 +1,16 @@
 import logging
 
+import structlog
+
 from app.container import Container
 from app.domain.cv.profile_text import ProfileBuilder
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.state import RunOptions
 from app.ports.pipeline import JsonDict
 from app.services.finalize import finalize_session
 
 logger = logging.getLogger(__name__)
+_log = structlog.get_logger("pipeline")
 
 AWAIT_ANSWERS = "await_answers"
 AWAIT_COVER_LETTER = "cover_letter_options"
@@ -24,6 +28,12 @@ def _options(c: Container, cover_letter: bool, tone: str | None, length: str | N
             "max_passes": c.settings.pipeline.max_passes,
         }
     )
+
+
+def _step_failed(c: Container, thread_id: str, failure: PipelineStepFailed) -> None:
+    """A required step failed: mark the session errored (no render, no coin deduction)."""
+    _log.warning("pipeline.failed", step=failure.step, code=failure.code)
+    c.store.update_session(thread_id, {"status": "error"})
 
 
 def _pause_status(c: Container, thread_id: str) -> bool:
@@ -72,6 +82,8 @@ def run_new_session(
         if not _pause_status(c, thread_id):
             finalize_session(c, thread_id, result, user_id, profile=profile)
 
+    except PipelineStepFailed as failure:
+        _step_failed(c, thread_id, failure)
     except Exception:
         logger.exception("Pipeline error for thread %s", thread_id)
         c.store.update_session(thread_id, {"status": "error"})
@@ -83,6 +95,8 @@ def resume_after_answers(c: Container, *, user_id: str, thread_id: str, user_qna
         if not _pause_status(c, thread_id):
             profile = c.store.get_cv_profile(user_id)
             finalize_session(c, thread_id, result, user_id, profile=profile)
+    except PipelineStepFailed as failure:
+        _step_failed(c, thread_id, failure)
     except Exception:
         logger.exception("Resume error for thread %s", thread_id)
         c.store.update_session(thread_id, {"status": "error"})
@@ -95,6 +109,8 @@ def resume_after_cover_letter_options(
         result = c.pipeline.resume_cover_letter(thread_id, tone, length)
         profile = c.store.get_cv_profile(user_id)
         finalize_session(c, thread_id, result, user_id, profile=profile)
+    except PipelineStepFailed as failure:
+        _step_failed(c, thread_id, failure)
     except Exception:
         logger.exception("Cover letter resume error for %s", thread_id)
         c.store.update_session(thread_id, {"status": "error"})
