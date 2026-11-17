@@ -164,3 +164,32 @@ def test_markup_stripped_copy_is_not_flagged():
     }
     claims, _ = _check(persona_cv("tech_backend"), edit)
     assert claims == []
+
+
+def test_rank_word_is_not_supported_by_a_longer_word():
+    source = _edited(persona_cv("tech_backend"), {"skills.soft_skills": ["Leadership"]})
+    claims, _ = _check(source, {"work_experience.0.job_title": "Lead Software Engineer"})
+    assert _kinds(claims) == [("title", "not_in_source", "hard")]
+
+
+def test_head_is_not_supported_by_overhead():
+    bullets = ["Built REST services", "Cut overhead on the database schema"]
+    source = _edited(persona_cv("tech_backend"), {"work_experience.0.responsibilities": bullets})
+    claims, _ = _check(source, {"work_experience.0.job_title": "Head Software Engineer"})
+    assert _kinds(claims) == [("title", "not_in_source", "hard")]
+
+
+def test_added_word_present_as_a_whole_word_is_supported():
+    claims, _ = _check(
+        persona_cv("tech_backend"), {"work_experience.0.job_title": "Backend Software Engineer"}
+    )
+    assert claims == []
+
+
+def test_lakh_grouping_matches_western_grouping():
+    tech = persona_cv("tech_backend")
+    source = _edited(tech, {"work_experience.0.achievements": ["Saved Tk 1,00,000 a year"]})
+    same, _ = _check(source, {"work_experience.0.achievements": ["Saved Tk 100,000 a year"]})
+    assert same == []
+    inflated, _ = _check(source, {"work_experience.0.achievements": ["Saved Tk 10,00,000 a year"]})
+    assert _kinds(inflated) == [("number", "number_not_in_source", "hard")]

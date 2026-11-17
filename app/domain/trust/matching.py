@@ -18,7 +18,10 @@ from app.domain.trust.policy import severity_of
 from app.domain.trust.report import SourceCounts, UnsupportedClaim
 
 NAME_MATCH = 90
-_MIN_SUBSTRING = 4  # shorter added tokens must appear as whole words
+# Rank words only ever count as the same whole word ("lead" is not supported by "leadership").
+RANK_WORDS = frozenset(
+    {"senior", "lead", "head", "principal", "chief", "staff", "manager", "director", "sr", "jr"}
+)
 
 Support = Literal["cv", "answers"] | None
 Reason = Literal["not_in_source", "number_not_in_source", "date_changed"]
@@ -29,7 +32,15 @@ def _has_phrase(text_norm: str, phrase: str) -> bool:
 
 
 def _token_in(token: str, text_norm: str) -> bool:
-    return _has_phrase(text_norm, token) or (len(token) >= _MIN_SUBSTRING and token in text_norm)
+    """Whole-word presence, never a substring; a simple plural counts except for rank words."""
+    if _has_phrase(text_norm, token):
+        return True
+    if token in RANK_WORDS:
+        return False
+    singular = token[:-1] if token.endswith("s") and len(token) > 3 else None
+    return _has_phrase(text_norm, f"{token}s") or bool(
+        singular and _has_phrase(text_norm, singular)
+    )
 
 
 def _name_support(claim: Claim, ev: SourceEvidence) -> Support:

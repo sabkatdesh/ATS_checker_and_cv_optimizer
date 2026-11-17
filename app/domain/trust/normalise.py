@@ -32,12 +32,18 @@ _DATE_FORMS = re.compile(
 )
 _CURRENCY_GLUE = re.compile(r"(BDT|Tk\.?|৳|\$)(?=\d)", re.IGNORECASE)
 _NUMBER = re.compile(
-    r"(?<![\w.])(?P<num>\d{1,3}(?:(?:,| (?=\d{3}(?!\d)))\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
-    r"(?P<suf>\s?%|[kK](?![\w])|M(?![\w])|)(?![^\W\d_])(?!\d)"
+    r"(?<![\w.])(?P<num>\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d+)?"  # South Asian: 1,00,000
+    r"|\d{1,3}(?:(?:,| (?=\d{3}(?!\d)))\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
+    r"(?P<suf>\s?%|\s?(?i:lakhs?|lacs?|crores?)(?![\w])|\s?(?:লাখ|কোটি)"
+    r"|[kK](?![\w])|M(?![\w])|[x×](?![\w])|)(?![^\W\d_])(?!\d)"
 )
 _YEAR_BEFORE = re.compile(rf"(?:\b{_DATE_WORDS}\.?|[-–—]|\d{{4}}\s*(?:[-–—]|to))\s*$", re.I)
 _YEAR_AFTER = re.compile(r"^\s*(?:[-–—]|to\b)\s*(?:\d{4}|present|current|now|date)", re.I)
-_MULTIPLIER = {"k": Decimal(1000), "m": Decimal(1_000_000)}
+_LAKH, _CRORE = Decimal(100_000), Decimal(10_000_000)
+_MULTIPLIER = {
+    "k": Decimal(1000), "m": Decimal(1_000_000), "lakh": _LAKH, "lakhs": _LAKH, "lac": _LAKH,
+    "lacs": _LAKH, "লাখ": _LAKH, "crore": _CRORE, "crores": _CRORE, "কোটি": _CRORE,
+}  # fmt: skip
 
 
 def _is_date_year(text: str, match: re.Match[str]) -> bool:

@@ -24,6 +24,11 @@ def test_normalise_keeps_bangla_vowel_signs():
         ("Tk5000 budget, $3.5M fund, 20k users", ["5000", "3500000", "20000"]),
         ("Since 2019, led 2019-2021 work; Jan 2020 to present", []),
         ("Served 2000 patients", ["2000"]),
+        ("Tk 1,00,000 and Tk 1,50,000 and BDT 10,00,000", ["100000", "150000", "1000000"]),
+        ("5 lakh, 2 crore, 3 Lakhs, 1.5 lac", ["500000", "20000000", "300000", "150000"]),
+        ("৫ লাখ টাকা, ২ কোটি", ["500000", "20000000"]),
+        ("3x throughput, 1.5x faster, 2× capacity", ["3", "1.5", "2"]),
+        ("Laid 5m of cable", []),
         ("Promoted 05/2019; EC2, Python3, 3D, 1st, v2.1, 24/7 support", []),
     ],
 )
