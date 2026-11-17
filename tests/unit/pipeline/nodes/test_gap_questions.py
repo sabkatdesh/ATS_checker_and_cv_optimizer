@@ -63,3 +63,12 @@ def test_gap_questions_unavailable_fails_the_job():
     with pytest.raises(PipelineStepFailed) as exc:
         run(gap_questions(_state(), deps=deps, ctx=ctx()))
     assert exc.value.code == "LLM_UNAVAILABLE"
+
+
+def test_gap_questions_reassigns_ids_in_order():
+    qs = GapQuestions(
+        questions=[GapQuestion(id="a", text="One?"), GapQuestion(id="a", text="Two?")]
+    )
+    _, deps = deps_for({"gap_questions": [qs]})
+    out = run(gap_questions(_state(), deps=deps, ctx=ctx()))
+    assert [(q.id, q.text) for q in out["questions"]] == [("q1", "One?"), ("q2", "Two?")]

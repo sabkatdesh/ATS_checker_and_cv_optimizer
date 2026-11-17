@@ -83,7 +83,7 @@ def test_failure_after_answers_is_also_an_error_session():
     c = _container(script)
     _start(c)
     assert c.store.get_session(TID)["status"] == "awaiting_hitl"
-    resume_after_answers(c, user_id=USER_A, thread_id=TID, user_qna="my private answer")
+    resume_after_answers(c, user_id=USER_A, thread_id=TID, reply="my private answer")
     assert c.store.get_session(TID)["status"] == "error"
     assert FakePdfRenderer.calls == []
     summary = c.pipeline.summary(TID)

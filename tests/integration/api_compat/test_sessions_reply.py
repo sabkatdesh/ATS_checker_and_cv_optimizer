@@ -1,3 +1,7 @@
+import pytest
+
+from app.domain.questions.schemas import GapQuestion
+from app.pipeline.errors import NotAwaitingInput
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, USER_B
 
@@ -53,3 +57,40 @@ def test_reply_error(client, backend):
     r = _reply(client)
     assert r.status_code == 200
     assert backend.store.sessions["t1"]["status"] == "error"
+
+
+def _post(client, body):
+    return client.post("/sessions/t1/reply", json=body, headers=auth_header())
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ({"user_qna": ""}, ""),
+        ({}, None),
+        ({"skipped": True}, {"skipped": True}),
+        ({"answers": {"q1": "x"}}, {"answers": {"q1": "x"}, "free_text": None}),
+        ({"user_qna": "Q1: a\nA1: b"}, "Q1: a\nA1: b"),
+    ],
+)
+def test_reply_forms_resume_and_complete(client, backend, body, expected):
+    _session(backend)
+    backend.pipeline.result = {"eligible": True}
+    assert _post(client, body).status_code == 200
+    assert ("resume", ("t1", expected), {}) in backend.pipeline.calls
+    assert backend.store.sessions["t1"]["status"] == "complete"
+
+
+def test_reply_not_awaited_marks_error(client, backend):
+    _session(backend)
+    backend.pipeline.error = NotAwaitingInput()
+    assert _post(client, {"skipped": True}).status_code == 200
+    assert backend.store.sessions["t1"]["status"] == "error"
+
+
+def test_pause_stores_question_texts_as_gaps(client, backend):
+    _session(backend)
+    backend.pipeline.next_nodes = ["await_answers"]
+    backend.pipeline.values = {"questions": [GapQuestion(id="q1", text="Kubernetes?")]}
+    _post(client, {"skipped": True})
+    assert backend.store.sessions["t1"]["gaps"] == ["Kubernetes?"]

@@ -59,7 +59,7 @@ def test_happy_path():
     assert state["next"] == ["await_answers"]
     assert state["interrupt"] == {
         "type": "gap_questions",
-        "questions": [{"id": "q1", "text": "Kubernetes?"}],
+        "questions": [{"id": "q1", "text": "Kubernetes?", "why": None, "hint": None}],
     }
     final = svc.resume("t1", persona_answers().free_text)
     assert isinstance(final["tailored_cv"], RewrittenCV)

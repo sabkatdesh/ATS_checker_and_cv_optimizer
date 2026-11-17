@@ -2,14 +2,12 @@
 
 from typing import Any
 
-from app.domain.questions.schemas import GapQuestions
+from app.domain.questions.schemas import MAX_QUESTIONS, GapQuestions
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.llm_call import call_step
 from app.pipeline.policy import run_optional, skip_warning
 from app.pipeline.state import PipelineState
-
-MAX_QUESTIONS = 5
 
 
 async def gap_questions(
@@ -35,4 +33,6 @@ async def gap_questions(
     )
     if out is None:
         return {"questions": [], "warnings": [skip_warning("gap_questions")]}
-    return {"questions": out.questions}
+    # Ids are ours, so a repeated or odd model id cannot collide with another answer.
+    numbered = [q.model_copy(update={"id": f"q{i}"}) for i, q in enumerate(out.questions, 1)]
+    return {"questions": numbered}

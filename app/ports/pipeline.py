@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ class PipelineRunner(Protocol):
 
     def get_state(self, thread_id: str) -> JsonDict: ...  # {"values", "next", "interrupt"}
 
-    def resume(self, thread_id: str, reply: Any) -> JsonDict: ...
+    def resume(self, thread_id: str, reply: Mapping[str, Any] | str | None) -> JsonDict: ...
 
     def resume_cover_letter(self, thread_id: str, tone: str, length: str) -> JsonDict: ...
 

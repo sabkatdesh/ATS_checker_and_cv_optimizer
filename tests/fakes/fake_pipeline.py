@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import Any
 
 from app.pipeline.state import RunOptions
@@ -35,7 +36,7 @@ class FakePipeline:
         self._enter("get_state", (thread_id,), {})
         return {"values": self.values, "next": self.next_nodes, "interrupt": None}
 
-    def resume(self, thread_id: str, reply: Any) -> dict:
+    def resume(self, thread_id: str, reply: Mapping[str, Any] | str | None) -> dict:
         self._enter("resume", (thread_id, reply), {})
         return self.result
 

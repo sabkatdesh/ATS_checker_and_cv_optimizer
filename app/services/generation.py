@@ -1,10 +1,12 @@
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 import structlog
 
 from app.container import Container
 from app.domain.cv.profile_text import ProfileBuilder
-from app.pipeline.errors import PipelineStepFailed
+from app.pipeline.errors import NotAwaitingInput, PipelineStepFailed
 from app.pipeline.state import RunOptions
 from app.ports.pipeline import JsonDict
 from app.services.finalize import finalize_session
@@ -89,12 +91,17 @@ def run_new_session(
         c.store.update_session(thread_id, {"status": "error"})
 
 
-def resume_after_answers(c: Container, *, user_id: str, thread_id: str, user_qna: str) -> None:
+def resume_after_answers(
+    c: Container, *, user_id: str, thread_id: str, reply: Mapping[str, Any] | str | None
+) -> None:
     try:
-        result = c.pipeline.resume(thread_id, user_qna)
+        result = c.pipeline.resume(thread_id, reply)
         if not _pause_status(c, thread_id):
             profile = c.store.get_cv_profile(user_id)
             finalize_session(c, thread_id, result, user_id, profile=profile)
+    except NotAwaitingInput:
+        _log.warning("pipeline.reply_not_awaited")
+        c.store.update_session(thread_id, {"status": "error"})
     except PipelineStepFailed as failure:
         _step_failed(c, thread_id, failure)
     except Exception:

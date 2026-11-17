@@ -6,6 +6,7 @@ from app.domain.ats.schemas import AtsMatch
 from app.domain.cv.domain_config import get_budget
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.sections import restore_dropped
+from app.domain.questions.reply import answers_block
 from app.pipeline.blocks import DataTag
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
@@ -42,8 +43,9 @@ def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
         ("job_requirements", state["jd"].model_dump_json()),
     ]
     answers = state.get("answers")
-    if answers is not None and answers.free_text:
-        blocks.append(("answers", answers.free_text))
+    text = answers_block(state.get("questions") or [], answers) if answers is not None else ""
+    if text:
+        blocks.append(("answers", text))
     draft = state.get("tailored_cv")
     if state.get("passes", 0) >= 1 and draft is not None:
         blocks.append(("previous_draft", draft.model_dump_json()))

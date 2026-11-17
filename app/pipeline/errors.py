@@ -21,3 +21,12 @@ class PipelineStepFailed(Exception):
         self.code: ErrorCode = code
         self.refund = refund
         super().__init__(f"{step} failed: {code}")
+
+
+class NotAwaitingInput(Exception):
+    """A reply arrived for a thread that is not paused at the gap questions."""
+
+    detail = "Session is not waiting for your input"
+
+    def __init__(self) -> None:
+        super().__init__(self.detail)

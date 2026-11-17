@@ -1,12 +1,13 @@
 """PipelineService: runs, inspects and resumes the compiled graph (implements PipelineRunner)."""
 
+from collections.abc import Mapping
 from typing import Any
 
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from app.adapters.llm._sync import run_sync
-from app.pipeline.errors import ErrorCode, PipelineStepFailed
+from app.pipeline.errors import ErrorCode, NotAwaitingInput, PipelineStepFailed
 from app.pipeline.state import PipelineState, RunOptions
 from app.pipeline.summary import SessionSummary, summarize
 
@@ -60,12 +61,16 @@ class PipelineService:
             "interrupt": interrupts[0].value if interrupts else None,
         }
 
-    def resume(self, thread_id: str, reply: Any) -> JsonDict:
-        """Answer the pending interrupt and run to the next pause or the end."""
-        return self._invoke(Command(resume=reply), thread_id)
+    def resume(self, thread_id: str, reply: Mapping[str, Any] | str | None) -> JsonDict:
+        """Answer the gap questions and run to the next pause or the end."""
+        if "await_answers" not in self._graph.get_state(_config(thread_id)).next:
+            raise NotAwaitingInput
+        # langgraph ignores a None resume and misreads {} as a map of interrupt ids; both mean
+        # "nothing to say", which the node turns into skipped answers.
+        return self._invoke(Command(resume=reply or ""), thread_id)
 
     def resume_cover_letter(self, thread_id: str, tone: str, length: str) -> JsonDict:
-        return self.resume(thread_id, {"tone": tone, "length": length})
+        return self._invoke(Command(resume={"tone": tone, "length": length}), thread_id)
 
     def summary(self, thread_id: str) -> SessionSummary | None:
         return summarize(

@@ -131,7 +131,7 @@ def hitl_reply(
             c,
             user_id=user_id,
             thread_id=thread_id,
-            user_qna=body.user_qna,
+            reply=body.to_reply(),
         )
     )
 
