@@ -16,6 +16,7 @@ from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion, GapQuestions
+from app.domain.trust.report import TrustReport
 from app.pipeline.state import RunOptions
 from app.pipeline.warnings import PipelineWarning
 
@@ -31,6 +32,7 @@ STATE_TYPES: tuple[type, ...] = (
     AtsMatch,
     RewrittenCV,
     CoverLetterStructured,
+    TrustReport,
     PipelineWarning,
 )
 

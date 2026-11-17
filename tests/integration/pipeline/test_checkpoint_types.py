@@ -23,6 +23,7 @@ def test_allowlist_covers_nested_models_and_enums():
     names = {name for _, name in allowed_modules()}
     assert {"Domain", "SeniorityLevel", "EmploymentType", "SectionScore", "ChangeLogEntry"} <= names
     assert {"WorkExperienceEntry", "PipelineWarning", "RunOptions"} <= names
+    assert {"TrustReport", "UnsupportedClaim", "SourceCounts"} <= names
 
 
 def test_interrupt_resume_flow_logs_nothing_from_the_serde(
