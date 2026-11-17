@@ -39,15 +39,30 @@ _PATTERNS: dict[MarkerCode, tuple[re.Pattern[str], ...]] = {
         re.compile(r"<\s*/?\s*(?:system|assistant|user)\s*>", _I),
         re.compile(r"\[/?INST\]|<<\s*/?SYS\s*>>|<\|im_(?:start|end)\|>", _I),
     ),
+    # Only the model-addressing form: "as an AI language model you must", "as an AI, you ...".
+    # Job titles ("as an AI engineer", "as an AI/ML researcher") must not fire.
     "AS_AN_AI": (
         re.compile(
-            r"\bas\s+an?\s+(?:ai\b|artificial\s+intelligence|(?:large\s+)?language\s+model)", _I
+            r"\bas\s+an?\s+(?:(?:ai|artificial\s+intelligence)(?:\s+(?:language\s+model|assistant"
+            r"|chatbot))?|(?:large\s+)?language\s+model)"
+            r"(?:\s*[,:]\s*(?:you|i|we|it)\b|\s+(?:you|i|we|it)\s+"
+            r"(?:must|should|will|shall|have|are|am|can|cannot|need)\b)",
+            _I,
         ),
     ),
     "JSON_PAYLOAD": (re.compile(r"\{[^{}]*\"(?:score|verdict|overall_score)\"\s*:", _I),),
+    # A demand aimed at the evaluation; "TOEFL score of 100" or "give every hire a score" is not.
     "SCORE_DEMAND": (
-        re.compile(r"\bscore\s+of\s+100\b", _I),
-        re.compile(r"\bgive\b[^.\n]{0,60}?\bscore\b", _I),
+        re.compile(
+            r"\bgive\s+(?:this|the|my|our)\s+(?:candidate|applicant|cv|resume|application)\b"
+            r"[^.\n]{0,40}?\b(?:score|rating)\b",
+            _I,
+        ),
+        re.compile(
+            r"\b(?:set|rate|score)\s+(?:this|the|my)\s+(?:candidate|applicant|cv|resume|application)"
+            r"\b[^.\n]{0,30}?\b100\b",
+            _I,
+        ),
     ),
     "DATA_TAG": (re.compile(rf"<\s*/?\s*(?:{_DATA_TAGS})\s*>", _I),),
 }
