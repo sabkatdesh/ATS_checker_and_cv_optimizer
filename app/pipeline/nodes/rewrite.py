@@ -1,9 +1,13 @@
-"""Tailor the source CV to the job within the domain budget; dropped sections come back."""
+"""Tailor the source CV to the job within the domain budget.
+
+Dropped sections come back, then invented contacts and markup are removed.
+"""
 
 from typing import Any
 
 from app.domain.ats.schemas import AtsMatch
 from app.domain.cv.domain_config import get_budget
+from app.domain.cv.output_checks import remove_foreign_contacts, strip_markup
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.sections import restore_dropped
 from app.domain.questions.reply import answers_block
@@ -80,8 +84,15 @@ async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) 
         ),
     )
 
-    cv, restored = restore_dropped(state["source_cv"], cv)
-    out: dict[str, Any] = {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}
+    source = state["source_cv"]
+    cv, restored = restore_dropped(source, cv)
+    cv, removed = remove_foreign_contacts(source, strip_markup(cv))
+    warnings: list[PipelineWarning] = []
     if restored:
-        out["warnings"] = [PipelineWarning(code="SECTION_RESTORED", step="rewrite")]
+        warnings.append(PipelineWarning(code="SECTION_RESTORED", step="rewrite"))
+    if removed:
+        warnings.append(PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="rewrite"))
+    out: dict[str, Any] = {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}
+    if warnings:
+        out["warnings"] = warnings
     return out

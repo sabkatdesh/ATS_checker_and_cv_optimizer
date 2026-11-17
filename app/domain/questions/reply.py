@@ -4,16 +4,19 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from app.domain.questions.schemas import GapAnswers, GapQuestion
+from app.domain.text.invisible import strip_invisible
 
 MAX_ANSWER_CHARS = 1000
 MAX_FREE_TEXT_CHARS = 6000
-_INVISIBLE = " ​﻿"
 
 
 def _clean(value: object, limit: int) -> str:
+    """Strip invisible characters and whitespace until nothing changes (a fixed point)."""
     if not isinstance(value, str):
         return ""
-    return value.strip().strip(_INVISIBLE).strip()[:limit]
+    while (cleaned := strip_invisible(value).strip()) != value:
+        value = cleaned
+    return value[:limit]
 
 
 def normalise_reply(raw: object, questions: Sequence[GapQuestion]) -> GapAnswers:

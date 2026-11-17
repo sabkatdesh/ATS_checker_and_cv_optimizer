@@ -91,11 +91,11 @@ def test_second_pass_without_ats_applying_sends_no_feedback():
     assert "<ats_feedback>\n" not in gw.requests[0].messages[0].content
 
 
-def test_rewrite_prompt_version_3_recorded():
+def test_rewrite_prompt_version_4_recorded():
     gw, deps = deps_for({"rewrite": [RewrittenCV()]})
     run(rewrite(_state(), deps=deps, ctx=ctx()))
     req = gw.requests[0]
-    assert req.metadata.prompt_version == 3
+    assert req.metadata.prompt_version == 4
     assert "gaps_unaddressed" in req.system and "change_log" in req.system
     assert "Never add employers, titles, dates, degrees, certifications, tools or skills" in (
         req.system
@@ -123,3 +123,21 @@ def test_rewrite_prompt_asks_for_verbatim_identifying_fields():
     gw, deps = deps_for({"rewrite": [RewrittenCV()]})
     run(rewrite(_state(), deps=deps, ctx=ctx()))
     assert "copied verbatim" in gw.requests[0].system
+
+
+def test_rewrite_removes_invented_contacts_and_markup_after_restore():
+    source = persona_cv()
+    draft = RewrittenCV.model_validate(source.model_dump(exclude={"education"}))
+    role = draft.work_experience[0].model_copy(
+        update={"responsibilities": ["**Built** REST services https://evil.example/apply"]}
+    )
+    draft = draft.model_copy(update={"work_experience": [role]})
+    _, deps = deps_for({"rewrite": [draft]})
+    out = run(rewrite(_state(), deps=deps, ctx=ctx()))
+    cv = out["tailored_cv"]
+    assert cv.work_experience[0].responsibilities == ["Built REST services"]
+    assert cv.education == source.education
+    assert out["warnings"] == [
+        PipelineWarning(code="SECTION_RESTORED", step="rewrite"),
+        PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="rewrite"),
+    ]

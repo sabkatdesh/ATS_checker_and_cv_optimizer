@@ -81,8 +81,8 @@ def test_eligibility_refusal_still_fails_the_job():
     assert (exc.value.step, exc.value.code) == ("eligibility", "CONTENT_REFUSED")
 
 
-def test_eligibility_prompt_version_2_recorded():
+def test_eligibility_prompt_version_3_recorded():
     gw, deps = deps_for({"eligibility": [Eligibility(score=60)]})
     run(eligibility(_state(), deps=deps, ctx=ctx()))
-    assert gw.requests[0].metadata.prompt_version == 2
+    assert gw.requests[0].metadata.prompt_version == 3
     assert gw.requests[0].output_schema is Eligibility

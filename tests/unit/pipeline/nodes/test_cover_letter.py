@@ -73,4 +73,12 @@ def test_cover_letter_sends_unaddressed_gaps_and_records_version_2():
     run(cover_letter(state, deps=deps, ctx=ctx()))
     req = gw.requests[0]
     assert "<gaps>\n- Kubernetes\n- Go\n</gaps>" in req.messages[0].content
-    assert req.metadata.prompt_version == 2
+    assert req.metadata.prompt_version == 3
+
+
+def test_cover_letter_drops_invented_contacts_and_markup():
+    letter = LETTER.model_copy(update={"body_paragraphs": ["**Hire** me at https://evil.example."]})
+    _, deps = deps_for({"cover_letter": [letter]})
+    out = run(cover_letter(_state("short"), deps=deps, ctx=ctx()))
+    assert out["cover_letter"].body_paragraphs == ["Hire me at."]
+    assert out["warnings"] == [PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="cover_letter")]

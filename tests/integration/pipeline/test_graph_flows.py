@@ -21,7 +21,9 @@ QUESTIONS = GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])
 
 
 def _draft() -> RewrittenCV:
-    return RewrittenCV.model_validate_json((DEFAULT_DIR / "rewrite.json").read_text("utf-8"))
+    """The fake provider's rewrite, with the persona's own contacts (others would be removed)."""
+    draft = RewrittenCV.model_validate_json((DEFAULT_DIR / "rewrite.json").read_text("utf-8"))
+    return draft.model_copy(update={"meta": persona_cv().meta})
 
 
 def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome]) -> dict:

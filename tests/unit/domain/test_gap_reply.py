@@ -12,6 +12,8 @@ QS = [GapQuestion(id="q1", text="Kubernetes?"), GapQuestion(id="q2", text="Go?")
         "",
         "   ",
         " \u200b",
+        "\u200b\n\u200b\n\u200b",
+        "\ufeff \u2060\u00ad ",
         None,
         {"answers": {"q1": "  "}},
         {"skipped": True},
@@ -59,3 +61,13 @@ def test_seven_questions_keep_the_first_five():
 def test_blank_question_text_is_dropped():
     raw = {"questions": [{"id": "a", "text": "  "}, {"id": "b", "text": "Real?"}]}
     assert [q.id for q in GapQuestions.model_validate(raw).questions] == ["b"]
+
+
+def test_invisible_characters_inside_an_answer_are_removed() -> None:
+    out = normalise_reply({"answers": {"q1": "\u200b Ku\u200bbernetes \u202e"}}, QS)
+    assert out == GapAnswers(answers={"q1": "Kubernetes"})
+
+
+def test_bangla_answer_keeps_its_joiner() -> None:
+    word = "র\u200d্যাব"
+    assert normalise_reply(word, QS) == GapAnswers(free_text=word)

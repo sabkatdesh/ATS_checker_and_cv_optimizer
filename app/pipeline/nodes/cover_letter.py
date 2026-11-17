@@ -1,14 +1,16 @@
-"""Write the cover letter from the tailored CV."""
+"""Write the cover letter from the tailored CV; invented contacts and markup are removed."""
 
 from typing import Any
 
 from app.domain.cv.cover_letter import CoverLetterStructured
+from app.domain.cv.output_checks import scrub_contacts, strip_markup
 from app.pipeline.blocks import DataTag
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.llm_call import call_step
 from app.pipeline.policy import run_optional, skip_warning
 from app.pipeline.state import PipelineState, RunOptions
+from app.pipeline.warnings import PipelineWarning
 
 _WORD_TARGETS = {"short": 150, "standard": 300}
 _REWRITE_NOTES = {"change_log", "gaps_unaddressed"}
@@ -44,4 +46,9 @@ async def cover_letter(
     )
     if letter is None:
         return {"cover_letter": None, "warnings": [skip_warning("cover_letter")]}
+    source = state.get("source_cv") or state["tailored_cv"]
+    letter, removed = scrub_contacts(strip_markup(letter), source)
+    if removed:
+        warning = PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="cover_letter")
+        return {"cover_letter": letter, "warnings": [warning]}
     return {"cover_letter": letter}

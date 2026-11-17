@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 
 from app.config.settings import ConfigError
-from app.pipeline.prompts.loader import PromptLibrary
+from app.pipeline.blocks import INJECTION_RULE
+from app.pipeline.prompts.loader import PROMPTS_DIR, PromptLibrary
 
 STEPS = ["jd_extract", "cv_extract", "eligibility", "gap_questions", "rewrite", "cover_letter"]
 
@@ -63,3 +64,13 @@ def test_every_llm_step_has_a_prompt(step: str) -> None:
 @pytest.mark.parametrize("step", STEPS)
 def test_system_text_has_no_placeholders(step: str) -> None:
     assert "{" not in PromptLibrary().get(step).system
+
+
+@pytest.mark.parametrize("step", STEPS)
+def test_every_prompt_has_injection_rule(step: str) -> None:
+    assert INJECTION_RULE in PromptLibrary().get(step).system
+
+
+def test_every_prompt_file_is_a_tested_step() -> None:
+    files = sorted(p.stem for p in PROMPTS_DIR.glob("*.md"))
+    assert files == sorted(STEPS)
