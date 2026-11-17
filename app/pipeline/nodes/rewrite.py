@@ -1,9 +1,11 @@
-"""Tailor the source CV to the job within the domain budget."""
+"""Tailor the source CV to the job within the domain budget; dropped sections come back."""
 
 from typing import Any
 
+from app.domain.ats.schemas import AtsMatch
 from app.domain.cv.domain_config import get_budget
 from app.domain.cv.rewrite import RewrittenCV
+from app.domain.cv.sections import restore_dropped
 from app.pipeline.blocks import DataTag
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
@@ -11,6 +13,7 @@ from app.pipeline.llm_call import call_step
 from app.pipeline.policy import run_required
 from app.pipeline.prompts.domain_guidance import get_domain_guidance
 from app.pipeline.state import PipelineState
+from app.pipeline.warnings import PipelineWarning
 
 _BUDGET_DEFAULTS = {
     "target_words": 800,
@@ -44,7 +47,21 @@ def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
     draft = state.get("tailored_cv")
     if state.get("passes", 0) >= 1 and draft is not None:
         blocks.append(("previous_draft", draft.model_dump_json()))
+        feedback = _unevidenced(state.get("ats"))
+        if feedback:
+            blocks.append(("ats_feedback", "\n".join(f"- {name}" for name in feedback)))
     return blocks
+
+
+def _unevidenced(ats: AtsMatch | None) -> list[str]:
+    """Job requirement names the draft does not show yet (the prompt: evidence only)."""
+    if ats is None or not ats.applies:
+        return []
+    names = list(ats.hard_gaps)
+    for section in ("skills", "tools"):
+        score = ats.breakdown.get(section)
+        names += score.missing if score is not None else []
+    return list(dict.fromkeys(names))
 
 
 async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) -> dict[str, Any]:
@@ -61,4 +78,8 @@ async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) 
         ),
     )
 
-    return {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}
+    cv, restored = restore_dropped(state["source_cv"], cv)
+    out: dict[str, Any] = {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}
+    if restored:
+        out["warnings"] = [PipelineWarning(code="SECTION_RESTORED", step="rewrite")]
+    return out

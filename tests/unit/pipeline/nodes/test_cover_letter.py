@@ -31,7 +31,9 @@ def test_cover_letter_uses_tailored_cv_and_options():
     req = gw.requests[0]
     assert req.output_schema is CoverLetterStructured
     content = req.messages[0].content
-    assert "<cv>\n" + state["tailored_cv"].model_dump_json() + "\n</cv>" in content
+    cv_json = state["tailored_cv"].model_dump_json(exclude={"change_log", "gaps_unaddressed"})
+    assert "<cv>\n" + cv_json + "\n</cv>" in content
+    assert "<gaps>" not in content
     assert "<job_requirements>\n" + state["jd"].model_dump_json() in content
     assert "Tone: formal. Length: short (about 150 words" in content
 
@@ -62,3 +64,13 @@ def test_cover_letter_refusal_fails_the_job():
     with pytest.raises(PipelineStepFailed) as exc:
         run(cover_letter(_state("short"), deps=deps, ctx=ctx()))
     assert exc.value.code == "CONTENT_REFUSED"
+
+
+def test_cover_letter_sends_unaddressed_gaps_and_records_version_2():
+    gw, deps = deps_for({"cover_letter": [LETTER]})
+    state = _state("short")
+    state["tailored_cv"] = RewrittenCV(gaps_unaddressed=["Kubernetes", "Go"])
+    run(cover_letter(state, deps=deps, ctx=ctx()))
+    req = gw.requests[0]
+    assert "<gaps>\n- Kubernetes\n- Go\n</gaps>" in req.messages[0].content
+    assert req.metadata.prompt_version == 2

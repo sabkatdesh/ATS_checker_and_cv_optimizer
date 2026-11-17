@@ -24,7 +24,7 @@ _log = structlog.get_logger("pipeline")
 POLICY: dict[str, Literal["required", "optional"]] = {
     "jd_extract": "required",
     "cv_extract": "required",
-    "eligibility": "required",  # Task 3 swaps this for the deterministic fallback
+    "eligibility": "optional",  # invalid output falls back to deterministic_eligibility
     "rewrite": "required",
     "gap_questions": "optional",
     "cover_letter": "optional",
@@ -34,10 +34,12 @@ _INFRA = (LLMUnavailable, LLMTimeout, LLMThrottled)
 
 # Optional steps skip (with a warning) only on these failures; anything else fails the job.
 _SKIP_ON: dict[str, tuple[type[LLMError], ...]] = {
+    "eligibility": (LLMOutputInvalid,),
     "gap_questions": (LLMOutputInvalid,),
     "cover_letter": (LLMOutputInvalid, *_INFRA),
 }
 _SKIP_WARNING: dict[str, WarningCode] = {
+    "eligibility": "ELIGIBILITY_DETERMINISTIC",
     "gap_questions": "QUESTIONS_SKIPPED",
     "cover_letter": "COVER_LETTER_SKIPPED",
 }

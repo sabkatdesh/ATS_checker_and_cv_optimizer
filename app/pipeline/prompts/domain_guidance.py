@@ -4,9 +4,10 @@
 
 DOMAIN_REWRITE_GUIDANCE = {
     "tech": (
-        "Optimise for ATS keyword scanning. Place exact JD keywords in the skills section. "
-        "Lead bullet points with strong verbs (Designed, Built, Deployed, Optimised). "
-        "Quantify impact (e.g. 'reduced latency by 40%'). GitHub/portfolio link prominent."
+        "Optimise for ATS scanning: use the job's exact terms in the skills section where the CV "
+        "supports them. Lead bullet points with strong verbs (Designed, Built, Deployed, "
+        "Optimised). Quantify impact only with numbers the CV states. GitHub/portfolio link "
+        "prominent."
     ),
     "medical": (
         "Lead with licenses and clinical practice — these are the primary screening criteria. "

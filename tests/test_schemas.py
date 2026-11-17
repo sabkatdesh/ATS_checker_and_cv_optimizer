@@ -52,3 +52,52 @@ def test_schema_null_lists_coerced(name):
     assert isinstance(cv.work_experience, list)
     assert isinstance(cv.education, list)
     assert isinstance(cv.certifications, list)
+
+
+# ── RewrittenCV keeps every UniversalCV section (E2) ──────────────────────────
+
+
+def test_rewritten_cv_is_a_universal_cv_with_a_change_log():
+    from app.domain.cv.rewrite import ChangeLogEntry, RewrittenCV
+
+    assert issubclass(RewrittenCV, UniversalCVStructured)
+    assert set(UniversalCVStructured.model_fields) < set(RewrittenCV.model_fields)
+    cv = RewrittenCV.model_validate(
+        {
+            "domain": "medical",
+            "certifications": [{"name": f"Cert {i}"} for i in range(8)],
+            "change_log": [{"section": "projects", "entry_id": "p3", "reason": "Not relevant"}],
+            "gaps_unaddressed": None,
+        }
+    )
+    assert cv.domain.value == "medical" and len(cv.certifications) == 8
+    assert cv.change_log == [
+        ChangeLogEntry(
+            section="projects", entry_id="p3", before=None, after=None, reason="Not relevant"
+        )
+    ]
+    assert cv.gaps_unaddressed == []
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"section": "not_a_section", "reason": "x"},
+        {"section": "projects", "reason": "x" * 201},
+        {"section": "projects", "reason": "x", "before": "y" * 201},
+        {"section": "projects", "reason": "x", "after": "y" * 201},
+    ],
+)
+def test_change_log_entry_limits(entry):
+    from pydantic import ValidationError
+
+    from app.domain.cv.rewrite import ChangeLogEntry
+
+    with pytest.raises(ValidationError):
+        ChangeLogEntry.model_validate(entry)
+
+
+def test_rewrite_entry_models_are_gone():
+    import app.domain.cv.rewrite as rewrite
+
+    assert not [n for n in dir(rewrite) if n.startswith("Rewrite") and n != "RewrittenCV"]

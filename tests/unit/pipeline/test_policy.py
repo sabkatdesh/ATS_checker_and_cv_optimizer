@@ -47,9 +47,10 @@ def test_failure_text_is_constant():
 
 
 def test_policy_table():
-    required = {"jd_extract", "cv_extract", "eligibility", "rewrite"}
+    required = {"jd_extract", "cv_extract", "rewrite"}
     assert {s for s, v in POLICY.items() if v == "required"} == required
-    assert {s for s, v in POLICY.items() if v == "optional"} == {"gap_questions", "cover_letter"}
+    optional = {"eligibility", "gap_questions", "cover_letter"}
+    assert {s for s, v in POLICY.items() if v == "optional"} == optional
 
 
 async def _raise(err: Exception) -> str:

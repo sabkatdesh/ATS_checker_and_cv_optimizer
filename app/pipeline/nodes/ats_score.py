@@ -4,7 +4,7 @@ from typing import Any
 
 import structlog
 
-from app.domain.ats.checker import compute_final_match
+from app.domain.ats.schemas import AtsMatch, compute_ats, non_ats_match
 from app.domain.cv.domain_config import should_run_ats
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
@@ -14,18 +14,14 @@ from app.pipeline.state import PipelineState
 _log = structlog.get_logger("pipeline")
 
 
-def _simplified() -> dict[str, Any]:
-    """Non-ATS domains: score 100 means nothing to optimise for keyword scanners."""
-    return {"overall_score": 100, "section_scores": {}, "hard_gaps": [], "rewrite_hints": {}}
-
-
 async def ats_score(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) -> dict[str, Any]:
     cv = state.get("tailored_cv") or state["source_cv"]
+    match: AtsMatch
     if not should_run_ats(state["domain"]):
-        match = _simplified()
+        match = non_ats_match()
     else:
         try:
-            match = compute_final_match(state["jd"], cv)
+            match = compute_ats(state["jd"], cv)
         except Exception as exc:  # a scorer bug must fail the job, never fake a score
             _log.error("pipeline.ats_failed", error_type=type(exc).__name__)
             raise PipelineStepFailed("ats_score", "INTERNAL") from None

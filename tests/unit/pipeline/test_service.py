@@ -14,7 +14,7 @@ from structlog.testing import capture_logs
 from app.config.settings import AppSettings
 from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
-from app.domain.match.schemas import Match
+from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.graph import build_graph
@@ -31,7 +31,7 @@ def _service() -> tuple[object, PipelineService]:
         {
             "jd_extract": [tech_jd()],
             "cv_extract": [persona_cv()],
-            "eligibility": [Match(score=60, gaps_to_consider=["Kubernetes depth"])],
+            "eligibility": [Eligibility(score=60, gaps=["Kubernetes depth"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
             "rewrite": [RewrittenCV(), RewrittenCV()],
         }

@@ -1,6 +1,6 @@
 import pytest
 
-from app.domain.match.schemas import Match
+from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.nodes.gap_questions import gap_questions
@@ -15,7 +15,7 @@ def test_gap_questions_asks_about_eligibility_gaps():
     state = {
         "source_cv": persona_cv(),
         "jd": tech_jd(),
-        "eligibility": Match(score=60, gaps_to_consider=["Kubernetes", "Go"]),
+        "eligibility": Eligibility(score=60, gaps=["Kubernetes", "Go"]),
     }
     out = run(gap_questions(state, deps=deps, ctx=ctx()))
     assert out == {"questions": qs.questions}
@@ -29,7 +29,7 @@ def test_gap_questions_asks_about_eligibility_gaps():
 
 def test_gap_questions_without_gaps_skips_the_call():
     gw, deps = deps_for({})
-    state = {"source_cv": persona_cv(), "jd": tech_jd(), "eligibility": Match(score=60)}
+    state = {"source_cv": persona_cv(), "jd": tech_jd(), "eligibility": Eligibility(score=60)}
     assert run(gap_questions(state, deps=deps, ctx=ctx())) == {"questions": []}
     assert gw.requests == []
 
@@ -38,7 +38,7 @@ def _state() -> dict:
     return {
         "source_cv": persona_cv(),
         "jd": tech_jd(),
-        "eligibility": Match(score=60, gaps_to_consider=["Kubernetes"]),
+        "eligibility": Eligibility(score=60, gaps=["Kubernetes"]),
     }
 
 

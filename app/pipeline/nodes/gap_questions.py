@@ -15,7 +15,7 @@ MAX_QUESTIONS = 5
 async def gap_questions(
     state: PipelineState, *, deps: PipelineDeps, ctx: RunContext
 ) -> dict[str, Any]:
-    gaps = state["eligibility"].gaps_to_consider
+    gaps = state["eligibility"].gaps
     if not gaps:
         return {"questions": []}
     out = await run_optional(

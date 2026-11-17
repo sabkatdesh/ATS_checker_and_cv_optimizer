@@ -87,6 +87,212 @@
       "title": "CVQualityFlags",
       "type": "object"
     },
+    "CertificationEntry": {
+      "properties": {
+        "credential_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credential Id"
+        },
+        "expiry_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expiry Year"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Year"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CertificationEntry",
+      "type": "object"
+    },
+    "ChangeLogEntry": {
+      "properties": {
+        "after": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "entry_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry Id"
+        },
+        "reason": {
+          "maxLength": 200,
+          "title": "Reason",
+          "type": "string"
+        },
+        "section": {
+          "enum": [
+            "meta",
+            "professional_summary",
+            "skills",
+            "experience_summary",
+            "work_experience",
+            "education",
+            "certifications",
+            "projects",
+            "publications",
+            "licenses",
+            "clinical_practice",
+            "trade_qualifications",
+            "languages",
+            "volunteering",
+            "awards",
+            "references_available"
+          ],
+          "title": "Section",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section",
+        "reason"
+      ],
+      "title": "ChangeLogEntry",
+      "type": "object"
+    },
+    "ClinicalEntry": {
+      "properties": {
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "institution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Institution"
+        },
+        "responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibilities",
+          "type": "array"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "setting": {
+          "title": "Setting",
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        }
+      },
+      "required": [
+        "setting"
+      ],
+      "title": "ClinicalEntry",
+      "type": "object"
+    },
     "Domain": {
       "enum": [
         "tech",
@@ -101,6 +307,72 @@
       "title": "Domain",
       "type": "string"
     },
+    "EducationEntry": {
+      "properties": {
+        "degree": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Degree"
+        },
+        "field_of_study": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Of Study"
+        },
+        "grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grade"
+        },
+        "graduation_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graduation Year"
+        },
+        "institution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Institution"
+        }
+      },
+      "title": "EducationEntry",
+      "type": "object"
+    },
     "EmploymentType": {
       "enum": [
         "full_time",
@@ -112,6 +384,52 @@
       ],
       "title": "EmploymentType",
       "type": "string"
+    },
+    "ExperienceSummary": {
+      "properties": {
+        "relevant_years": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relevant Years"
+        },
+        "role_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Type"
+        },
+        "seniority": {
+          "$ref": "#/$defs/SeniorityLevel",
+          "default": "unknown"
+        },
+        "total_years": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Years"
+        }
+      },
+      "title": "ExperienceSummary",
+      "type": "object"
     },
     "LanguageEntry": {
       "properties": {
@@ -187,6 +505,50 @@
       "title": "LicenseEntry",
       "type": "object"
     },
+    "ProjectEntry": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "technologies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Technologies",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "ProjectEntry",
+      "type": "object"
+    },
     "PublicationEntry": {
       "properties": {
         "authors": {
@@ -246,333 +608,6 @@
         "title"
       ],
       "title": "PublicationEntry",
-      "type": "object"
-    },
-    "RewriteCertEntry": {
-      "properties": {
-        "issuer": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Issuer"
-        },
-        "name": {
-          "title": "Name",
-          "type": "string"
-        },
-        "year": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Year"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "title": "RewriteCertEntry",
-      "type": "object"
-    },
-    "RewriteEducationEntry": {
-      "properties": {
-        "degree": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Degree"
-        },
-        "field_of_study": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Field Of Study"
-        },
-        "grade": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Grade"
-        },
-        "graduation_year": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Graduation Year"
-        },
-        "institution": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Institution"
-        }
-      },
-      "title": "RewriteEducationEntry",
-      "type": "object"
-    },
-    "RewriteExperienceSummary": {
-      "properties": {
-        "relevant_years": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Relevant Years"
-        },
-        "role_type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Role Type"
-        },
-        "seniority": {
-          "$ref": "#/$defs/SeniorityLevel",
-          "default": "unknown"
-        },
-        "total_years": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Total Years"
-        }
-      },
-      "title": "RewriteExperienceSummary",
-      "type": "object"
-    },
-    "RewriteProjectEntry": {
-      "properties": {
-        "description": {
-          "anyOf": [
-            {
-              "maxLength": 400,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Description"
-        },
-        "technologies": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 8,
-          "title": "Technologies",
-          "type": "array"
-        },
-        "title": {
-          "title": "Title",
-          "type": "string"
-        },
-        "url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Url"
-        }
-      },
-      "required": [
-        "title"
-      ],
-      "title": "RewriteProjectEntry",
-      "type": "object"
-    },
-    "RewriteSkillBlock": {
-      "properties": {
-        "cloud_platforms": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 5,
-          "title": "Cloud Platforms",
-          "type": "array"
-        },
-        "frameworks": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 10,
-          "title": "Frameworks",
-          "type": "array"
-        },
-        "hard_skills": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 25,
-          "title": "Hard Skills",
-          "type": "array"
-        },
-        "soft_skills": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 5,
-          "title": "Soft Skills",
-          "type": "array"
-        },
-        "tools": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 15,
-          "title": "Tools",
-          "type": "array"
-        }
-      },
-      "title": "RewriteSkillBlock",
-      "type": "object"
-    },
-    "RewriteWorkEntry": {
-      "properties": {
-        "achievements": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 3,
-          "title": "Achievements",
-          "type": "array"
-        },
-        "company_name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Company Name"
-        },
-        "employment_type": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EmploymentType"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "end_date": {
-          "anyOf": [
-            {
-              "format": "date",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "End Date"
-        },
-        "job_title": {
-          "title": "Job Title",
-          "type": "string"
-        },
-        "responsibilities": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 5,
-          "title": "Responsibilities",
-          "type": "array"
-        },
-        "start_date": {
-          "anyOf": [
-            {
-              "format": "date",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Start Date"
-        },
-        "tools_used": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 8,
-          "title": "Tools Used",
-          "type": "array"
-        }
-      },
-      "required": [
-        "job_title"
-      ],
-      "title": "RewriteWorkEntry",
       "type": "object"
     },
     "SeniorityLevel": {
@@ -705,9 +740,196 @@
       },
       "title": "UniversalCVMeta",
       "type": "object"
+    },
+    "UniversalSkillBlock": {
+      "properties": {
+        "cloud_platforms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cloud Platforms",
+          "type": "array"
+        },
+        "frameworks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Frameworks",
+          "type": "array"
+        },
+        "hard_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Skills",
+          "type": "array"
+        },
+        "soft_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft Skills",
+          "type": "array"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "title": "UniversalSkillBlock",
+      "type": "object"
+    },
+    "VolunteerEntry": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "organization": {
+          "title": "Organization",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        }
+      },
+      "required": [
+        "organization"
+      ],
+      "title": "VolunteerEntry",
+      "type": "object"
+    },
+    "WorkExperienceEntry": {
+      "properties": {
+        "achievements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Achievements",
+          "type": "array"
+        },
+        "company_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Name"
+        },
+        "employment_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmploymentType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "job_title": {
+          "title": "Job Title",
+          "type": "string"
+        },
+        "responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibilities",
+          "type": "array"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "tools_used": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools Used",
+          "type": "array"
+        }
+      },
+      "required": [
+        "job_title"
+      ],
+      "title": "WorkExperienceEntry",
+      "type": "object"
     }
   },
-  "description": "Output schema for the CV rewrite node. Enforces hard field limits.",
+  "description": "Output schema of the rewrite node.",
   "properties": {
     "awards": {
       "items": {
@@ -718,10 +940,23 @@
     },
     "certifications": {
       "items": {
-        "$ref": "#/$defs/RewriteCertEntry"
+        "$ref": "#/$defs/CertificationEntry"
       },
-      "maxItems": 5,
       "title": "Certifications",
+      "type": "array"
+    },
+    "change_log": {
+      "items": {
+        "$ref": "#/$defs/ChangeLogEntry"
+      },
+      "title": "Change Log",
+      "type": "array"
+    },
+    "clinical_practice": {
+      "items": {
+        "$ref": "#/$defs/ClinicalEntry"
+      },
+      "title": "Clinical Practice",
       "type": "array"
     },
     "domain": {
@@ -730,13 +965,20 @@
     },
     "education": {
       "items": {
-        "$ref": "#/$defs/RewriteEducationEntry"
+        "$ref": "#/$defs/EducationEntry"
       },
       "title": "Education",
       "type": "array"
     },
     "experience_summary": {
-      "$ref": "#/$defs/RewriteExperienceSummary"
+      "$ref": "#/$defs/ExperienceSummary"
+    },
+    "gaps_unaddressed": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Gaps Unaddressed",
+      "type": "array"
     },
     "languages": {
       "items": {
@@ -758,7 +1000,6 @@
     "professional_summary": {
       "anyOf": [
         {
-          "maxLength": 700,
           "type": "string"
         },
         {
@@ -770,9 +1011,8 @@
     },
     "projects": {
       "items": {
-        "$ref": "#/$defs/RewriteProjectEntry"
+        "$ref": "#/$defs/ProjectEntry"
       },
-      "maxItems": 3,
       "title": "Projects",
       "type": "array"
     },
@@ -780,15 +1020,19 @@
       "items": {
         "$ref": "#/$defs/PublicationEntry"
       },
-      "maxItems": 10,
       "title": "Publications",
       "type": "array"
     },
     "quality_flags": {
       "$ref": "#/$defs/CVQualityFlags"
     },
+    "references_available": {
+      "default": false,
+      "title": "References Available",
+      "type": "boolean"
+    },
     "skills": {
-      "$ref": "#/$defs/RewriteSkillBlock"
+      "$ref": "#/$defs/UniversalSkillBlock"
     },
     "trade_qualifications": {
       "items": {
@@ -797,9 +1041,16 @@
       "title": "Trade Qualifications",
       "type": "array"
     },
+    "volunteering": {
+      "items": {
+        "$ref": "#/$defs/VolunteerEntry"
+      },
+      "title": "Volunteering",
+      "type": "array"
+    },
     "work_experience": {
       "items": {
-        "$ref": "#/$defs/RewriteWorkEntry"
+        "$ref": "#/$defs/WorkExperienceEntry"
       },
       "title": "Work Experience",
       "type": "array"

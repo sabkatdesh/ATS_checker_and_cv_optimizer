@@ -5,11 +5,13 @@ from langchain_core.prompts import PromptTemplate
 
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured, SummaryJD
-from app.domain.match.schemas import Match, SummaryCV
+from app.domain.match.schemas import Eligibility, SummaryCV
 
 parser_quick_cv: PydanticOutputParser[SummaryCV] = PydanticOutputParser(pydantic_object=SummaryCV)
 parser_quick_jd: PydanticOutputParser[SummaryJD] = PydanticOutputParser(pydantic_object=SummaryJD)
-parser_verdict: PydanticOutputParser[Match] = PydanticOutputParser(pydantic_object=Match)
+parser_verdict: PydanticOutputParser[Eligibility] = PydanticOutputParser(
+    pydantic_object=Eligibility
+)
 parser_detailed_jd: PydanticOutputParser[JobDescriptionStructured] = PydanticOutputParser(
     pydantic_object=JobDescriptionStructured
 )

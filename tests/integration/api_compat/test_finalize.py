@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+from app.domain.ats.schemas import AtsMatch
 from app.pipeline.state import RunOptions
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
@@ -32,7 +33,7 @@ def _run(client, backend, result, profile=None):
 def _eligible(**extra):
     return {
         "eligible": True,
-        "ats": {"overall_score": 82},
+        "ats": AtsMatch(applies=True, score=82),
         "eligibility": SimpleNamespace(score=70),
         "tailored_cv": CV,
         "domain": "tech",
@@ -128,3 +129,22 @@ def test_no_structured_cv_completes_without_pdf(client, backend):
     assert row["status"] == "complete"
     assert row["pdf_url"] is None
     assert FakePdfRenderer.calls == []
+
+
+def test_requested_but_skipped_cover_letter_completes_with_cv_only(client, backend):
+    from app.pipeline.warnings import PipelineWarning
+
+    tid, row = _run(
+        client,
+        backend,
+        _eligible(
+            cover_letter=None,
+            options=RunOptions(cover_letter=True, cover_letter_tone="formal"),
+            warnings=[PipelineWarning(code="COVER_LETTER_SKIPPED", step="cover_letter")],
+        ),
+    )
+    assert row["status"] == "complete"
+    assert row["pdf_url"] == f"https://storage.test/user-a/{tid}.pdf"
+    assert [c[0] for c in FakePdfRenderer.calls] == ["render"]
+    assert FakeCoverLetterRenderer.calls == []
+    assert row["cover_letter_text"] is None and row["cover_letter_pdf_url"] is None

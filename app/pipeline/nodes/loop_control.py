@@ -15,7 +15,7 @@ def route_after_ats(
         return "rewrite"
     if not should_run_ats(state.get("domain", Domain.GENERAL.value)):
         return "done"
-    if state["ats"]["overall_score"] >= settings.ats_target:
+    if (state["ats"].score or 0) >= settings.ats_target:
         return "done"
     if passes >= state.get("options", RunOptions()).max_passes:
         return "done"

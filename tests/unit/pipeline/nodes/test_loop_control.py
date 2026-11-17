@@ -1,15 +1,16 @@
 from app.config.pipeline_settings import PipelineSettings
+from app.domain.ats.schemas import AtsMatch
 from app.pipeline.nodes.loop_control import route_after_ats
 from app.pipeline.state import RunOptions
 
 S = PipelineSettings(ats_target=90)
 
 
-def _state(passes: int, score: float, domain: str = "tech", max_passes: int = 2) -> dict:
+def _state(passes: int, score: int, domain: str = "tech", max_passes: int = 2) -> dict:
     return {
         "passes": passes,
         "domain": domain,
-        "ats": {"overall_score": score},
+        "ats": AtsMatch(applies=True, score=score),
         "options": RunOptions(max_passes=max_passes),
     }
 
@@ -34,5 +35,5 @@ def test_route_after_ats_cap_reached():
 
 
 def test_route_after_ats_below_target_rewrites():
-    assert route_after_ats(_state(1, 89.99), settings=S) == "rewrite"
+    assert route_after_ats(_state(1, 89), settings=S) == "rewrite"
     assert route_after_ats(_state(2, 50, max_passes=3), settings=S) == "rewrite"

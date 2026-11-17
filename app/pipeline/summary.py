@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.domain.ats.schemas import AtsMatch
 from app.pipeline.errors import ErrorCode
 from app.pipeline.warnings import WarningCode
 
@@ -25,12 +26,9 @@ class SessionSummary(BaseModel, frozen=True):
     error_code: ErrorCode | None = None
 
 
-def ats_score_of(ats: Any) -> int | None:
-    """Score of an ATS result: the legacy dict until Task 3, then AtsMatch.score."""
-    if ats is None:
-        return None
-    raw = ats.get("overall_score") if isinstance(ats, Mapping) else getattr(ats, "score", None)
-    return None if raw is None else round(raw)
+def ats_score_of(ats: AtsMatch | None) -> int | None:
+    """Score of an ATS result; None when there is none or the domain is not ATS-scored."""
+    return None if ats is None else ats.score
 
 
 def summarize(

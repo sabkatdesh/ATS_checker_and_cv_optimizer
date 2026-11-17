@@ -219,3 +219,18 @@ def test_compute_final_match_score_in_range():
     )
     result = compute_final_match(jd, cv)
     assert 0 <= result["overall_score"] <= 100
+
+
+# ── Stop words ────────────────────────────────────────────────────────────────
+
+
+def test_flexible_match_ignores_stop_words():
+    assert _flexible_match("Python and Django", "Java and Spring") is False
+
+
+def test_flexible_match_still_matches_tokens():
+    assert _flexible_match("Python", "python 3") is True
+
+
+def test_flexible_match_ignores_one_character_tokens():
+    assert _flexible_match("C level reporting", "a b c") is False

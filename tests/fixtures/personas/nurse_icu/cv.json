@@ -22,6 +22,7 @@
   ],
   "licenses": [{"name": "Registered Nurse", "issuing_body": "Example Nursing Council", "valid_until": "Active"}],
   "clinical_practice": [
-    {"setting": "ICU", "role": "Staff Nurse", "institution": "Example General Hospital", "start_date": "2020-01-01"}
+    {"setting": "ICU", "role": "Staff Nurse", "institution": "Example General Hospital", "start_date": "2020-01-01"},
+    {"setting": "Emergency Department", "role": "Student Nurse", "institution": "Example Teaching Hospital", "start_date": "2018-06-01", "end_date": "2019-05-31"}
   ]
 }

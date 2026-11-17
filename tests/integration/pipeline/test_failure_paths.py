@@ -10,7 +10,7 @@ from structlog.testing import capture_logs
 from app.adapters.background.inline_runner import InlineRunner
 from app.config.settings import AppSettings
 from app.container import Container
-from app.domain.match.schemas import Match
+from app.domain.match.schemas import Eligibility
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.ports.llm_errors import LLMOutputInvalid, LLMRefused
@@ -59,7 +59,7 @@ def _script(rewrite: list[Outcome], gaps: list[str] | None = None) -> dict[str, 
     return {
         "jd_extract": [tech_jd()],
         "cv_extract": [persona_cv()],
-        "eligibility": [Match(score=60, gaps_to_consider=gaps or [])],
+        "eligibility": [Eligibility(score=60, gaps=gaps or [])],
         "rewrite": rewrite,
     }
 

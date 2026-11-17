@@ -24,8 +24,15 @@ def _normalize(text: Any) -> str:
     return re.sub(r"\s+", " ", str(text).lower().strip())
 
 
+_STOP_WORDS = frozenset(
+    {"and", "or", "with", "the", "a", "an", "of", "in", "on", "for", "to", "at", "by", "as"}
+    | {"from", "into", "via", "using"}
+)
+
+
 def _tokenize(text: str) -> set[str]:
-    return set(re.findall(r"\b[a-z0-9\+\#\.]+\b", _normalize(text)))
+    tokens = re.findall(r"\b[a-z0-9\+\#\.]+\b", _normalize(text))
+    return {t for t in tokens if len(t) > 1 and t not in _STOP_WORDS}
 
 
 def _safe_div(n: int, d: int) -> float:

@@ -1,15 +1,16 @@
-"""Typed pipeline state. Later tasks re-annotate the fields noted below."""
+"""Typed pipeline state."""
 
 import operator
 from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
+from app.domain.ats.schemas import AtsMatch
 from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured
-from app.domain.match.schemas import Match
+from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion
 from app.pipeline.warnings import PipelineWarning
 
@@ -30,12 +31,12 @@ class PipelineState(TypedDict, total=False):
     jd: JobDescriptionStructured
     source_cv: UniversalCVStructured
     domain: str
-    eligibility: Match  # becomes Eligibility
+    eligibility: Eligibility
     eligible: bool
     questions: list[GapQuestion]
     answers: GapAnswers
-    ats_before: dict[str, Any]  # becomes AtsMatch
-    ats: dict[str, Any]  # becomes AtsMatch
+    ats_before: AtsMatch
+    ats: AtsMatch
     tailored_cv: RewrittenCV
     passes: int
     revised: bool

@@ -15,12 +15,14 @@ JD = (
 def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplog):  # noqa: F811
     from types import SimpleNamespace
 
+    from app.domain.ats.schemas import AtsMatch
+
     FakePdfRenderer.raise_on_render = RuntimeError("render failed")
     backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
     backend.pipeline.next_nodes = []
     backend.pipeline.result = {
         "eligible": True,
-        "ats": {"overall_score": 82},
+        "ats": AtsMatch(applies=True, score=82),
         "eligibility": SimpleNamespace(score=70),
         "tailored_cv": {"full_name": "Test Person"},
     }

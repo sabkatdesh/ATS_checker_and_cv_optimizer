@@ -10,13 +10,13 @@ from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured, SummaryJD
-from app.domain.match.schemas import Match, SummaryCV
+from app.domain.match.schemas import Eligibility, SummaryCV
 from app.domain.questions.schemas import GapQuestions
 
 CASES = {
     "quick_jd": SummaryJD,
     "quick_cv": SummaryCV,
-    "verdict": Match,
+    "verdict": Eligibility,
     "detailed_jd": JobDescriptionStructured,
     "detailed_cv": UniversalCVStructured,
     "rewrite": RewrittenCV,
@@ -37,13 +37,13 @@ def test_canned_response_validates_strictly(chain, model):
 
 
 def test_verdict_has_the_eligible_score():
-    assert Match.model_validate_json(_text("verdict")).score == 60
+    assert Eligibility.model_validate_json(_text("verdict")).score == 60
 
 
 STEP_CASES = {
     "jd_extract": JobDescriptionStructured,
     "cv_extract": UniversalCVStructured,
-    "eligibility": Match,
+    "eligibility": Eligibility,
     "gap_questions": GapQuestions,
     "rewrite": RewrittenCV,
     "cover_letter": CoverLetterStructured,

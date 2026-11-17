@@ -8,8 +8,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from app.adapters.llm.fake import DEFAULT_DIR
 from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.cv.rewrite import RewrittenCV
-from app.domain.jd.schemas import JobDescriptionStructured
-from app.domain.match.schemas import Match
+from app.domain.jd.schemas import JDSkillBlock, JobDescriptionStructured
+from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion, GapQuestions
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
@@ -24,7 +24,7 @@ def _draft() -> RewrittenCV:
     return RewrittenCV.model_validate_json((DEFAULT_DIR / "rewrite.json").read_text("utf-8"))
 
 
-def _script(eligibility: Match, rewrites: int = 2, **extra: list[Outcome]) -> dict:
+def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome]) -> dict:
     return {
         "jd_extract": [tech_jd()],
         "cv_extract": [persona_cv()],
@@ -49,7 +49,7 @@ def _start(svc: PipelineService, options: RunOptions | None = None) -> dict:
     )
 
 
-ELIGIBLE = Match(score=60, gaps_to_consider=["Kubernetes"])
+ELIGIBLE = Eligibility(score=60, gaps=["Kubernetes"])
 
 
 def test_happy_path():
@@ -77,7 +77,7 @@ def test_happy_path():
 
 
 def test_ineligible_ends_before_questions():
-    gw, svc = _service(_script(Match.model_construct(score=10, gaps_to_consider=[])))
+    gw, svc = _service(_script(Eligibility(score=10)))
     final = _start(svc)
     assert final["eligible"] is False
     steps = [r.step for r in gw.requests]
@@ -87,10 +87,13 @@ def test_ineligible_ends_before_questions():
 
 def test_rewrite_loop_cap():
     empty = [RewrittenCV() for _ in range(3)]
-    gw, svc = _service({**_script(ELIGIBLE), "rewrite": list(empty)})
+    hard_jd = tech_jd().model_copy(
+        update={"skills": JDSkillBlock(hard_skills=["Rust", "Go"], tools=["Kafka"])}
+    )
+    gw, svc = _service({**_script(ELIGIBLE), "jd_extract": [hard_jd], "rewrite": list(empty)})
     _start(svc, RunOptions(max_passes=3))
     final = svc.resume("t1", "answers")
-    assert final["ats"]["overall_score"] < 90
+    assert (final["ats"].score or 0) < 90
     assert [r.step for r in gw.requests].count("rewrite") == 3
     assert final["passes"] == 3
 
