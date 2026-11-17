@@ -17,6 +17,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic_settings.exceptions import SettingsError
 
 from app.config.llm_settings import LlmSettings
+from app.config.pipeline_settings import PipelineSettings
 
 Env = Literal["dev", "test", "staging", "prod"]
 
@@ -84,6 +85,7 @@ class AppSettings(BaseSettings):
     auth: AuthSettings = Field(default_factory=AuthSettings)
     obs: ObsSettings = Field(default_factory=ObsSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
     sentry_dsn: SecretStr | None = None
     supabase_url_legacy: str | None = Field(default=None, validation_alias="SUPABASE_URL")
     supabase_secret_key: SecretStr | None = Field(

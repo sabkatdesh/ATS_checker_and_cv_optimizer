@@ -10,9 +10,9 @@ from app.domain.cv.domain_config import Domain, get_budget
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.parsing.safe_parser import safe_llm_parse
 from app.pipeline.chains import Chains
+from app.pipeline.legacy_state import CombinedState
 from app.pipeline.nodes._helpers import _normalize_budget, _safe_json
 from app.pipeline.prompts import get_domain_guidance
-from app.pipeline.state import CombinedState
 
 log = structlog.get_logger(__name__)
 

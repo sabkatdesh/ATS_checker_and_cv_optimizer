@@ -10,8 +10,8 @@ from langgraph.types import interrupt
 from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.parsing.safe_parser import safe_llm_parse
 from app.pipeline.chains import Chains
+from app.pipeline.legacy_state import CombinedState
 from app.pipeline.nodes._helpers import _safe_json
-from app.pipeline.state import CombinedState
 
 log = structlog.get_logger(__name__)
 

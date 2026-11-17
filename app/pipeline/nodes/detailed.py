@@ -12,8 +12,8 @@ from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.domain.parsing.safe_parser import safe_llm_parse
 from app.pipeline.chains import Chains
+from app.pipeline.legacy_state import CombinedState
 from app.pipeline.nodes._helpers import _fallback_cv, _fallback_jd, _simplified_match
-from app.pipeline.state import CombinedState
 
 log = structlog.get_logger(__name__)
 

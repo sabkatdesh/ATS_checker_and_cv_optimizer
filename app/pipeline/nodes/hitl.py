@@ -7,7 +7,7 @@ from typing import Any
 import structlog
 from langgraph.types import interrupt
 
-from app.pipeline.state import CombinedState
+from app.pipeline.legacy_state import CombinedState
 
 log = structlog.get_logger(__name__)
 

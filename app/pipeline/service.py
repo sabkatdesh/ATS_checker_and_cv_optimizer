@@ -4,7 +4,7 @@ from typing import Any
 
 from langgraph.graph.state import CompiledStateGraph
 
-from app.pipeline.state import CombinedState
+from app.pipeline.legacy_state import CombinedState
 
 JsonDict = dict[str, Any]
 

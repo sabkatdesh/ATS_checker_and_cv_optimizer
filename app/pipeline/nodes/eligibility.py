@@ -11,13 +11,13 @@ from app.domain.jd.schemas import SummaryJD
 from app.domain.match.schemas import Match, SummaryCV
 from app.domain.parsing.safe_parser import safe_llm_parse
 from app.pipeline.chains import Chains
+from app.pipeline.legacy_state import CombinedState
 from app.pipeline.nodes._helpers import (
     _fallback_match,
     _fallback_summary_cv,
     _fallback_summary_jd,
     _reconcile_domain,
 )
-from app.pipeline.state import CombinedState
 
 log = structlog.get_logger(__name__)
 

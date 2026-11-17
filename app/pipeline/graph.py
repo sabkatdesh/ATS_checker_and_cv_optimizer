@@ -7,6 +7,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from app.pipeline.chains import Chains
+from app.pipeline.legacy_state import CombinedState
 from app.pipeline.nodes.cover_letter import (
     check_cover_letter_gate,
     cover_letter_hitl_node,
@@ -27,7 +28,6 @@ from app.pipeline.nodes.eligibility import (
 )
 from app.pipeline.nodes.hitl import hitl_node
 from app.pipeline.nodes.rewrite import rewrite_cv_node
-from app.pipeline.state import CombinedState
 
 
 def build_graph(chains: Chains, checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
