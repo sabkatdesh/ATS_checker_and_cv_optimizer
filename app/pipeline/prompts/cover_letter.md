@@ -14,4 +14,4 @@ Strict rules:
 6. Sign-off: "Sincerely," for formal tone; "Best regards," for conversational.
 Gaps listed in the <gaps> block are evidence the candidate lacks; do not fill them by invention.
 ## task
-Write a cover letter from the <rewritten_cv> block for the <job_description> block. Tone: {tone}. Length: {length} (about {word_target} words of body).
+Write a cover letter from the <cv> block for the <job_requirements> block. Tone: {tone}. Length: {length} (about {word_target} words of body).

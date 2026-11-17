@@ -10,6 +10,7 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.domain.match.schemas import Match
+from app.domain.questions.schemas import GapAnswers, GapQuestion
 from app.pipeline.warnings import PipelineWarning
 
 
@@ -31,8 +32,8 @@ class PipelineState(TypedDict, total=False):
     domain: str
     eligibility: Match  # becomes Eligibility
     eligible: bool
-    questions: list[Any]  # becomes list[GapQuestion]
-    answers: dict[str, Any]  # becomes GapAnswers
+    questions: list[GapQuestion]
+    answers: GapAnswers
     ats_before: dict[str, Any]  # becomes AtsMatch
     ats: dict[str, Any]  # becomes AtsMatch
     tailored_cv: RewrittenCV

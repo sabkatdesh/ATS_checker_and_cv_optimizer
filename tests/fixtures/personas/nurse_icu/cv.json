@@ -1,0 +1,27 @@
+{
+  "domain": "medical",
+  "meta": {
+    "full_name": "Nadia Example",
+    "location": "Chattogram",
+    "email": "nadia@example.com",
+    "phone": "+880 1700-000002"
+  },
+  "professional_summary": "Registered nurse with five years of critical care experience.",
+  "skills": {"hard_skills": ["Ventilator management", "Patient assessment"], "soft_skills": ["Teamwork"]},
+  "experience_summary": {"total_years": 5, "seniority": "mid", "role_type": "IC", "relevant_years": 5},
+  "work_experience": [
+    {
+      "job_title": "Staff Nurse",
+      "company_name": "Example General Hospital",
+      "start_date": "2020-01-01",
+      "responsibilities": ["Cared for ventilated patients", "Administered medication"]
+    }
+  ],
+  "education": [
+    {"degree": "BSc Nursing", "institution": "Example College of Nursing", "graduation_year": 2019}
+  ],
+  "licenses": [{"name": "Registered Nurse", "issuing_body": "Example Nursing Council", "valid_until": "Active"}],
+  "clinical_practice": [
+    {"setting": "ICU", "role": "Staff Nurse", "institution": "Example General Hospital", "start_date": "2020-01-01"}
+  ]
+}

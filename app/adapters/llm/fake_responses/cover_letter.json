@@ -1,0 +1,9 @@
+{
+  "salutation": "Dear Hiring Manager,",
+  "opening_paragraph": "Cutting document processing time by 40% is the kind of result I want to bring to your Backend Engineer role.",
+  "body_paragraphs": [
+    "At Example Logistics I built the REST services and database schema behind a document pipeline, which matches your need for API design and SQL experience."
+  ],
+  "closing_paragraph": "I would welcome a conversation about how this experience fits your team.",
+  "sign_off": "Sincerely,"
+}

@@ -17,7 +17,7 @@ from app.adapters.llm._sync import run_sync
 from app.adapters.llm.langchain_bridge import GatewayChatModel
 from app.adapters.llm.legacy_structured import GatewayStructuredLLM
 from app.config.settings import AppSettings, ConfigError
-from app.container import LEGACY_CHAIN_ROUTES, Container
+from app.container import Container
 from app.pipeline.chains import Chains, build_chains
 from app.ports.llm import LLMRequest, LLMResult, Usage
 from app.ports.llm_errors import LLMBadRequest, LLMOutputInvalid, LLMThrottled
@@ -173,27 +173,6 @@ def test_build_chains_accepts_single_model_and_factory():
 
 def _fake_settings() -> AppSettings:
     return AppSettings(_env_file=None, llm={"default_provider": "fake"})
-
-
-def test_container_wires_legacy_chains_to_routes(monkeypatch):
-    import app.container as mod
-
-    captured: list[Chains] = []
-    real = mod.build_chains
-
-    def spy(llm):
-        captured.append(real(llm))
-        return captured[-1]
-
-    monkeypatch.setattr(mod, "build_chains", spy)
-    c = Container(_fake_settings())
-    _ = c.pipeline
-    assert set(LEGACY_CHAIN_ROUTES) == set(Chains.__dataclass_fields__)
-    for chain, step in LEGACY_CHAIN_ROUTES.items():
-        model = getattr(captured[0], chain).middle[0]
-        assert isinstance(model, GatewayChatModel)
-        assert (model.step, model.prompt_id) == (step, f"legacy.{chain}")
-        assert model.gateway is c.llm
 
 
 def test_container_shares_one_router_and_embeddings_are_fake():

@@ -19,10 +19,10 @@ def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplo
     backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
     backend.pipeline.next_nodes = []
     backend.pipeline.result = {
-        "is_eligible": True,
-        "final_match": {"overall_score": 82},
-        "eligibility_verdict": SimpleNamespace(score=70),
-        "structured_cv": {"full_name": "Test Person"},
+        "eligible": True,
+        "ats": {"overall_score": 82},
+        "eligibility": SimpleNamespace(score=70),
+        "tailored_cv": {"full_name": "Test Person"},
     }
     with caplog.at_level(logging.ERROR):
         r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())

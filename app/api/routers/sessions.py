@@ -143,7 +143,8 @@ def session_status(
     if session["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
-    return session
+    summary = c.pipeline.summary(thread_id)
+    return {**session, "pipeline": summary.model_dump(mode="json") if summary else None}
 
 
 @router.get("/sessions")

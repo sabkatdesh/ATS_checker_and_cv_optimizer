@@ -16,8 +16,9 @@ from app.adapters.llm.usage_recorder import UsageRecorder
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
 from app.config.settings import AppSettings, ConfigError, load_settings
-from app.pipeline.chains import build_chains
+from app.pipeline.deps import PipelineDeps
 from app.pipeline.graph import build_graph
+from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
@@ -29,17 +30,6 @@ from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
 from app.ports.usage import UsageSink
 from supabase import Client
-
-# Legacy chain name -> route step (llm_routes.yaml); prompt ids are "legacy.<chain>".
-LEGACY_CHAIN_ROUTES: dict[str, str] = {
-    "quick_jd": "jd_extract",
-    "detailed_jd": "jd_extract",
-    "quick_cv": "profile_import",
-    "detailed_cv": "profile_import",
-    "verdict": "eligibility",
-    "rewrite": "rewrite",
-    "cover_letter": "cover_letter",
-}
 
 
 def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> LegacyStore:
@@ -67,14 +57,8 @@ def _default_cover_letter() -> CoverLetterRenderer:
 
 
 def _default_pipeline(settings: AppSettings, gateway: LLMGateway) -> PipelineRunner:
-    from app.adapters.llm.langchain_bridge import GatewayChatModel
-
-    chains = build_chains(
-        lambda chain: GatewayChatModel(
-            gateway=gateway, step=LEGACY_CHAIN_ROUTES[chain], prompt_id=f"legacy.{chain}"
-        )
-    )
-    return PipelineService(build_graph(chains, MemorySaver(serde=JsonPlusSerializer())))
+    deps = PipelineDeps(gateway=gateway, prompts=PromptLibrary(), settings=settings.pipeline)
+    return PipelineService(build_graph(deps, MemorySaver(serde=JsonPlusSerializer())))
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:

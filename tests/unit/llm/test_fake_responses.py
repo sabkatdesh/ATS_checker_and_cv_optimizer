@@ -12,6 +12,7 @@ from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured, SummaryJD
 from app.domain.match.schemas import Match, SummaryCV
 from app.domain.parsing.safe_parser import safe_llm_parse
+from app.domain.questions.schemas import GapQuestions
 
 CASES = {
     "quick_jd": SummaryJD,
@@ -44,3 +45,20 @@ def test_canned_response_passes_legacy_parser_without_fallback(chain, model):
 
 def test_verdict_has_the_eligible_score():
     assert Match.model_validate_json(_text("verdict")).score == 60
+
+
+STEP_CASES = {
+    "jd_extract": JobDescriptionStructured,
+    "cv_extract": UniversalCVStructured,
+    "eligibility": Match,
+    "gap_questions": GapQuestions,
+    "rewrite": RewrittenCV,
+    "cover_letter": CoverLetterStructured,
+}
+
+
+@pytest.mark.parametrize(("step", "model"), STEP_CASES.items())
+def test_step_canned_response_validates_strictly(step, model):
+    text = (Path(DEFAULT_DIR) / f"{step}.json").read_text(encoding="utf-8")
+    assert model.model_validate_json(text).model_dump(exclude_defaults=True)
+    assert set(json.loads(text)) <= set(model.model_fields)

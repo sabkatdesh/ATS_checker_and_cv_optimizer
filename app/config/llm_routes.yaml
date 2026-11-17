@@ -13,6 +13,8 @@ defaults:
 
 steps:
   jd_extract: {max_tokens: 2000, temperature: 0}
+  # Transitional (Task 9 replaces it with the deterministic cv_snapshot).
+  cv_extract: {max_tokens: 6000, temperature: 0}
   eligibility: {max_tokens: 800, temperature: 0}
   gap_questions: {max_tokens: 1200, temperature: 0.3, structured_mode: native}
   rewrite: {max_tokens: 8000, temperature: 0.4, timeout_s: 150, stream: true}

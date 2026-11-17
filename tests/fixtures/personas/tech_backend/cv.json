@@ -1,0 +1,34 @@
+{
+  "domain": "tech",
+  "meta": {
+    "full_name": "Rafi Example",
+    "location": "Dhaka",
+    "email": "rafi@example.com",
+    "phone": "+880 1700-000001",
+    "linkedin": "linkedin.com/in/rafi-example"
+  },
+  "professional_summary": "Backend engineer with four years of Python and REST API experience.",
+  "skills": {
+    "hard_skills": ["API design", "Database modelling"],
+    "soft_skills": ["Communication"],
+    "tools": ["Python", "PostgreSQL", "Docker"],
+    "frameworks": ["FastAPI"],
+    "cloud_platforms": ["AWS"]
+  },
+  "experience_summary": {"total_years": 4, "seniority": "mid", "role_type": "IC", "relevant_years": 4},
+  "work_experience": [
+    {
+      "job_title": "Software Engineer",
+      "company_name": "Example Logistics",
+      "employment_type": "full_time",
+      "start_date": "2021-03-01",
+      "responsibilities": ["Built REST services", "Maintained the database schema"],
+      "achievements": ["Cut document processing time by 40%"],
+      "tools_used": ["Python", "FastAPI", "PostgreSQL"]
+    }
+  ],
+  "education": [
+    {"degree": "BSc", "field_of_study": "Computer Science", "institution": "Example University", "graduation_year": 2020}
+  ],
+  "certifications": [{"name": "Cloud Practitioner", "issuer": "Example Academy", "year": 2022}]
+}

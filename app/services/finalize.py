@@ -4,6 +4,7 @@ import tempfile
 
 from app.container import Container
 from app.domain.credits.legacy import CV_GENERATION_COST
+from app.pipeline.summary import ats_score_of
 from app.ports.pipeline import JsonDict
 
 logger = logging.getLogger(__name__)
@@ -24,19 +25,14 @@ def finalize_session(
     4. Deducts coins
     5. Updates session as complete
     """
-    ats_score = None
-    eligibility_score = None
     pdf_url = None
-
-    # Get scores
-    if result.get("final_match"):
-        ats_score = result["final_match"].get("overall_score")
-
-    if result.get("eligibility_verdict"):
-        eligibility_score = result["eligibility_verdict"].score
+    ats_score = ats_score_of(result.get("ats"))
+    eligibility = result.get("eligibility")
+    eligibility_score = eligibility.score if eligibility is not None else None
+    domain = result.get("domain") or "general"
 
     # Check if eligible — only generate PDF if eligible
-    if not result.get("is_eligible"):
+    if not result.get("eligible"):
         c.store.update_session(
             thread_id,
             {
@@ -47,10 +43,10 @@ def finalize_session(
         return
 
     # Generate PDF using WeasyPrint + Jinja2 templates
-    structured_cv = result.get("structured_cv")
+    structured_cv = result.get("tailored_cv")
     if not structured_cv:
         logger.info(
-            "[PDF] No structured_cv in pipeline result for %s. Result keys: %s",
+            "[PDF] No tailored_cv in pipeline result for %s. Result keys: %s",
             thread_id,
             list(result.keys()),
         )
@@ -61,7 +57,7 @@ def finalize_session(
                 "[PDF] Generating for %s, template=%s, domain=%s",
                 thread_id,
                 profile.get("preferred_template", "classic"),
-                result.get("detected_domain", "general"),
+                domain,
             )
             generator = c.make_pdf_renderer()
             pdf_bytes = generator.render(
@@ -69,7 +65,7 @@ def finalize_session(
                 template_id=profile.get("preferred_template", "classic"),
                 accent_color=profile.get("accent_color", "#4361ee"),
                 bangla=bool(profile.get("bangla_mode", False)),
-                domain=result.get("detected_domain", "general"),
+                domain=domain,
             )
 
             local_path = os.path.join(tempfile.gettempdir(), f"{thread_id}.pdf")
@@ -90,13 +86,14 @@ def finalize_session(
     # ── Cover letter PDF (optional) ─────────────────────────────────────────────
     cover_letter_pdf_url = None
     cover_letter_text = None
-    cl_result = result.get("cover_letter_result")
+    cl_result = result.get("cover_letter")
 
     if cl_result:
         try:
             profile = profile or {}
             candidate_name = profile.get("full_name", "")
-            tone = result.get("cover_letter_tone") or "formal"
+            options = result.get("options")
+            tone = (options.cover_letter_tone if options else None) or "formal"
 
             cl_service = c.make_cover_letter_renderer()
             cl_pdf_bytes = cl_service.render_to_pdf(

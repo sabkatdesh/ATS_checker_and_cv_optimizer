@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+from app.pipeline.state import RunOptions
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
@@ -30,20 +31,20 @@ def _run(client, backend, result, profile=None):
 
 def _eligible(**extra):
     return {
-        "is_eligible": True,
-        "final_match": {"overall_score": 82},
-        "eligibility_verdict": SimpleNamespace(score=70),
-        "structured_cv": CV,
-        "detected_domain": "tech",
+        "eligible": True,
+        "ats": {"overall_score": 82},
+        "eligibility": SimpleNamespace(score=70),
+        "tailored_cv": CV,
+        "domain": "tech",
         **extra,
     }
 
 
 def test_ineligible(client, backend):
     result = {
-        "is_eligible": False,
-        "eligibility_verdict": SimpleNamespace(score=20),
-        "structured_cv": CV,
+        "eligible": False,
+        "eligibility": SimpleNamespace(score=20),
+        "tailored_cv": CV,
     }
     _, row = _run(client, backend, result)
     assert row["status"] == "ineligible"
@@ -101,8 +102,8 @@ def test_complete_with_cover_letter(client, backend):
         client,
         backend,
         _eligible(
-            cover_letter_result={"body": "x"},
-            cover_letter_tone="conversational",
+            cover_letter={"body": "x"},
+            options=RunOptions(cover_letter=True, cover_letter_tone="conversational"),
         ),
     )
     render = [c for c in FakeCoverLetterRenderer.calls if c[0] == "render_to_pdf"][0]
@@ -122,7 +123,7 @@ def test_pdf_failure_still_completes(client, backend):
 
 def test_no_structured_cv_completes_without_pdf(client, backend):
     result = _eligible()
-    del result["structured_cv"]
+    del result["tailored_cv"]
     _, row = _run(client, backend, result)
     assert row["status"] == "complete"
     assert row["pdf_url"] is None

@@ -1,77 +1,59 @@
-"""CV rewrite node."""
-
-from __future__ import annotations
+"""Tailor the source CV to the job within the domain budget."""
 
 from typing import Any
 
-import structlog
-
-from app.domain.cv.domain_config import Domain, get_budget
+from app.domain.cv.domain_config import get_budget
 from app.domain.cv.rewrite import RewrittenCV
-from app.domain.parsing.safe_parser import safe_llm_parse
-from app.pipeline.chains import Chains
-from app.pipeline.legacy_state import CombinedState
-from app.pipeline.nodes._helpers import _normalize_budget, _safe_json
-from app.pipeline.prompts import get_domain_guidance
+from app.pipeline.blocks import DataTag
+from app.pipeline.context import RunContext
+from app.pipeline.deps import PipelineDeps
+from app.pipeline.llm_call import call_step
+from app.pipeline.prompts.domain_guidance import get_domain_guidance
+from app.pipeline.state import PipelineState
 
-log = structlog.get_logger(__name__)
+_BUDGET_DEFAULTS = {
+    "target_words": 800,
+    "max_roles": 4,
+    "max_skills": 18,
+    "max_projects": 0,
+    "max_publications": 0,
+}
 
 
-def rewrite_cv_node(state: CombinedState, *, chains: Chains) -> dict[str, Any]:
-    counter = state.get("counter", 0)
-    domain = state.get("detected_domain", Domain.GENERAL.value)
-    log.info("pipeline.stage", stage="rewrite_cv", domain=domain, attempt=counter + 1)
-
-    if counter >= 10:
-        log.warning("pipeline.safety_ceiling", counter=counter)
-        return {"structured_cv": state["structured_cv"], "counter": 10}
-
-    # Determine seniority tier from experience summary
-    structured_cv = state.get("structured_cv")
-    total_years = 0
-    try:
-        if structured_cv and structured_cv.experience_summary:
-            total_years = structured_cv.experience_summary.total_years or 0
-    except AttributeError:
-        pass
-
-    # Domain-aware budget
-    raw_budget = get_budget(domain, total_years)
-    budget = _normalize_budget(raw_budget)
-
-    # ATS-specific gap hints (empty for non-ATS domains)
-    final_match = state.get("final_match") or {}
-    section_scores = final_match.get("section_scores", {})
-    must_have_missing = section_scores.get("must_have", {}).get("missing", [])
-    skills_missing = section_scores.get("skills", {}).get("missing", [])
-    tools_missing = section_scores.get("tools", {}).get("missing", [])
-
-    raw = chains.rewrite.invoke(
-        {
-            "domain": domain,
-            "domain_guidance": get_domain_guidance(domain),
-            "target_words": budget["target_words"],
-            "max_roles": budget["max_roles"],
-            "max_skills": budget["max_skills"],
-            "max_projects": budget["max_projects"],
-            "max_publications": budget["max_publications"],
-            "max_certs": budget["max_certs"],
-            "must_have_missing": must_have_missing or "None",
-            "skills_missing": skills_missing or "None",
-            "tools_missing": tools_missing or "None",
-            "user_feedback": state.get("user_qna") or "No user feedback provided",
-            "cv_text": _safe_json(structured_cv) if structured_cv else state.get("user_resume", ""),
-            "jd_text": _safe_json(state.get("structured_jd"))
-            if state.get("structured_jd")
-            else state.get("job_description", ""),
-            "ats_score": final_match.get("overall_score", "N/A"),
-            "title_alignment": final_match.get("rewrite_hints", {}).get("title_alignment", "N/A"),
-        }
-    )
-
-    rewritten_cv = safe_llm_parse(raw, RewrittenCV, structured_cv)  # type: ignore[type-var]
-
-    return {
-        "structured_cv": rewritten_cv,
-        "counter": counter + 1,
+def _task_params(state: PipelineState) -> dict[str, int | float | str]:
+    domain = state["domain"]
+    years = state["source_cv"].experience_summary.total_years or 0
+    budget = get_budget(domain, years)
+    params: dict[str, int | float | str] = {
+        k: budget.get(k, v) for k, v in _BUDGET_DEFAULTS.items()
     }
+    params["domain"] = domain
+    params["domain_guidance"] = get_domain_guidance(domain)
+    return params
+
+
+def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
+    blocks: list[tuple[DataTag, str]] = [
+        ("cv", state["source_cv"].model_dump_json()),
+        ("job_requirements", state["jd"].model_dump_json()),
+    ]
+    answers = state.get("answers")
+    if answers is not None and answers.free_text:
+        blocks.append(("answers", answers.free_text))
+    draft = state.get("tailored_cv")
+    if state.get("passes", 0) >= 1 and draft is not None:
+        blocks.append(("previous_draft", draft.model_dump_json()))
+    return blocks
+
+
+async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) -> dict[str, Any]:
+    cv = await call_step(
+        deps,
+        ctx,
+        step="rewrite",
+        schema=RewrittenCV,
+        blocks=_blocks(state),
+        task_params=_task_params(state),
+        cache_prefix=True,
+    )
+    return {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}

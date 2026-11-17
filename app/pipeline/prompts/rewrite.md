@@ -18,7 +18,7 @@ Writing rules:
 8. Every entry in education, licenses, certifications, clinical_practice and trade_qualifications must be kept.
 9. Record each change in change_log and list job requirements you could not address in gaps_unaddressed.
 ## task
-Rewrite the CV in the <cv> block for the job in the <job_description> block. Profession domain: {domain}.
+Rewrite the CV in the <cv> block for the job in the <job_requirements> block. Profession domain: {domain}.
 Budget (hard limits): target about {target_words} words; at most {max_roles} work experience roles, {max_skills} hard skills, {max_projects} projects, {max_publications} publications ({max_projects} or {max_publications} of 0 means not applicable); trim only sections other than the protected ones in rule 8.
 Domain guidance: {domain_guidance}
 Use the <ats_feedback>, <answers> and <previous_draft> blocks when present.

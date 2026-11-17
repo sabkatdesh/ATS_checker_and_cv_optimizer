@@ -3,6 +3,8 @@ from types import SimpleNamespace
 
 from app.domain.cv.profile_text import ProfileBuilder
 from app.domain.parsing.input_validator import validate_jd
+from app.domain.questions.schemas import GapQuestion
+from app.pipeline.state import RunOptions
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
 
@@ -74,10 +76,10 @@ def test_start_creates_session_with_cover_letter_args(client, backend):
 
 def test_start_pauses_at_hitl(client, backend):
     _ready(backend)
-    backend.pipeline.next_nodes = ["hitl_node"]
+    backend.pipeline.next_nodes = ["await_answers"]
     backend.pipeline.values = {
-        "gaps_identified": ["g1"],
-        "eligibility_verdict": SimpleNamespace(score=55),
+        "questions": [GapQuestion(id="q1", text="g1")],
+        "eligibility": SimpleNamespace(score=55),
     }
     row = _row(backend, _start(client))
     assert row["status"] == "awaiting_hitl"
@@ -87,7 +89,7 @@ def test_start_pauses_at_hitl(client, backend):
 
 def test_start_pauses_for_cover_letter_options(client, backend):
     _ready(backend)
-    backend.pipeline.next_nodes = ["cover_letter_hitl"]
+    backend.pipeline.next_nodes = ["cover_letter_options"]
     assert _row(backend, _start(client))["status"] == "awaiting_cover_letter_options"
 
 
@@ -106,4 +108,13 @@ def test_start_passes_profile_text_to_pipeline(client, backend):
     assert name == "run"
     assert kwargs["user_resume_text"] == ProfileBuilder.from_profile_dict(
         backend.store.profiles[USER_A]
+    )
+
+
+def test_start_builds_run_options(client, backend):
+    _ready(backend)
+    _start(client, cover_letter=True, cover_letter_tone="casual", cover_letter_length="short")
+    options = backend.pipeline.calls[0][2]["options"]
+    assert options == RunOptions(
+        cover_letter=True, cover_letter_tone=None, cover_letter_length="short", max_passes=2
     )

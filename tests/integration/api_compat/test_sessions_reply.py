@@ -35,14 +35,14 @@ def test_reply_ok_response(client, backend):
 
 def test_reply_then_cover_letter_options(client, backend):
     _session(backend)
-    backend.pipeline.next_nodes = ["cover_letter_hitl"]
+    backend.pipeline.next_nodes = ["cover_letter_options"]
     _reply(client)
     assert backend.store.sessions["t1"]["status"] == "awaiting_cover_letter_options"
 
 
 def test_reply_then_finalize(client, backend):
     _session(backend)
-    backend.pipeline.result = {"is_eligible": True}
+    backend.pipeline.result = {"eligible": True}
     _reply(client)
     assert backend.store.sessions["t1"]["status"] == "complete"
 

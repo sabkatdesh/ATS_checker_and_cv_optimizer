@@ -1,4 +1,8 @@
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from app.pipeline.state import RunOptions
+    from app.pipeline.summary import SessionSummary
 
 JsonDict = dict[str, Any]
 
@@ -10,13 +14,13 @@ class PipelineRunner(Protocol):
         job_description: str,
         user_resume_text: str,
         thread_id: str,
-        cover_letter_requested: bool = False,
-        cover_letter_tone: str | None = None,
-        cover_letter_length: str | None = None,
+        options: "RunOptions",
     ) -> JsonDict: ...
 
-    def get_state(self, thread_id: str) -> JsonDict: ...
+    def get_state(self, thread_id: str) -> JsonDict: ...  # {"values", "next", "interrupt"}
 
-    def resume(self, thread_id: str, user_qna: str) -> JsonDict: ...
+    def resume(self, thread_id: str, reply: Any) -> JsonDict: ...
 
     def resume_cover_letter(self, thread_id: str, tone: str, length: str) -> JsonDict: ...
+
+    def summary(self, thread_id: str) -> "SessionSummary | None": ...
