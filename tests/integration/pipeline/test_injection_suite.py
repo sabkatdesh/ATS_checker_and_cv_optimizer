@@ -11,6 +11,7 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.text.invisible import strip_invisible
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.blocks import DataTag
 from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
@@ -43,6 +44,7 @@ def _run(jd_text: str, draft: RewrittenCV) -> tuple[ScriptedGateway, dict]:
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
             "rewrite": [draft for _ in range(3)],
+            "verify_claims": [JudgeFindings()],
         }
     )
     svc = PipelineService(build_graph(deps, new_checkpointer()))

@@ -1,0 +1,33 @@
+{
+  "domain": "education",
+  "job_title": "Mathematics Teacher",
+  "company_name": "Example International School",
+  "location": "Rajshahi",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Secondary mathematics teaching",
+      "Assessment design"
+    ],
+    "nice_to_have": [
+      "Community work"
+    ]
+  },
+  "skills": {
+    "hard_skills": [
+      "Assessment design"
+    ],
+    "tools": []
+  },
+  "experience": {
+    "min_years": 4,
+    "max_years": null
+  },
+  "education": {
+    "degree_required": "Degree in mathematics or education",
+    "fields_of_study": [
+      "Mathematics",
+      "Education"
+    ]
+  }
+}

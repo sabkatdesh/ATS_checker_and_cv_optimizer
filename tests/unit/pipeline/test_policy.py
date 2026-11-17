@@ -47,9 +47,9 @@ def test_failure_text_is_constant():
 
 
 def test_policy_table():
-    required = {"jd_extract", "cv_extract", "rewrite"}
+    required = {"jd_extract", "cv_extract", "rewrite", "revise_flagged"}
     assert {s for s, v in POLICY.items() if v == "required"} == required
-    optional = {"eligibility", "gap_questions", "cover_letter"}
+    optional = {"eligibility", "gap_questions", "verify_claims", "cover_letter"}
     assert {s for s, v in POLICY.items() if v == "optional"} == optional
 
 
@@ -100,3 +100,18 @@ def test_cover_letter_skips_invalid_output_and_infrastructure_failures():
     with pytest.raises(PipelineStepFailed) as exc:
         _optional("cover_letter", LLMAuthError("x"))
     assert exc.value.code == "LLM_AUTH"
+
+
+def test_verify_claims_judge_skips_on_any_llm_failure_but_cancellation():
+    for err in (LLMOutputInvalid("x"), LLMRefused("x"), LLMUnavailable("x"), LLMAuthError("x")):
+        assert _optional("verify_claims", err) is None
+    with pytest.raises(LLMCancelled):
+        _optional("verify_claims", LLMCancelled("c"))
+
+
+def test_revise_flagged_skips_only_invalid_output():
+    assert _optional("revise_flagged", LLMOutputInvalid("x")) is None
+    assert _optional("revise_flagged", LLMOutputTruncated("x")) is None
+    with pytest.raises(PipelineStepFailed) as exc:
+        _optional("revise_flagged", LLMUnavailable("x"))
+    assert (exc.value.step, exc.value.code) == ("revise_flagged", "LLM_UNAVAILABLE")

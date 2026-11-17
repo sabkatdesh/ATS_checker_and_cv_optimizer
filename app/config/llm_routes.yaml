@@ -12,14 +12,15 @@ defaults:
     model: global.anthropic.claude-sonnet-4-6
 
 steps:
-  jd_extract: {max_tokens: 2000, temperature: 0}
+  jd_extract: {max_tokens: 2000, temperature: 0, timeout_s: 60}
   # Transitional (Task 9 replaces it with the deterministic cv_snapshot).
   cv_extract: {max_tokens: 6000, temperature: 0}
-  eligibility: {max_tokens: 800, temperature: 0}
-  gap_questions: {max_tokens: 1200, temperature: 0.3, structured_mode: native}
+  eligibility: {max_tokens: 800, temperature: 0, timeout_s: 45}
+  gap_questions: {max_tokens: 1200, temperature: 0.3, structured_mode: native, timeout_s: 45}
   rewrite: {max_tokens: 8000, temperature: 0.4, timeout_s: 150, stream: true}
-  verify_claims: {max_tokens: 1500, temperature: 0}
-  cover_letter: {max_tokens: 2000, temperature: 0.6}
+  verify_claims: {max_tokens: 1500, temperature: 0, timeout_s: 45}
+  revise_flagged: {max_tokens: 6000, temperature: 0.2, timeout_s: 120, stream: true}
+  cover_letter: {max_tokens: 2000, temperature: 0.6, timeout_s: 60}
   profile_import: {max_tokens: 6000, temperature: 0}
 
 embeddings:

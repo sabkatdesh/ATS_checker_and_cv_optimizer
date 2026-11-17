@@ -7,6 +7,7 @@ import app.pipeline.nodes.await_answers as await_mod
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.errors import NotAwaitingInput
 from app.pipeline.graph import build_graph
@@ -28,6 +29,7 @@ def _service(questions: GapQuestions = QUESTIONS, eligibility: Eligibility = ELI
             "eligibility": [eligibility],
             "gap_questions": [questions],
             "rewrite": [RewrittenCV() for _ in range(3)],
+            "verify_claims": [JudgeFindings()],
         }
     )
     return gw, PipelineService(build_graph(deps, new_checkpointer()))

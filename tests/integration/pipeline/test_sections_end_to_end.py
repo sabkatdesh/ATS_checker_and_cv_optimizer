@@ -8,6 +8,7 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.sections import PROTECTED_SECTIONS, SECTIONS, present_sections
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.match.schemas import Eligibility
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
@@ -45,6 +46,7 @@ def _final(name: str) -> tuple[UniversalCVStructured, RewrittenCV, list[str]]:
             "cv_extract": [source],
             "eligibility": [Eligibility(score=70)],
             "rewrite": [_lossy_rewrite(source) for _ in range(3)],
+            "verify_claims": [JudgeFindings()],
         }
     )
     svc = PipelineService(build_graph(deps, new_checkpointer()))

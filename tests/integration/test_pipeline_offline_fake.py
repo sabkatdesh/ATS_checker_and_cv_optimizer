@@ -64,7 +64,15 @@ def _run(c: Container, tid: str = "t1", options: RunOptions | None = None) -> No
 
 
 COVER = RunOptions(cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
-STEPS = {"jd_extract", "cv_extract", "eligibility", "gap_questions", "rewrite", "cover_letter"}
+STEPS = {
+    "jd_extract",
+    "cv_extract",
+    "eligibility",
+    "gap_questions",
+    "rewrite",
+    "verify_claims",
+    "cover_letter",
+}
 
 
 def test_full_pipeline_runs_offline_on_fake_provider(container):

@@ -6,7 +6,16 @@ from app.config.settings import ConfigError
 from app.pipeline.blocks import INJECTION_RULE
 from app.pipeline.prompts.loader import PROMPTS_DIR, PromptLibrary
 
-STEPS = ["jd_extract", "cv_extract", "eligibility", "gap_questions", "rewrite", "cover_letter"]
+STEPS = [
+    "jd_extract",
+    "cv_extract",
+    "eligibility",
+    "gap_questions",
+    "rewrite",
+    "verify_claims",
+    "revise_flagged",
+    "cover_letter",
+]
 
 
 def write(tmp_path: Path, name: str, text: str) -> None:

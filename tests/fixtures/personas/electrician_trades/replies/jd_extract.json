@@ -1,0 +1,29 @@
+{
+  "domain": "trades",
+  "job_title": "Maintenance Electrician",
+  "company_name": "Example Textiles",
+  "location": "Gazipur",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Panel installation",
+      "Fault finding",
+      "NC-3 electrical trade qualification"
+    ],
+    "nice_to_have": []
+  },
+  "skills": {
+    "hard_skills": [
+      "Fault finding"
+    ],
+    "tools": []
+  },
+  "experience": {
+    "min_years": 5,
+    "max_years": null
+  },
+  "education": {
+    "degree_required": null,
+    "fields_of_study": []
+  }
+}

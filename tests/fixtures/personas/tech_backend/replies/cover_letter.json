@@ -1,0 +1,9 @@
+{
+  "salutation": "Dear Hiring Manager,",
+  "opening_paragraph": "I am applying for the Backend Engineer role at Example Company.",
+  "body_paragraphs": [
+    "My experience, as set out in my CV, matches the main requirements of the role."
+  ],
+  "closing_paragraph": "I would welcome a conversation about how I can contribute.",
+  "sign_off": "Sincerely,"
+}

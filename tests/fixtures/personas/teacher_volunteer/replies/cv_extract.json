@@ -1,0 +1,72 @@
+{
+  "domain": "education",
+  "meta": {
+    "full_name": "Sumi Example",
+    "location": "Rajshahi",
+    "email": "sumi@example.com",
+    "phone": "+880 1700-000004"
+  },
+  "professional_summary": "Secondary school mathematics teacher with six years of classroom experience.",
+  "skills": {
+    "hard_skills": [
+      "Lesson planning",
+      "Assessment design"
+    ],
+    "soft_skills": [
+      "Mentoring"
+    ]
+  },
+  "experience_summary": {
+    "total_years": 6,
+    "seniority": "mid",
+    "role_type": "Teacher",
+    "relevant_years": 6
+  },
+  "work_experience": [
+    {
+      "job_title": "Assistant Teacher (Mathematics)",
+      "company_name": "Example Model School",
+      "start_date": "2019-01-01",
+      "responsibilities": [
+        "Taught mathematics to grades 8 to 10",
+        "Designed term assessments"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BEd",
+      "institution": "Example Teachers College",
+      "graduation_year": 2018
+    },
+    {
+      "degree": "BSc",
+      "field_of_study": "Mathematics",
+      "institution": "Example University",
+      "graduation_year": 2017
+    }
+  ],
+  "volunteering": [
+    {
+      "organization": "Example Literacy Trust",
+      "role": "Weekend tutor",
+      "start_date": "2020-06-01",
+      "description": "Tutored children in reading and arithmetic."
+    }
+  ],
+  "awards": [
+    {
+      "title": "Teacher of the Year",
+      "issuer": "Example Model School",
+      "year": 2023
+    }
+  ],
+  "publications": [
+    {
+      "title": "Group work in secondary mathematics",
+      "journal_or_venue": "Example Education Review",
+      "year": 2022
+    }
+  ],
+  "references_available": true
+}

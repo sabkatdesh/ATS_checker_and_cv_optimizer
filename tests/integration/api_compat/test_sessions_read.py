@@ -44,6 +44,7 @@ def test_status_adds_pipeline_summary(client, backend):
         "eligibility_score": 60,
         "ats_before": None,
         "ats_after": None,
+        "trust_report": None,
         "warnings": [],
         "error_code": None,
     }

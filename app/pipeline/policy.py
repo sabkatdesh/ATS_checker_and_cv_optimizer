@@ -26,6 +26,8 @@ POLICY: dict[str, Literal["required", "optional"]] = {
     "cv_extract": "required",
     "eligibility": "optional",  # invalid output falls back to deterministic_eligibility
     "rewrite": "required",
+    "verify_claims": "optional",  # the LLM judge; the deterministic layer always runs
+    "revise_flagged": "required",  # invalid output keeps the previous draft
     "gap_questions": "optional",
     "cover_letter": "optional",
 }
@@ -37,11 +39,15 @@ _SKIP_ON: dict[str, tuple[type[LLMError], ...]] = {
     "eligibility": (LLMOutputInvalid,),
     "gap_questions": (LLMOutputInvalid,),
     "cover_letter": (LLMOutputInvalid, *_INFRA),
+    "verify_claims": (LLMError,),
+    "revise_flagged": (LLMOutputInvalid,),
 }
 _SKIP_WARNING: dict[str, WarningCode] = {
     "eligibility": "ELIGIBILITY_DETERMINISTIC",
     "gap_questions": "QUESTIONS_SKIPPED",
     "cover_letter": "COVER_LETTER_SKIPPED",
+    "verify_claims": "VERIFIER_JUDGE_SKIPPED",
+    "revise_flagged": "REVISE_KEPT_PREVIOUS",
 }
 
 _CODES: tuple[tuple[type[LLMError], ErrorCode], ...] = (

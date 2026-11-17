@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.domain.ats.schemas import AtsMatch
+from app.domain.trust.report import TrustReport
 from app.pipeline.errors import ErrorCode
 from app.pipeline.warnings import WarningCode
 
@@ -22,6 +23,7 @@ class SessionSummary(BaseModel, frozen=True):
     eligibility_score: int | None = None
     ats_before: int | None = None
     ats_after: int | None = None
+    trust_report: TrustReport | None = None
     warnings: list[WarningCode] = Field(default_factory=list)
     error_code: ErrorCode | None = None
 
@@ -46,6 +48,7 @@ def summarize(
         eligibility_score=None if eligibility is None else eligibility.score,
         ats_before=ats_score_of(values.get("ats_before")),
         ats_after=ats_score_of(values.get("ats")),
+        trust_report=values.get("trust_report"),
         warnings=[w.code for w in values.get("warnings", [])],
         error_code=error_code,
     )

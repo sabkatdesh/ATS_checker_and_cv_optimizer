@@ -1,24 +1,18 @@
-"""Tailor the source CV to the job within the domain budget.
-
-Dropped sections come back, then invented contacts and markup are removed.
-"""
+"""Tailor the source CV to the job within the domain budget (then the draft checks run)."""
 
 from typing import Any
 
 from app.domain.ats.schemas import AtsMatch
 from app.domain.cv.domain_config import get_budget
-from app.domain.cv.output_checks import remove_foreign_contacts, strip_markup
 from app.domain.cv.rewrite import RewrittenCV
-from app.domain.cv.sections import restore_dropped
-from app.domain.questions.reply import answers_block
 from app.pipeline.blocks import DataTag
 from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
+from app.pipeline.draft_checks import answers_text, check_draft
 from app.pipeline.llm_call import call_step
 from app.pipeline.policy import run_required
 from app.pipeline.prompts.domain_guidance import get_domain_guidance
 from app.pipeline.state import PipelineState
-from app.pipeline.warnings import PipelineWarning
 
 _BUDGET_DEFAULTS = {
     "target_words": 800,
@@ -46,8 +40,7 @@ def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
         ("cv", state["source_cv"].model_dump_json()),
         ("job_requirements", state["jd"].model_dump_json()),
     ]
-    answers = state.get("answers")
-    text = answers_block(state.get("questions") or [], answers) if answers is not None else ""
+    text = answers_text(state)
     if text:
         blocks.append(("answers", text))
     draft = state.get("tailored_cv")
@@ -84,14 +77,7 @@ async def rewrite(state: PipelineState, *, deps: PipelineDeps, ctx: RunContext) 
         ),
     )
 
-    source = state["source_cv"]
-    cv, restored = restore_dropped(source, cv)
-    cv, removed = remove_foreign_contacts(source, strip_markup(cv))
-    warnings: list[PipelineWarning] = []
-    if restored:
-        warnings.append(PipelineWarning(code="SECTION_RESTORED", step="rewrite"))
-    if removed:
-        warnings.append(PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="rewrite"))
+    cv, warnings = check_draft(state["source_cv"], cv, "rewrite")
     out: dict[str, Any] = {"tailored_cv": cv, "passes": state.get("passes", 0) + 1}
     if warnings:
         out["warnings"] = warnings

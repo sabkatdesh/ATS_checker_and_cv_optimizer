@@ -12,6 +12,7 @@ from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.graph import build_graph
@@ -47,6 +48,7 @@ def _script(rewrite: list[Outcome]) -> dict[str, list[Outcome]]:
         "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
         "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
         "rewrite": rewrite,
+        "verify_claims": [JudgeFindings()],
     }
 
 

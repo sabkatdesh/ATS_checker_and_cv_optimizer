@@ -19,6 +19,7 @@ KNOWN_STEPS = frozenset(
         "gap_questions",
         "rewrite",
         "verify_claims",
+        "revise_flagged",
         "cover_letter",
         "profile_import",
     }

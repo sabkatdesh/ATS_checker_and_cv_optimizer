@@ -10,6 +10,7 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.jd.schemas import JDSkillBlock, JobDescriptionStructured
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion, GapQuestions
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
@@ -21,9 +22,9 @@ QUESTIONS = GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])
 
 
 def _draft() -> RewrittenCV:
-    """The fake provider's rewrite, with the persona's own contacts (others would be removed)."""
+    """The fake provider's rewrite with the persona's own contacts and education (so it verifies)."""
     draft = RewrittenCV.model_validate_json((DEFAULT_DIR / "rewrite.json").read_text("utf-8"))
-    return draft.model_copy(update={"meta": persona_cv().meta})
+    return draft.model_copy(update={"meta": persona_cv().meta, "education": persona_cv().education})
 
 
 def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome]) -> dict:
@@ -33,6 +34,7 @@ def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome])
         "eligibility": [eligibility],
         "gap_questions": [QUESTIONS],
         "rewrite": [_draft() for _ in range(rewrites)],
+        "verify_claims": [JudgeFindings()],
         **extra,
     }
 
@@ -141,3 +143,4 @@ def test_summary_reports_jd_meta_and_scores():
     assert summary.domain == "tech" and summary.eligibility_score == 60
     assert isinstance(summary.ats_before, int) and isinstance(summary.ats_after, int)
     assert summary.warnings == []
+    assert summary.trust_report is not None and summary.trust_report.status == "pass"

@@ -10,6 +10,7 @@ from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.domain.trust.judge import JudgeFindings
 from app.pipeline.checkpoint_types import allowed_modules, new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
@@ -42,6 +43,7 @@ def test_interrupt_resume_flow_logs_nothing_from_the_serde(
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])],
             "rewrite": [RewrittenCV.model_validate(lossy) for _ in range(3)],
+            "verify_claims": [JudgeFindings()],
             "cover_letter": [letter],
         }
     )

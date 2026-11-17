@@ -1,0 +1,33 @@
+{
+  "domain": "general",
+  "job_title": "Management Trainee",
+  "company_name": "Example Group",
+  "location": "Khulna",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Communication",
+      "Report writing",
+      "Microsoft Office"
+    ],
+    "nice_to_have": []
+  },
+  "skills": {
+    "hard_skills": [
+      "Report writing"
+    ],
+    "tools": [
+      "Microsoft Office"
+    ]
+  },
+  "experience": {
+    "min_years": 0,
+    "max_years": 1
+  },
+  "education": {
+    "degree_required": "Bachelor's degree",
+    "fields_of_study": [
+      "Business"
+    ]
+  }
+}

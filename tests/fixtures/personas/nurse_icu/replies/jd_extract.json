@@ -1,0 +1,31 @@
+{
+  "domain": "medical",
+  "job_title": "ICU Staff Nurse",
+  "company_name": "Example Medical Centre",
+  "location": "Chattogram",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Intensive care",
+      "Ventilator management",
+      "Patient assessment"
+    ],
+    "nice_to_have": []
+  },
+  "skills": {
+    "hard_skills": [
+      "Patient assessment"
+    ],
+    "tools": []
+  },
+  "experience": {
+    "min_years": 3,
+    "max_years": null
+  },
+  "education": {
+    "degree_required": "BSc in Nursing",
+    "fields_of_study": [
+      "Nursing"
+    ]
+  }
+}

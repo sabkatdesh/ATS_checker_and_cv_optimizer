@@ -22,7 +22,9 @@ from app.pipeline.nodes.gap_questions import gap_questions
 from app.pipeline.nodes.gate import route_after_eligibility
 from app.pipeline.nodes.jd_extract import jd_extract
 from app.pipeline.nodes.loop_control import route_after_ats
+from app.pipeline.nodes.revise_flagged import revise_flagged
 from app.pipeline.nodes.rewrite import rewrite
+from app.pipeline.nodes.verify_claims import route_after_verify, verify_claims
 from app.pipeline.state import PipelineState
 from app.ports.llm import CancelToken
 
@@ -45,6 +47,8 @@ _NODES: dict[str, NodeFn] = {
     "await_answers": await_answers,
     "ats_score": ats_score,
     "rewrite": rewrite,
+    "verify_claims": verify_claims,
+    "revise_flagged": revise_flagged,
     "cover_letter_options": cover_letter_options,
     "cover_letter": cover_letter,
 }
@@ -81,9 +85,15 @@ def build_graph(deps: PipelineDeps, checkpointer: BaseCheckpointSaver) -> Compil
     workflow.add_conditional_edges(
         "ats_score",
         partial(route_after_ats, settings=deps.settings),
-        {"rewrite": "rewrite", "done": "cover_letter_options"},
+        {"rewrite": "rewrite", "done": "verify_claims"},
     )
     workflow.add_edge("rewrite", "ats_score")
+    workflow.add_conditional_edges(
+        "verify_claims",
+        route_after_verify,
+        {"revise": "revise_flagged", "done": "cover_letter_options"},
+    )
+    workflow.add_edge("revise_flagged", "verify_claims")
     workflow.add_conditional_edges(
         "cover_letter_options",
         route_cover_letter,

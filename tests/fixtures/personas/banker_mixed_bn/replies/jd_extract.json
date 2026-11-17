@@ -1,0 +1,35 @@
+{
+  "domain": "finance",
+  "job_title": "Credit Risk Analyst",
+  "company_name": "Example Finance Ltd",
+  "location": "Dhaka",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Credit analysis",
+      "Financial statement analysis",
+      "SQL"
+    ],
+    "nice_to_have": [
+      "Basel III"
+    ]
+  },
+  "skills": {
+    "hard_skills": [
+      "Credit analysis"
+    ],
+    "tools": [
+      "SQL"
+    ]
+  },
+  "experience": {
+    "min_years": 4,
+    "max_years": null
+  },
+  "education": {
+    "degree_required": "MBA in Finance",
+    "fields_of_study": [
+      "Finance"
+    ]
+  }
+}

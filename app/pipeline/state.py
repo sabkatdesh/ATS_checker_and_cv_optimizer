@@ -12,6 +12,7 @@ from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion
+from app.domain.trust.report import TrustReport
 from app.pipeline.warnings import PipelineWarning
 
 
@@ -39,6 +40,7 @@ class PipelineState(TypedDict, total=False):
     ats: AtsMatch
     tailored_cv: RewrittenCV
     passes: int
+    trust_report: TrustReport
     revised: bool
     cover_letter: CoverLetterStructured | None
     warnings: Annotated[list[PipelineWarning], operator.add]

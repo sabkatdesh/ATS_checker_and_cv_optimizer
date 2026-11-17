@@ -6,9 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.domain.cv.rewrite import TEXT_LIMIT, ChangeLogEntry
 from app.domain.cv.sections import SectionName
-
-# The pipeline's warning codes; warnings.py imports nothing, so this creates no import cycle.
-from app.pipeline.warnings import WarningCode
+from app.domain.warnings import WarningCode
 
 ClaimKind = Literal[
     "employer",
@@ -20,6 +18,7 @@ ClaimKind = Literal[
     "licence",
     "skill",
     "number",
+    "statement",  # a judge-layer finding about a sentence rather than a named fact
 ]
 TrustStatus = Literal["pass", "warn", "fail"]
 
@@ -28,7 +27,7 @@ class UnsupportedClaim(BaseModel):
     text: str
     section: SectionName
     kind: ClaimKind
-    reason: Literal["not_in_source", "number_not_in_source", "date_changed"]
+    reason: Literal["not_in_source", "number_not_in_source", "date_changed", "inflated"]
     layer: Literal["deterministic", "judge"]
     severity: Literal["hard", "soft"]
 
