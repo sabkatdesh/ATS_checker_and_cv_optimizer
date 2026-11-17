@@ -1,5 +1,6 @@
 """Checkable claims in a CV (names, skills, dates, numbers) and the evidence a source offers."""
 
+import math
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import date
@@ -13,7 +14,13 @@ from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.questions.schemas import GapAnswers
 from app.domain.text.strings import iter_strings
 from app.domain.trust.aliases import canonical_skill
-from app.domain.trust.normalise import normalise_text, number_key, parse_numbers, word_numbers
+from app.domain.trust.normalise import (
+    normalise_text,
+    number_key,
+    parse_numbers,
+    tenure_numbers,
+    word_numbers,
+)
 from app.domain.trust.report import ClaimKind
 
 __all__ = ["Claim", "ClaimKind", "SourceEvidence", "build_evidence", "extract_claims"]
@@ -41,6 +48,7 @@ class Claim:
     norm: str
     section: SectionName
     entry_key: str | None
+    tenure: bool = False  # a number written as years ("5+ years")
 
 
 def _name_text(section: str, entry: Any, field: str) -> str:
@@ -80,9 +88,10 @@ def _free_strings(section: str, value: Any) -> Iterator[str]:
 
 def _number_claims(section: SectionName, key: str | None, value: Any) -> Iterator[Claim]:
     for text in _free_strings(section, value):
+        tenure = tenure_numbers(text)
         for number in parse_numbers(text):
             norm = number_key(number)
-            yield Claim("number", f"{norm} in: {text}", norm, section, key)
+            yield Claim("number", f"{norm} in: {text}", norm, section, key, number in tenure)
 
 
 def _section_claims(cv: UniversalCVStructured, section: SectionName) -> Iterator[Claim]:
@@ -121,6 +130,7 @@ class SourceEvidence:
     cv_text_norm: str
     cv_numbers: frozenset[Decimal] = frozenset()
     answer_numbers: frozenset[Decimal] = frozenset()
+    max_years: int = 0  # whole years of experience the source shows (for "5+ years")
 
 
 def _numeric_fields(value: Any) -> Iterator[Decimal]:
@@ -136,12 +146,25 @@ def _numeric_fields(value: Any) -> Iterator[Decimal]:
             yield from _numeric_fields(item)
 
 
+def _max_years(cv: UniversalCVStructured, today: date) -> int:
+    """Floor of the largest of total years, relevant years and the work history's date span."""
+    summary = cv.experience_summary
+    candidates = [summary.total_years or 0.0, summary.relevant_years or 0.0]
+    starts = [w.start_date for w in cv.work_experience if w.start_date]
+    if starts:
+        end = max((w.end_date or today) for w in cv.work_experience if w.start_date)
+        candidates.append((end - min(starts)).days / 365.25)
+    return max(0, math.floor(max(candidates)))
+
+
 def _numbers(texts: list[str], text_norm: str) -> frozenset[Decimal]:
     parsed = {n for text in texts for n in parse_numbers(text)}
     return frozenset(parsed | word_numbers(text_norm))
 
 
-def build_evidence(cv: UniversalCVStructured, answers: GapAnswers | None) -> SourceEvidence:
+def build_evidence(
+    cv: UniversalCVStructured, answers: GapAnswers | None, today: date | None = None
+) -> SourceEvidence:
     """Source claims, normalised source text and every source number (answers kept apart)."""
     cv_texts = [text for _, text in iter_strings(cv, skip=("meta",))]
     cv_norm = normalise_text("\n".join(cv_texts))
@@ -156,4 +179,5 @@ def build_evidence(cv: UniversalCVStructured, answers: GapAnswers | None) -> Sou
         cv_text_norm=cv_norm,
         cv_numbers=_numbers(cv_texts, cv_norm) | numeric,
         answer_numbers=_numbers(answer_texts, answer_norm),
+        max_years=_max_years(cv, today or date.today()),
     )

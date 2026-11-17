@@ -22,6 +22,10 @@ NAME_MATCH = 90
 RANK_WORDS = frozenset(
     {"senior", "lead", "head", "principal", "chief", "staff", "manager", "director", "sr", "jr"}
 )
+# Legal-form words an employer name may gain or lose ("Example Logistics Ltd").
+CORPORATE_SUFFIXES = frozenset(
+    {"ltd", "limited", "plc", "inc", "pvt", "private", "llc", "bd", "co", "company"}
+)
 
 Support = Literal["cv", "answers"] | None
 Reason = Literal["not_in_source", "number_not_in_source", "date_changed"]
@@ -55,6 +59,8 @@ def _name_support(claim: Claim, ev: SourceEvidence) -> Support:
         if src.kind != claim.kind or token_set_ratio(claim.norm, src.norm) < NAME_MATCH:
             continue
         added = tokens - set(src.norm.split())
+        if claim.kind == "employer":
+            added -= CORPORATE_SUFFIXES
         if all(_token_in(t, ev.cv_text_norm) for t in added):
             return "cv"
         if all(_token_in(t, ev.cv_text_norm) or _token_in(t, ev.answer_text_norm) for t in added):
@@ -79,6 +85,8 @@ def _number_support(claim: Claim, ev: SourceEvidence) -> Support:
     value = Decimal(claim.norm)
     if value in ev.cv_numbers:
         return "cv"
+    if claim.tenure and value == value.to_integral_value() and value <= ev.max_years:
+        return "cv"  # "4+ years" is a lower bound the source's experience covers
     return "answers" if value in ev.answer_numbers else None
 
 

@@ -85,6 +85,17 @@ def word_numbers(text_norm: str) -> set[Decimal]:
     return {_WORD_NUMBERS[t] for t in text_norm.split() if t in _WORD_NUMBERS}
 
 
+_TENURE = re.compile(
+    r"(?<![\w.])(?P<num>\d+(?:\.\d+)?)\s*\+?\s*(?:(?i:years?|yrs?)(?![^\W\d_])|বছর)"
+)
+
+
+def tenure_numbers(text: str) -> set[Decimal]:
+    """Numbers written as a length of time in years: "5+ years", "over 3 yrs", "৩ বছর"."""
+    ascii_text = to_ascii_digits(strip_invisible(text))
+    return {Decimal(m.group("num")).normalize() for m in _TENURE.finditer(ascii_text)}
+
+
 def number_key(value: Decimal) -> str:
     """Plain decimal text without exponent: Decimal("4E+1") -> "40"."""
     return format(value.normalize(), "f")
