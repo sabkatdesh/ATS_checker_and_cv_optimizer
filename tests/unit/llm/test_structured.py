@@ -127,3 +127,28 @@ def test_additional_properties_schema_is_overwritten_with_false():
 
     schema = provider_schema(WithMap)
     assert schema["properties"]["tags"]["additionalProperties"] is False
+
+
+def test_repair_turns_never_send_a_blank_assistant_turn():
+    out = repair_turns([Message(role="user", content="hi")], "  \n", "(root): empty")
+    assert out[1].role == "assistant" and out[1].content == "(empty reply)"
+    assert out[-1].role == "user"
+
+
+class Inner(BaseModel):
+    labels: dict[str, int]
+
+
+class Outer(BaseModel):
+    items: list[Inner]
+    extra: dict[str, int] = {}
+
+
+def test_error_summary_redacts_model_generated_keys():
+    key = "SENTINEL-CV-KEY https://example.com/x"
+    text = json.dumps({"items": [{"labels": {key: "nan"}}], "extra": {key: "nan"}})
+    with pytest.raises(LLMOutputInvalid) as ei:
+        parse_structured(text, Outer)
+    detail = ei.value.detail
+    assert "SENTINEL" not in detail and "https" not in detail
+    assert "items.[].labels.*" in detail and "extra.*" in detail

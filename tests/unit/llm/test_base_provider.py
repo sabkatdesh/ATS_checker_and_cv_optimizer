@@ -336,3 +336,45 @@ def test_shared_error_instance_is_not_enriched_twice() -> None:
             call(p, route(), req(schema=None))
     assert shared.attempts == 1 and shared.usage == Usage()
     assert str(shared) == "bad_request provider=bedrock model=m1: bad"
+
+
+class StepClock(Script):
+    """Advances a fake clock by `step` seconds during each send."""
+
+    def __init__(self, clock: Clock, step: float, *replies: object) -> None:
+        super().__init__(*replies)
+        self.clock, self.step = clock, step
+
+    async def send(self, wire: WireRequest, cancel: CancelToken) -> RawCompletion:
+        self.clock.now += self.step
+        return await super().send(wire, cancel)
+
+
+def _clocked(t: Script, clock: Clock) -> BaseProvider:
+    return BaseProvider(
+        t, prices=PRICES, breakers=BreakerRegistry(clock=clock), clock=clock,
+        retry=RetryPolicy(sleep=_nosleep, rand=lambda: 0.0),
+    )  # fmt: skip
+
+
+def test_repair_shares_the_call_deadline() -> None:
+    clock = Clock()
+    t = StepClock(clock, 3.0, ok("not json"), ok('{"x": 1}'))
+    res = asyncio.run(_clocked(t, clock).complete(req(), route(timeout_s=5), CancelToken()))
+    assert res.repaired is True
+    assert t.wires[0].timeout_s == 5 and t.wires[1].timeout_s == pytest.approx(2.0)
+
+
+def test_no_repair_when_deadline_spent_raises_original_invalid() -> None:
+    clock = Clock()
+    t = StepClock(clock, 5.0, ok("not json"), ok('{"x": 1}'))
+    with pytest.raises(LLMOutputInvalid) as ei:
+        asyncio.run(_clocked(t, clock).complete(req(), route(timeout_s=5), CancelToken()))
+    assert type(ei.value) is LLMOutputInvalid and "invalid JSON" in ei.value.detail
+    assert len(t.wires) == 1 and ei.value.provider == "bedrock"
+
+
+def test_empty_structured_reply_repairs_with_placeholder_turn() -> None:
+    t = Script(ok(""), ok('{"x": 1}'))
+    call(provider(t), route())
+    assert all(m.content.strip() for w in t.wires for m in w.messages)

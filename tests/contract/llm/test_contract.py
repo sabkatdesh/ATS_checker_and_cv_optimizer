@@ -165,6 +165,8 @@ def test_empty_structured_repairs_once(harness, prices, instant_retry):
     harness.script(h.Empty(), h.Ok(VALID))
     res = call(harness, prices, instant_retry)
     assert res.repaired is True and len(harness.sent_bodies()) == 2
+    for body in harness.sent_bodies():  # providers reject blank turns with a 400
+        assert all(str(m["content"]).strip() for m in body["messages"])
 
 
 def test_empty_text_raises(harness, prices, instant_retry):

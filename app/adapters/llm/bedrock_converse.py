@@ -3,7 +3,9 @@
 The boto3 client is built on first use (so a missing credential shows up as LLMAuthError on the
 first call, not at boot) and shared across threads. Each blocking boto3 call runs on its own
 daemon thread: on cancel the awaiting task is abandoned at once, the thread ends when botocore's
-read timeout fires, and neither the event loop nor interpreter shutdown waits for it. An
+read timeout fires (so an abandoned thread lives at most connect + read_timeout_s), and neither
+the event loop nor interpreter shutdown waits for it. The shared client pools up to
+MAX_POOL_CONNECTIONS connections, which also bounds how many such threads can hold one. An
 abandoned attempt (cancel or deadline) also sets a per-call stop flag, so a stream stops being
 read at its next event.
 """
@@ -30,6 +32,7 @@ from app.ports.llm import CancelToken
 from app.ports.llm_errors import LLMError
 
 CONNECT_TIMEOUT_S = 5
+MAX_POOL_CONNECTIONS = 50  # shared client: one pooled connection per concurrent call
 
 
 class _AttemptCancel(CancelToken):
@@ -89,6 +92,7 @@ class BedrockConverseTransport:
                     config = Config(
                         connect_timeout=CONNECT_TIMEOUT_S,
                         read_timeout=self._read_timeout_s,
+                        max_pool_connections=MAX_POOL_CONNECTIONS,
                         retries={"mode": "adaptive", "total_max_attempts": 1},
                     )
                     session = boto3.session.Session()

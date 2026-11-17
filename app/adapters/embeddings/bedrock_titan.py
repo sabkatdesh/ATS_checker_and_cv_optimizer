@@ -17,7 +17,11 @@ from app.adapters.llm._bedrock_wire import TRANSPORT_ERRORS, map_error
 from app.adapters.llm._breaker import BreakerRegistry
 from app.adapters.llm._pricing import PriceTable
 from app.adapters.llm._retry import Deadline, RetryPolicy, call_with_retry
-from app.adapters.llm.bedrock_converse import CONNECT_TIMEOUT_S, in_daemon_thread
+from app.adapters.llm.bedrock_converse import (
+    CONNECT_TIMEOUT_S,
+    MAX_POOL_CONNECTIONS,
+    in_daemon_thread,
+)
 from app.adapters.llm.usage_recorder import UsageRecorder
 from app.ports.embeddings import Purpose
 from app.ports.llm import CancelToken, Usage
@@ -62,6 +66,7 @@ class TitanEmbeddings:
                     config = Config(
                         connect_timeout=CONNECT_TIMEOUT_S,
                         read_timeout=self._timeout_s,
+                        max_pool_connections=MAX_POOL_CONNECTIONS,
                         retries={"mode": "adaptive", "total_max_attempts": 1},
                     )
                     self._client = boto3.session.Session().client(

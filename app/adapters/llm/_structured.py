@@ -5,7 +5,8 @@ Error text built here never contains model or user text, only paths and constant
 
 import json
 import re
-from typing import Any
+import types
+from typing import Any, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -25,6 +26,7 @@ REPAIR_TEXT = (
     "Your previous reply was not valid. Reply again with only a corrected JSON object "
     "that conforms to the schema. Problems found:\n"
 )
+EMPTY_REPLY = "(empty reply)"
 _MAX_ERROR_LINES = 10
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 
@@ -80,10 +82,41 @@ def _extract_json(text: str) -> str:
     return candidate
 
 
-def _error_summary(exc: ValidationError) -> str:
+def _field_names(model: type[BaseModel]) -> frozenset[str]:
+    """Every field name and alias reachable from `model`, nested models included."""
+    names: set[str] = set()
+    seen: set[type] = set()
+
+    def walk(tp: Any) -> None:
+        if isinstance(tp, type) and issubclass(tp, BaseModel):
+            if tp in seen:
+                return
+            seen.add(tp)
+            for name, field in tp.model_fields.items():
+                names.add(name)
+                if field.alias:
+                    names.add(field.alias)
+                walk(field.annotation)
+            return
+        if get_origin(tp) in (Union, types.UnionType) or get_args(tp):
+            for arg in get_args(tp):
+                walk(arg)
+
+    walk(model)
+    return frozenset(names)
+
+
+def _loc_part(part: int | str, names: frozenset[str]) -> str:
+    if isinstance(part, int):
+        return "[]"
+    return part if part in names else "*"  # a model-generated dict key: never echo it
+
+
+def _error_summary(exc: ValidationError, model: type[BaseModel]) -> str:
+    names = _field_names(model)
     lines = []
     for err in exc.errors(include_input=False)[:_MAX_ERROR_LINES]:
-        loc = ".".join(str(p) for p in err["loc"]) or "(root)"
+        loc = ".".join(_loc_part(p, names) for p in err["loc"]) or "(root)"
         lines.append(f"{loc}: {err['msg']}")
     return "\n".join(lines)
 
@@ -98,12 +131,13 @@ def parse_structured[T: BaseModel](text: str, model: type[T]) -> T:
     try:
         return model.model_validate(data)
     except ValidationError as exc:
-        raise LLMOutputInvalid(_error_summary(exc)) from None
+        raise LLMOutputInvalid(_error_summary(exc, model)) from None
 
 
 def repair_turns(messages: list[Message], bad_text: str, error_summary: str) -> list[Message]:
     return [
         *messages,
-        Message(role="assistant", content=bad_text),
+        # Providers reject blank turns with a 400, so an empty reply gets a placeholder.
+        Message(role="assistant", content=bad_text if bad_text.strip() else EMPTY_REPLY),
         Message(role="user", content=REPAIR_TEXT + error_summary),
     ]

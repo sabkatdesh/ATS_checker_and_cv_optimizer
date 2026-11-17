@@ -12,7 +12,12 @@ from typing import Any
 
 
 def run_sync[R](coro: Coroutine[Any, Any, R]) -> R:
-    """No running loop in this thread: asyncio.run. Otherwise run on a fresh thread and wait."""
+    """Run `coro` to completion from sync code and return its result.
+
+    Never call this from async code: with a running loop in this thread it runs the coroutine on a
+    fresh thread and blocks the calling loop until it finishes. Await the gateway there instead.
+    No running loop in this thread: asyncio.run.
+    """
     try:
         asyncio.get_running_loop()
     except RuntimeError:

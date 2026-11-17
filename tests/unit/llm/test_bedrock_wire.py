@@ -256,3 +256,18 @@ def test_error_detail_excludes_aws_message():
 def test_map_error_returns_fresh_instances():
     exc = client_error("ThrottlingException", 429)
     assert map_error(exc, model=MODEL) is not map_error(exc, model=MODEL)
+
+
+def test_kwargs_never_contain_blank_text_blocks():
+    w = wire(
+        system="  ",
+        messages=(
+            Message(role="user", content="hi"),
+            Message(role="assistant", content=""),
+            Message(role="user", content=" \n"),
+        ),
+    )
+    kw = build_converse_kwargs(w)
+    texts = [b["text"] for m in kw["messages"] for b in m["content"]]
+    assert texts == ["hi", "(empty)", "(empty)"]
+    assert "system" not in kw

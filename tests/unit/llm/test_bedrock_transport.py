@@ -107,3 +107,20 @@ def test_smoke_dry_run_prints_cost_and_makes_no_call(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "estimated cost" in out and "max_tokens=1500" in out and "no call made" in out
     assert "fallback: disabled" in out
+
+
+def test_clients_share_a_50_connection_pool(monkeypatch):
+    from app.adapters.embeddings.bedrock_titan import TitanEmbeddings
+    from app.adapters.llm._breaker import BreakerRegistry
+    from app.adapters.llm._pricing import PriceTable
+    from app.adapters.llm._retry import RetryPolicy
+
+    FakeSession.made = []
+    monkeypatch.setattr(bc.boto3.session, "Session", FakeSession)
+    bc.BedrockConverseTransport(region="r", read_timeout_s=10)._get_client()
+    titan = TitanEmbeddings(
+        region="r", retry=RetryPolicy(), breakers=BreakerRegistry(), recorder=None,
+        prices=PriceTable({}),
+    )  # fmt: skip
+    titan._get_client()
+    assert [m["config"].max_pool_connections for m in FakeSession.made] == [50, 50]

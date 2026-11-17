@@ -6,11 +6,12 @@ Errors raised here carry constant phrases and schema paths only, never prompt or
 import asyncio
 import dataclasses
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
 from app.adapters.llm._breaker import BreakerRegistry, CircuitBreaker
+from app.adapters.llm._call_state import CallState, enrich, first_of
 from app.adapters.llm._pricing import PriceTable
 from app.adapters.llm._retry import Deadline, RetryPolicy, call_with_retry
 from app.adapters.llm._structured import (
@@ -21,7 +22,6 @@ from app.adapters.llm._structured import (
 )
 from app.ports.llm import CancelToken, LLMRequest, LLMResult, Message, Route, T, Usage
 from app.ports.llm_errors import (
-    LLMCancelled,
     LLMError,
     LLMOutputInvalid,
     LLMOutputTruncated,
@@ -65,41 +65,6 @@ class Transport(Protocol):
         ...
 
 
-async def _first_of[R](work: Awaitable[R], cancel: CancelToken) -> R:
-    """Run `work` until it finishes or `cancel` fires; never leaves a task behind."""
-    send = asyncio.ensure_future(work)
-    waiter = asyncio.ensure_future(cancel.wait())
-    try:
-        await asyncio.wait({send, waiter}, return_when=asyncio.FIRST_COMPLETED)
-    finally:
-        for task in (send, waiter):
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(send, waiter, return_exceptions=True)
-    if cancel.is_cancelled:
-        raise LLMCancelled("cancelled")
-    return send.result()
-
-
-@dataclass
-class _Tally:
-    attempts: int = 0
-    usage: Usage = dataclasses.field(default_factory=Usage)
-
-
-def _enrich(err: LLMError, tally: _Tally, provider: str, model: str) -> None:
-    """Add call totals once; an instance seen again (a shared error) is left as it is."""
-    if getattr(err, "_enriched", False):
-        return
-    err._enriched = True  # type: ignore[attr-defined]
-    err.usage = tally.usage + (err.usage or Usage())
-    err.attempts = tally.attempts
-    if err.provider is None:
-        err.provider = provider
-    if err.model is None:
-        err.model = model
-
-
 class BaseProvider:
     """Implements LLMProvider on top of a Transport that only knows the wire format."""
 
@@ -121,11 +86,11 @@ class BaseProvider:
 
     async def complete(self, req: LLMRequest[T], route: Route, cancel: CancelToken) -> LLMResult[T]:
         start = self._clock()
-        tally = _Tally()
+        state = CallState(Deadline(route.timeout_s, self._clock))
         schema = req.output_schema
         wire = self._wire(req, route)
         try:
-            raw = await self._send(wire, route, cancel, tally)
+            raw = await self._send(wire, route, cancel, state)
             self._classify(raw, route, structured=schema is not None)
             repaired = False
             output: T | str
@@ -135,26 +100,28 @@ class BaseProvider:
                 try:
                     output = parse_structured(raw.text, schema)
                 except LLMOutputInvalid as bad:
+                    if state.deadline.expired:  # no time left for the repair
+                        raise bad
                     turns = repair_turns(list(wire.messages), raw.text, bad.detail)
                     raw = await self._send(
-                        dataclasses.replace(wire, messages=tuple(turns)), route, cancel, tally
+                        dataclasses.replace(wire, messages=tuple(turns)), route, cancel, state
                     )
                     self._classify(raw, route, structured=True)
                     output = self._parse_again(raw.text, schema, route)
                     repaired = True
         except LLMError as err:
-            _enrich(err, tally, self.name, route.model)
+            enrich(err, state, self.name, route.model)
             raise
         return LLMResult[T](
             output=output,
-            usage=tally.usage,
-            cost_usd=self._prices.cost(self.name, route.model, tally.usage),
+            usage=state.usage,
+            cost_usd=self._prices.cost(self.name, route.model, state.usage),
             provider=self.name,
             model=route.model,
             latency_ms=int((self._clock() - start) * 1000),
             repaired=repaired,
             stop_reason=raw.stop,
-            attempts=tally.attempts,
+            attempts=state.attempts,
         )
 
     def _wire(self, req: LLMRequest[T], route: Route) -> WireRequest:
@@ -181,12 +148,12 @@ class BaseProvider:
         )
 
     async def _send(
-        self, wire: WireRequest, route: Route, cancel: CancelToken, tally: _Tally
+        self, wire: WireRequest, route: Route, cancel: CancelToken, state: CallState
     ) -> RawCompletion:
         breaker = self._breakers.get(self.name, route.model)
 
         async def attempt(timeout_s: float) -> RawCompletion:
-            tally.attempts += 1
+            state.attempts += 1
             return await self._attempt(
                 dataclasses.replace(wire, timeout_s=timeout_s), breaker, cancel
             )
@@ -194,11 +161,11 @@ class BaseProvider:
         raw, _ = await call_with_retry(
             attempt,
             policy=dataclasses.replace(self._retry, max_attempts=route.max_attempts),
-            deadline=Deadline(route.timeout_s, self._clock),
+            deadline=state.deadline,
             cancel=cancel,
             on_failure=lambda _err: None,
         )
-        tally.usage = tally.usage + raw.usage
+        state.usage = state.usage + raw.usage
         return raw
 
     async def _attempt(
@@ -208,7 +175,7 @@ class BaseProvider:
         outcome: Literal["success", "failure", "release"] = "release"
         try:
             raw = await asyncio.wait_for(
-                _first_of(self._transport.send(wire, cancel), cancel), wire.timeout_s
+                first_of(self._transport.send(wire, cancel), cancel), wire.timeout_s
             )
             outcome = "success"
             return raw

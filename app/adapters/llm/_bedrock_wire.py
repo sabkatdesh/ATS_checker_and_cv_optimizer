@@ -85,21 +85,29 @@ TRANSPORT_ERRORS: tuple[type[Exception], ...] = (BotoCoreError, ClientError, Url
 _SAFE_CODE = re.compile(r"^[A-Za-z][A-Za-z0-9.]{0,63}$")
 
 
+BLANK = "(empty)"
+
+
 def estimate_tokens(text: str) -> int:
     """Rough token count (4 characters per token), used only to decide on caching."""
     return len(text) // 4
 
 
 def build_converse_kwargs(wire: WireRequest) -> dict[str, Any]:
+    """Bedrock rejects blank text blocks, so a blank message becomes BLANK and a blank system
+    prompt is left out."""
     inference: dict[str, Any] = {"maxTokens": wire.max_tokens}
     if wire.temperature is not None:
         inference["temperature"] = wire.temperature
     kwargs: dict[str, Any] = {
         "modelId": wire.model,
-        "messages": [{"role": m.role, "content": [{"text": m.content}]} for m in wire.messages],
+        "messages": [
+            {"role": m.role, "content": [{"text": m.content if m.content.strip() else BLANK}]}
+            for m in wire.messages
+        ],
         "inferenceConfig": inference,
     }
-    if wire.system:
+    if wire.system.strip():
         system: list[dict[str, Any]] = [{"text": wire.system}]
         if wire.cache_prefix and estimate_tokens(wire.system) >= CACHE_MIN_TOKENS:
             system.append({"cachePoint": {"type": "default"}})
