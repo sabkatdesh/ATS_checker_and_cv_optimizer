@@ -85,3 +85,34 @@ def test_error_message_has_no_input_text(instant_retry):
     with pytest.raises(LLMTimeout) as info:
         embed(h, instant_retry, [secret])
     assert secret not in str(info.value)
+
+
+def test_deadline_is_per_text_not_per_batch(instant_retry):
+    h = TitanHarness()
+    h.delay_s = 0.3
+    h.script_ok(12)
+    vecs = asyncio.run(h.provider(instant_retry, timeout_s=0.5).embed(["t"] * 12, "document"))
+    assert len(vecs) == 12
+
+
+def test_slow_call_past_timeout_raises_timeout(instant_retry):
+    h = TitanHarness()
+    h.delay_s = 0.4
+    h.script_ok(4)
+    with pytest.raises(LLMTimeout):
+        asyncio.run(h.provider(instant_retry, timeout_s=0.1).embed(["hi"], "document"))
+
+
+def test_empty_batch_returns_empty_without_record(instant_retry):
+    h = TitanHarness()
+    assert embed(h, instant_retry, []) == []
+    assert h.sink.records() == []
+
+
+def test_error_record_carries_attempts(instant_retry):
+    h = TitanHarness()
+    h.timeout()
+    with pytest.raises(LLMTimeout):
+        embed(h, instant_retry, ["hi"])
+    rec = h.sink.records()[0]
+    assert rec.status == "error" and rec.attempts == 4

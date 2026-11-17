@@ -81,8 +81,6 @@ class TitanEmbeddings:
             data = json.loads(resp["body"].read())
             vec = [float(x) for x in data["embedding"]]
             tokens = int(data.get("inputTextTokenCount", 0))
-        except LLMError as err:
-            raise map_error(err, model=self._model) from None
         except TRANSPORT_ERRORS as exc:
             raise map_error(exc, model=self._model) from None
         except (ValueError, KeyError, TypeError):  # malformed reply; never echo it
@@ -117,16 +115,28 @@ class TitanEmbeddings:
                 breaker.release_probe(generation)
 
     async def _one(
-        self, text: str, sem: asyncio.Semaphore, deadline: Deadline, cancel: CancelToken
+        self, text: str, sem: asyncio.Semaphore, cancel: CancelToken
     ) -> tuple[list[float], int, int]:
         async with sem:
-            (vec, tokens), attempts = await call_with_retry(
-                lambda timeout_s: self._attempt(text, timeout_s),
-                policy=self._retry,
-                deadline=deadline,
-                cancel=cancel,
-                on_failure=lambda _err: None,
-            )
+            deadline = Deadline(self._timeout_s)  # starts when this text's request starts
+            tried = 0
+
+            async def attempt(timeout_s: float) -> tuple[list[float], int]:
+                nonlocal tried
+                tried += 1
+                return await self._attempt(text, timeout_s)
+
+            try:
+                (vec, tokens), attempts = await call_with_retry(
+                    attempt,
+                    policy=self._retry,
+                    deadline=deadline,
+                    cancel=cancel,
+                    on_failure=lambda _err: None,
+                )
+            except LLMError as err:
+                err.attempts = tried
+                raise
         return vec, tokens, attempts
 
     def _validate(self, texts: list[str]) -> None:
@@ -139,11 +149,12 @@ class TitanEmbeddings:
     async def embed(self, texts: list[str], purpose: Purpose) -> list[list[float]]:
         """One call per text, up to CONCURRENCY at once, results in input order."""
         self._validate(texts)
+        if not texts:
+            return []
         start = time.monotonic()
         cancel = CancelToken()
-        deadline = Deadline(self._timeout_s)
         sem = asyncio.Semaphore(CONCURRENCY)
-        tasks = [asyncio.ensure_future(self._one(t, sem, deadline, cancel)) for t in texts]
+        tasks = [asyncio.ensure_future(self._one(t, sem, cancel)) for t in texts]
         try:
             done = await asyncio.gather(*tasks)
         except BaseException as exc:
@@ -152,7 +163,7 @@ class TitanEmbeddings:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
             if isinstance(exc, LLMError):
-                self._record(Usage(), start, 1, exc)
+                self._record(Usage(), start, exc.attempts or 1, exc)
             raise
         tokens = sum(d[1] for d in done)
         self._record(Usage(input_tokens=tokens), start, max((d[2] for d in done), default=1), None)

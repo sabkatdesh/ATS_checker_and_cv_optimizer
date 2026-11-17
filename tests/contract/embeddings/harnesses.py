@@ -2,6 +2,7 @@
 
 import io
 import json
+import time
 from decimal import Decimal
 from typing import Any
 
@@ -50,17 +51,21 @@ class TitanHarness:
         self.stubber.activate()
         self.sink = MemoryUsageSink()
         self.timeout_next = False
+        self.delay_s = 0.0
         self._stubbed = self.client.invoke_model
         self.client.invoke_model = self._invoke  # type: ignore[method-assign]
 
     def _invoke(self, **kwargs: Any) -> Any:
+        if self.delay_s:
+            time.sleep(self.delay_s)
         if self.timeout_next:
             raise ReadTimeoutError(endpoint_url="https://bedrock-runtime.us-east-1.amazonaws.com")
         return self._stubbed(**kwargs)
 
-    def provider(self, retry: RetryPolicy) -> TitanEmbeddings:
+    def provider(self, retry: RetryPolicy, timeout_s: float = 20) -> TitanEmbeddings:
         return TitanEmbeddings(
             region="us-east-1",
+            timeout_s=timeout_s,
             client=self.client,
             retry=retry,
             breakers=BreakerRegistry(),
