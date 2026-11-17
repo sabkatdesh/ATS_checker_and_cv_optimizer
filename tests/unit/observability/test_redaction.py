@@ -72,3 +72,10 @@ def test_exception_message_dropped():
 def test_arbitrary_objects_become_type_names():
     out = _redact(err=ValueError("cv says a@b.co"))
     assert out["err"] == "<ValueError>"
+
+
+def test_llm_request_and_provider_key_fields_are_redacted():
+    from app.observability.redaction import REDACTED, redact_value
+
+    for key in ("prompt", "system", "messages", "api_key", "x-api-key", "aws_secret_access_key"):
+        assert redact_value(key, "some private text") == REDACTED
