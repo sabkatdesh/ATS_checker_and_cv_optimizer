@@ -4,11 +4,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.sections import SectionName
+from app.domain.text.strings import iter_strings
+from app.domain.trust.normalise import normalise_text
 from app.domain.trust.report import UnsupportedClaim
 
 JUDGE_TEXT_LIMIT = 300
 MAX_FINDINGS = 20
+# The judge sees the CV without these, so a finding can only quote the rest.
+NOT_JUDGED = frozenset({"change_log", "gaps_unaddressed"})
 
 
 def _cut(value: Any) -> Any:
@@ -31,6 +36,17 @@ class JudgeFindings(BaseModel):
     @classmethod
     def _first_findings(cls, value: Any) -> Any:
         return value[:MAX_FINDINGS] if isinstance(value, list) else value
+
+
+def grounded(findings: JudgeFindings, cv: RewrittenCV) -> JudgeFindings:
+    """Only findings whose quoted text appears in the CV (ignoring case, punctuation, markup)."""
+    cv_norm = f" {normalise_text(' '.join(t for _, t in iter_strings(cv, skip=NOT_JUDGED)))} "
+    kept = [
+        f
+        for f in findings.findings
+        if (quote := normalise_text(f.output_text)) and f" {quote} " in cv_norm
+    ]
+    return JudgeFindings(findings=kept)
 
 
 def judge_claims(findings: JudgeFindings) -> list[UnsupportedClaim]:

@@ -6,7 +6,7 @@ Still failing after the one revise, the job finishes with the claims kept and fl
 from typing import Any, Literal
 
 from app.domain.trust.claims import build_evidence
-from app.domain.trust.judge import JudgeFindings, judge_claims
+from app.domain.trust.judge import NOT_JUDGED, JudgeFindings, grounded, judge_claims
 from app.domain.trust.matching import find_unsupported
 from app.domain.trust.policy import next_action, status_for
 from app.domain.trust.report import TrustReport
@@ -23,8 +23,6 @@ from app.pipeline.state import PipelineState
 INJECTION_CODES: frozenset[WarningCode] = frozenset(
     {"JD_INJECTION_MARKERS", "CV_INJECTION_MARKERS", "FOREIGN_CONTACT_REMOVED"}
 )
-# The judge compares facts; the change log and gap list would only distract it.
-_NOT_JUDGED = {"change_log", "gaps_unaddressed"}
 
 
 def _judge_blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
@@ -32,7 +30,7 @@ def _judge_blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
     text = answers_text(state)
     if text:
         blocks.append(("answers", text))
-    blocks.append(("rewritten_cv", state["tailored_cv"].model_dump_json(exclude=_NOT_JUDGED)))
+    blocks.append(("rewritten_cv", state["tailored_cv"].model_dump_json(exclude=set(NOT_JUDGED))))
     return blocks
 
 
@@ -58,7 +56,7 @@ async def verify_claims(
         if findings is None:
             out["warnings"] = [skip_warning("verify_claims")]
         else:
-            claims = [*claims, *judge_claims(findings)]
+            claims = [*claims, *judge_claims(grounded(findings, cv))]  # quotes only
 
     report = TrustReport(
         status=status_for(claims),

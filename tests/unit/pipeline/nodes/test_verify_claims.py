@@ -25,10 +25,10 @@ def _state(cv: RewrittenCV, **extra) -> dict:
     return {"source_cv": persona_cv(), "tailored_cv": cv, "warnings": [], **extra}
 
 
-def _finding(issue: str) -> JudgeFindings:
+def _finding(issue: str, quote: str = "Built REST services") -> JudgeFindings:
     return JudgeFindings(
         findings=[
-            JudgeFinding(section="work_experience", output_text="led", issue=issue, reason="r")
+            JudgeFinding(section="work_experience", output_text=quote, issue=issue, reason="r")
         ]
     )
 
@@ -63,6 +63,12 @@ def test_judge_findings_are_added(issue: str, status: str):
     report = run(verify_claims(_state(_copy()), deps=deps, ctx=ctx()))["trust_report"]
     assert report.status == status
     assert [c.layer for c in report.unsupported_claims] == ["judge"]
+
+
+def test_judge_finding_that_quotes_nothing_in_the_cv_is_dropped():
+    _, deps = deps_for({"verify_claims": [_finding("fabrication", quote="Led a team of 40")]})
+    report = run(verify_claims(_state(_copy()), deps=deps, ctx=ctx()))["trust_report"]
+    assert (report.status, report.unsupported_claims) == ("pass", [])
 
 
 @pytest.mark.parametrize("err", [LLMOutputInvalid("x"), LLMUnavailable("x")])

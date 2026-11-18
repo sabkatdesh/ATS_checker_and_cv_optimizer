@@ -55,11 +55,20 @@ def _is_date_year(text: str, match: re.Match[str]) -> bool:
     return bool(_YEAR_BEFORE.search(before) or _YEAR_AFTER.search(after))
 
 
+# Right after a number: it is a length of time in years ("5+ years", "3 yrs", "৩ বছর").
+_YEARS_AFTER = re.compile(r"\s*\+?\s*(?:(?i:years?|yrs?)(?![^\W\d_])|বছর)")
+
+
 def parse_numbers(text: str) -> list[Decimal]:
     """Numeric values in reading order; date forms and years in date context are left out."""
+    return [value for value, _ in parse_numbers_with_tenure(text)]
+
+
+def parse_numbers_with_tenure(text: str) -> list[tuple[Decimal, bool]]:
+    """Like parse_numbers, with a flag per occurrence: True when that number is a tenure."""
     text = _CURRENCY_GLUE.sub(r"\1 ", to_ascii_digits(strip_invisible(text)))
     text = _DATE_FORMS.sub(" ", text)
-    values: list[Decimal] = []
+    values: list[tuple[Decimal, bool]] = []
     for match in _NUMBER.finditer(text):
         if _is_date_year(text, match):
             continue
@@ -68,7 +77,8 @@ def parse_numbers(text: str) -> list[Decimal]:
         except InvalidOperation:  # pragma: no cover - the pattern only admits digits
             continue
         suffix = match.group("suf").strip().lower()
-        values.append((value * _MULTIPLIER.get(suffix, Decimal(1))).normalize())
+        tenure = not suffix and _YEARS_AFTER.match(text, match.end()) is not None
+        values.append(((value * _MULTIPLIER.get(suffix, Decimal(1))).normalize(), tenure))
     return values
 
 
@@ -83,17 +93,6 @@ _WORD_NUMBERS = {normalise_text(word): Decimal(value) for word, value in _WORDS.
 def word_numbers(text_norm: str) -> set[Decimal]:
     """Small spelled-out numbers ("four years", "পাঁচ বছর"), so a source may support "4 years"."""
     return {_WORD_NUMBERS[t] for t in text_norm.split() if t in _WORD_NUMBERS}
-
-
-_TENURE = re.compile(
-    r"(?<![\w.])(?P<num>\d+(?:\.\d+)?)\s*\+?\s*(?:(?i:years?|yrs?)(?![^\W\d_])|বছর)"
-)
-
-
-def tenure_numbers(text: str) -> set[Decimal]:
-    """Numbers written as a length of time in years: "5+ years", "over 3 yrs", "৩ বছর"."""
-    ascii_text = to_ascii_digits(strip_invisible(text))
-    return {Decimal(m.group("num")).normalize() for m in _TENURE.finditer(ascii_text)}
 
 
 def number_key(value: Decimal) -> str:

@@ -34,3 +34,20 @@ def test_fabrication_is_hard_and_inflation_soft():
 
 def test_no_findings_is_the_default():
     assert JudgeFindings().findings == []
+
+
+def test_findings_not_quoting_the_cv_are_dropped():
+    from app.domain.cv.rewrite import RewrittenCV
+    from app.domain.trust.judge import grounded
+
+    cv = RewrittenCV(professional_summary="Led a team of **five** engineers.")
+    findings = JudgeFindings.model_validate(
+        {
+            "findings": [
+                _finding(output_text="led a team of five"),  # case and markup differ: kept
+                _finding(output_text="Managed a budget"),  # not in the CV: dropped
+                _finding(output_text="   "),  # empty after normalising: dropped
+            ]
+        }
+    )
+    assert [f.output_text for f in grounded(findings, cv).findings] == ["led a team of five"]

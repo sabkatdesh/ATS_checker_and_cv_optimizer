@@ -1,5 +1,7 @@
 """Tenure phrases ("5+ years") and corporate suffixes ("Ltd") in the deterministic check."""
 
+import pytest
+
 from app.domain.cv.universal_cv import UniversalCVStructured
 from tests.pipeline.helpers import persona_cv
 from tests.unit.domain.trust.test_matching import _check, _edited, _kinds
@@ -71,3 +73,13 @@ def test_added_word_in_the_employer_is_still_hard():
         persona_cv("tech_backend"), {"work_experience.0.company_name": "Example Global Logistics"}
     )
     assert _kinds(claims) == [("employer", "not_in_source", "hard")]
+
+
+@pytest.mark.parametrize(
+    "summary", ["Backend engineer who managed 4 teams over 4 years.", "4 years leading 4 teams."]
+)
+def test_same_value_as_tenure_and_count_checks_the_count(summary: str):
+    source = _tenure_source(4.5, "2021-03-01", "2024-03-01")
+    claims, _ = _check(source, {_SUMMARY: summary})
+    assert _kinds(claims) == [("number", "number_not_in_source", "hard")]
+    assert "4 teams" in claims[0].text

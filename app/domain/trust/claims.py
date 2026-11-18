@@ -18,7 +18,7 @@ from app.domain.trust.normalise import (
     normalise_text,
     number_key,
     parse_numbers,
-    tenure_numbers,
+    parse_numbers_with_tenure,
     word_numbers,
 )
 from app.domain.trust.report import ClaimKind
@@ -88,10 +88,9 @@ def _free_strings(section: str, value: Any) -> Iterator[str]:
 
 def _number_claims(section: SectionName, key: str | None, value: Any) -> Iterator[Claim]:
     for text in _free_strings(section, value):
-        tenure = tenure_numbers(text)
-        for number in parse_numbers(text):
+        for number, tenure in parse_numbers_with_tenure(text):
             norm = number_key(number)
-            yield Claim("number", f"{norm} in: {text}", norm, section, key, number in tenure)
+            yield Claim("number", f"{norm} in: {text}", norm, section, key, tenure)
 
 
 def _section_claims(cv: UniversalCVStructured, section: SectionName) -> Iterator[Claim]:
@@ -112,11 +111,12 @@ def _section_claims(cv: UniversalCVStructured, section: SectionName) -> Iterator
 
 def extract_claims(cv: UniversalCVStructured) -> list[Claim]:
     """Every checkable claim in reading order, without duplicates or empty names."""
-    seen: set[tuple[str, str, str, str | None]] = set()
+    seen: set[tuple[str, str, str, str | None, bool]] = set()
     claims: list[Claim] = []
     for section in SECTIONS:
         for claim in _section_claims(cv, section):
-            ident = (claim.kind, claim.norm, claim.section, claim.entry_key)
+            # tenure is part of the identity: "4 years" must not hide "4 teams" in one entry
+            ident = (claim.kind, claim.norm, claim.section, claim.entry_key, claim.tenure)
             if claim.norm and ident not in seen:
                 seen.add(ident)
                 claims.append(claim)
