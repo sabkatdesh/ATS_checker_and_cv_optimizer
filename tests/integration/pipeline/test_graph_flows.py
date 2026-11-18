@@ -138,8 +138,8 @@ def test_summary_reports_jd_meta_and_scores():
     svc.resume("t1", "answers")
     summary = svc.summary("t1")
     assert summary is not None
-    assert summary.jd is not None and summary.jd.job_title == "Backend Engineer"
-    assert summary.jd.company_name == "Example Company" and summary.jd.domain == "tech"
+    assert summary.jd is not None and summary.jd.title == "Backend Engineer"
+    assert summary.jd.company == "Example Company" and summary.jd.domain.value == "tech"
     assert summary.domain == "tech" and summary.eligibility_score == 60
     assert isinstance(summary.ats_before, int) and isinstance(summary.ats_after, int)
     assert summary.warnings == []

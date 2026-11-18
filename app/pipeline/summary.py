@@ -6,15 +6,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.domain.ats.schemas import AtsMatch
+from app.domain.jd.meta import JdMeta, jd_meta
 from app.domain.trust.report import TrustReport
 from app.pipeline.errors import ErrorCode
 from app.pipeline.warnings import WarningCode
-
-
-class JdMeta(BaseModel, frozen=True):
-    job_title: str | None = None
-    company_name: str | None = None
-    domain: str | None = None
 
 
 class SessionSummary(BaseModel, frozen=True):
@@ -41,9 +36,7 @@ def summarize(
     jd = values.get("jd")
     eligibility = values.get("eligibility")
     return SessionSummary(
-        jd=None
-        if jd is None
-        else JdMeta(job_title=jd.job_title, company_name=jd.company_name, domain=jd.domain.value),
+        jd=None if jd is None else jd_meta(jd),
         domain=values.get("domain"),
         eligibility_score=None if eligibility is None else eligibility.score,
         ats_before=ats_score_of(values.get("ats_before")),

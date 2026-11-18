@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from app.domain.jd.meta import normalise_jd
 from app.domain.jd.sanitize import sanitize_jd
 from app.domain.jd.schemas import JobDescriptionStructured
 from app.pipeline.context import RunContext
@@ -26,7 +27,7 @@ async def jd_extract(
             blocks=[("job_description", clean.text)],
         ),
     )
-    out: dict[str, Any] = {"jd": jd}
+    out: dict[str, Any] = {"jd": normalise_jd(jd, clean.text)}
     if clean.markers:
         out["warnings"] = [PipelineWarning(code="JD_INJECTION_MARKERS", step="jd_extract")]
     return out

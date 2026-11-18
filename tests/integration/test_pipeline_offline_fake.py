@@ -126,7 +126,7 @@ def test_api_start_and_reply_offline(container):
     assert r.status_code == 200
     assert r.json()["status"] == "complete"
     assert r.json()["pdf_url"]
-    assert r.json()["pipeline"]["jd"]["job_title"] == "Backend Engineer"
+    assert r.json()["pipeline"]["jd"]["title"] == "Backend Engineer"
     values = container.pipeline.get_state(tid)["values"]
     assert isinstance(values["tailored_cv"], RewrittenCV) and values["passes"] >= 1
     assert FakePdfRenderer.calls

@@ -49,6 +49,7 @@ def _pause_status(c: Container, thread_id: str) -> bool:
             thread_id,
             {
                 "status": "awaiting_hitl",
+                "domain": values.get("domain"),
                 "gaps": [q.text for q in values.get("questions", [])],
                 "eligibility_score": eligibility.score if eligibility else None,
             },

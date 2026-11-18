@@ -2,9 +2,7 @@
 
 from typing import Any
 
-from app.domain.cv.domain_config import Domain
-from app.domain.cv.universal_cv import UniversalCVStructured
-from app.domain.jd.schemas import JobDescriptionStructured
+from app.domain.cv.domain_reconcile import reconcile_domain
 from app.domain.match.deterministic import deterministic_eligibility
 from app.domain.match.schemas import Eligibility
 from app.pipeline.context import RunContext
@@ -14,19 +12,11 @@ from app.pipeline.policy import run_optional, skip_warning
 from app.pipeline.state import PipelineState
 
 
-def reconcile_domain(cv: UniversalCVStructured, jd: JobDescriptionStructured) -> str:
-    """CV domain wins (the candidate knows their profession), then the JD domain, then general."""
-    for domain in (cv.domain, jd.domain):
-        if domain != Domain.GENERAL:
-            return domain.value
-    return Domain.GENERAL.value
-
-
 async def eligibility(
     state: PipelineState, *, deps: PipelineDeps, ctx: RunContext
 ) -> dict[str, Any]:
     cv, jd = state["source_cv"], state["jd"]
-    domain = reconcile_domain(cv, jd)
+    domain = reconcile_domain(cv.domain, jd.domain).value
     verdict = await run_optional(
         "eligibility",
         call_step(

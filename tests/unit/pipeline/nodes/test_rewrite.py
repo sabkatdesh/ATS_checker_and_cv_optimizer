@@ -27,7 +27,8 @@ def test_rewrite_first_pass_blocks_and_budget():
     assert req.cache_prefix is True
     content = req.messages[0].content
     assert "<cv>\n" + state["source_cv"].model_dump_json() + "\n</cv>" in content
-    assert "<job_requirements>\n" + state["jd"].model_dump_json() in content
+    jd_json = state["jd"].model_dump_json(exclude={"keywords", "deadline", "application_email"})
+    assert "<job_requirements>\n" + jd_json in content
     assert "<answers>\nk8s for a year\n</answers>" in content
     assert "<previous_draft>\n" not in content
     # tech with 4 years is the mid_senior budget tier

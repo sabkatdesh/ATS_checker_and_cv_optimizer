@@ -35,10 +35,14 @@ def _task_params(state: PipelineState) -> dict[str, int | float | str]:
     return params
 
 
+# Posting metadata is not tailoring input; a keyword list would invite stuffing.
+_JD_META = {"keywords", "deadline", "application_email"}
+
+
 def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
     blocks: list[tuple[DataTag, str]] = [
         ("cv", state["source_cv"].model_dump_json()),
-        ("job_requirements", state["jd"].model_dump_json()),
+        ("job_requirements", state["jd"].model_dump_json(exclude=_JD_META)),
     ]
     text = answers_text(state)
     if text:

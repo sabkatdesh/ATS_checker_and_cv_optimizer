@@ -1,4 +1,6 @@
-from app.pipeline.summary import JdMeta, SessionSummary
+from app.domain.cv.domain_config import Domain
+from app.domain.jd.meta import JdMeta
+from app.pipeline.summary import SessionSummary
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, USER_B
 
@@ -33,13 +35,21 @@ def test_status_returns_row_verbatim(client, backend):
 def test_status_adds_pipeline_summary(client, backend):
     backend.store.sessions["t1"] = {"thread_id": "t1", "user_id": USER_A, "status": "running"}
     backend.pipeline.summary_value = SessionSummary(
-        jd=JdMeta(job_title="Nurse", company_name="Example", domain="medical"),
+        jd=JdMeta(title="Staff Nurse", company="Example", domain=Domain.MEDICAL),
         domain="medical",
         eligibility_score=60,
     )
     r = client.get("/sessions/t1/status", headers=auth_header())
+    assert r.json()["pipeline"]["jd"]["title"] == "Staff Nurse"
     assert r.json()["pipeline"] == {
-        "jd": {"job_title": "Nurse", "company_name": "Example", "domain": "medical"},
+        "jd": {
+            "title": "Staff Nurse",
+            "company": "Example",
+            "domain": "medical",
+            "location": None,
+            "deadline": None,
+            "application_email": None,
+        },
         "domain": "medical",
         "eligibility_score": 60,
         "ats_before": None,

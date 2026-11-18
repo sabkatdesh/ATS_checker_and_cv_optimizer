@@ -5,10 +5,14 @@ Used in Stage 1 (quick summary) and Stage 2 (detailed extraction).
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from datetime import date
+
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain.common import NullSafeListMixin, SeniorityLevel
 from app.domain.cv.domain_config import Domain
+
+MAX_KEYWORDS = 30
 
 # ─── Quick extraction (Stage 1 — eligibility check) ─────────────────────────────
 
@@ -67,9 +71,17 @@ class JobDescriptionStructured(NullSafeListMixin, BaseModel):
     location: str | None = None
     employment_type: str | None = None
     summary: str | None = None
+    deadline: date | None = None
+    application_email: str | None = None
+    keywords: list[str] = Field(default_factory=list)
 
     responsibilities: JDResponsibilityBlock = Field(default_factory=JDResponsibilityBlock)
     requirements: JDRequirementBlock = Field(default_factory=JDRequirementBlock)
     skills: JDSkillBlock = Field(default_factory=JDSkillBlock)
     experience: JDExperienceBlock = Field(default_factory=JDExperienceBlock)
     education: JDEducationBlock = Field(default_factory=JDEducationBlock)
+
+    @field_validator("keywords")
+    @classmethod
+    def _cap_keywords(cls, value: list[str]) -> list[str]:
+        return value[:MAX_KEYWORDS]

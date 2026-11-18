@@ -37,6 +37,7 @@ def finalize_session(
             thread_id,
             {
                 "status": "ineligible",
+                "domain": domain,
                 "eligibility_score": eligibility_score,
             },
         )
@@ -128,6 +129,7 @@ def finalize_session(
         thread_id,
         {
             "status": "complete",
+            "domain": domain,
             "ats_score": ats_score,
             "eligibility_score": eligibility_score,
             "pdf_url": pdf_url,
