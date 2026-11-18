@@ -8,7 +8,7 @@ import structlog
 
 from app.adapters.llm._pricing import PriceTable
 from app.ports.llm import LLMRequest, LLMResult, Route, Usage
-from app.ports.llm_errors import LLMError
+from app.ports.llm_errors import LLMCancelled, LLMError
 from app.ports.usage import LlmCallRecord, UsageSink
 
 
@@ -52,7 +52,8 @@ class UsageRecorder:
                 else Decimal(0)
             )
             n_attempts, repaired = (attempts if attempts is not None else 1), False
-            status, error_kind = "error", error.kind if error else "error"
+            status = "cancelled" if isinstance(error, LLMCancelled) else "error"
+            error_kind = error.kind if error else "error"
         meta = req.metadata
         rec = LlmCallRecord(
             at=self._clock(),

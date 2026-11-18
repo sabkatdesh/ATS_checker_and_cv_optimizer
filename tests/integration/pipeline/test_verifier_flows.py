@@ -51,7 +51,7 @@ def _service(draft: RewrittenCV, **steps: list[Outcome]) -> tuple[ScriptedGatewa
         **steps,
     }
     gw, deps = deps_for(script)
-    return gw, PipelineService(build_graph(deps, new_checkpointer()))
+    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _finish(svc: PipelineService, jd: str | None = None, reply: str | None = None) -> dict:
@@ -147,7 +147,7 @@ def test_judge_disabled_makes_no_call():
         },
         judge_enabled=False,
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     final = _finish(svc)
     assert "verify_claims" not in _steps(gw)
     assert final["trust_report"].status == "pass"

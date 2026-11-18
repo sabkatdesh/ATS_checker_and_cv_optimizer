@@ -56,7 +56,7 @@ def _default_cover_letter() -> CoverLetterRenderer:
 
 def _default_pipeline(settings: AppSettings, gateway: LLMGateway) -> PipelineRunner:
     deps = PipelineDeps(gateway=gateway, prompts=PromptLibrary(), settings=settings.pipeline)
-    return PipelineService(build_graph(deps, new_checkpointer()))
+    return PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:

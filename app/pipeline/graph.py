@@ -10,8 +10,9 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from app.pipeline.context import RunContext
 from app.pipeline.deps import PipelineDeps
+from app.pipeline.errors import PipelineCancelled
+from app.pipeline.hooks import NODE_STAGES, Phase, ProgressEvent
 from app.pipeline.nodes.ats_score import ats_score
 from app.pipeline.nodes.await_answers import await_answers
 from app.pipeline.nodes.cover_letter import cover_letter
@@ -26,7 +27,7 @@ from app.pipeline.nodes.revise_flagged import revise_flagged
 from app.pipeline.nodes.rewrite import rewrite
 from app.pipeline.nodes.verify_claims import route_after_verify, verify_claims
 from app.pipeline.state import PipelineState
-from app.ports.llm import CancelToken
+from app.ports.llm_errors import LLMCancelled
 
 NodeFn = Callable[..., Awaitable[dict[str, Any]]]
 
@@ -54,14 +55,43 @@ _NODES: dict[str, NodeFn] = {
 }
 
 
+async def _notify(hook: Callable[[ProgressEvent], Awaitable[None]], event: ProgressEvent) -> None:
+    """Progress can never break a run: a failing hook is logged (no event payload) and ignored."""
+    try:
+        await hook(event)
+    except Exception as exc:  # noqa: BLE001 - any hook failure is swallowed by design
+        _log.warning(
+            "pipeline.hook_failed", node=event.node, phase=event.phase, error=type(exc).__name__
+        )
+
+
 def _bind(name: str, fn: NodeFn, deps: PipelineDeps) -> BoundNode:
-    """Adapt a node to LangGraph: a fresh RunContext per call (Task 8 swaps in the registry)."""
+    """Adapt a node to LangGraph: the run's context, cancel checkpoints and progress hooks.
+
+    A cancel seen after the node ran discards its update (nothing is committed), so a resume
+    re-runs the node.
+    """
+    stage, percent = NODE_STAGES[name]
 
     async def node(state: PipelineState, config: RunnableConfig) -> dict[str, Any]:
-        session_id = str(config["configurable"]["thread_id"])
-        ctx = RunContext(session_id=session_id, cancel=CancelToken())
+        ctx = deps.runs.get(str(config["configurable"]["thread_id"]))
+        if ctx.cancel.is_cancelled:
+            raise PipelineCancelled(name, stage, "before")
+
+        def event(phase: Phase) -> ProgressEvent:
+            progress = ctx.progress.advance(percent)
+            return ProgressEvent(ctx.session_id, name, stage, phase, progress)
+
+        await _notify(ctx.hooks.before_node, event("started"))
         _log.info("pipeline.stage", stage=name)
-        return await fn(state, deps=deps, ctx=ctx)
+        try:
+            update = await fn(state, deps=deps, ctx=ctx)
+        except LLMCancelled:
+            raise PipelineCancelled(name, stage, "during") from None
+        await _notify(ctx.hooks.after_node, event("finished"))
+        if ctx.cancel.is_cancelled:
+            raise PipelineCancelled(name, stage, "after")
+        return update
 
     node.__name__ = name
     return node

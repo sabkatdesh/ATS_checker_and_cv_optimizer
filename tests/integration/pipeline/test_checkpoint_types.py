@@ -47,7 +47,7 @@ def test_interrupt_resume_flow_logs_nothing_from_the_serde(
             "cover_letter": [letter],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     with caplog.at_level(logging.DEBUG, logger=SERDE_LOGGER):
         svc.run(
             job_description=persona_jd_text(),

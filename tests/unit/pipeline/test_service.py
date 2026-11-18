@@ -38,7 +38,7 @@ def _service() -> tuple[object, PipelineService]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    return gw, PipelineService(build_graph(deps, new_checkpointer()))
+    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _run(svc: PipelineService, tid: str = "t1") -> dict:
@@ -62,13 +62,16 @@ def test_run_pauses_at_await_answers_then_resume_finishes():
     assert svc.get_state("t1")["next"] == []
 
 
-def test_each_node_call_gets_the_thread_id_and_its_own_cancel_token():
+def test_calls_get_the_thread_id_and_one_cancel_token_per_invocation():
     gw, svc = _service()
     _run(svc)
+    first = len(gw.cancel_tokens)  # type: ignore[attr-defined]
     svc.resume("t1", "answers")
     assert {r.metadata.session_id for r in gw.requests} == {"t1"}  # type: ignore[attr-defined]
     tokens = gw.cancel_tokens  # type: ignore[attr-defined]
-    assert len({id(t) for t in tokens}) == len(tokens)
+    run_tokens, resume_tokens = {id(t) for t in tokens[:first]}, {id(t) for t in tokens[first:]}
+    assert len(run_tokens) == 1 and len(resume_tokens) == 1  # svc.cancel reaches every call
+    assert run_tokens != resume_tokens
 
 
 def test_get_state_of_unknown_thread_is_empty():
@@ -108,7 +111,7 @@ def test_stage_events_carry_no_text():
 def test_pipeline_parse_failure_does_not_leak():
     secret = "SENTINEL secret cv line"
     _, deps = deps_for({"jd_extract": [LLMOutputInvalid(f"bad reply: {secret}")]})
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     with capture_logs() as logs, pytest.raises(PipelineStepFailed) as exc:
         _run(svc)
     assert exc.value.code == "LLM_OUTPUT_INVALID"

@@ -35,7 +35,7 @@ def _container(script: dict[str, list[Outcome]]) -> Container:
         AppSettings(_env_file=None, env="test"),
         store=store,
         auth=FakeAuth(),
-        pipeline=PipelineService(build_graph(deps, new_checkpointer())),
+        pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,

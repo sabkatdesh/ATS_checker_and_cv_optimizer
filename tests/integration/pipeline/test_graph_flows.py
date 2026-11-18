@@ -41,7 +41,7 @@ def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome])
 
 def _service(script: dict) -> tuple[ScriptedGateway, PipelineService]:
     gw, deps = deps_for(script)
-    return gw, PipelineService(build_graph(deps, new_checkpointer()))
+    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _start(svc: PipelineService, options: RunOptions | None = None) -> dict:

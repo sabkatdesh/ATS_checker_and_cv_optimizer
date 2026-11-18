@@ -47,7 +47,7 @@ def _run(jd_text: str, draft: RewrittenCV) -> tuple[ScriptedGateway, dict]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     svc.run(
         job_description=jd_text, user_resume_text="cv text", thread_id="t", options=RunOptions()
     )

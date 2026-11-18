@@ -9,6 +9,7 @@ from app.domain.ats.schemas import AtsMatch
 from app.domain.jd.meta import JdMeta, jd_meta
 from app.domain.trust.report import TrustReport
 from app.pipeline.errors import ErrorCode
+from app.pipeline.hooks import Stage
 from app.pipeline.warnings import WarningCode
 
 
@@ -21,6 +22,7 @@ class SessionSummary(BaseModel, frozen=True):
     trust_report: TrustReport | None = None
     warnings: list[WarningCode] = Field(default_factory=list)
     error_code: ErrorCode | None = None
+    cancelled_stage: Stage | None = None
 
 
 def ats_score_of(ats: AtsMatch | None) -> int | None:
@@ -29,10 +31,14 @@ def ats_score_of(ats: AtsMatch | None) -> int | None:
 
 
 def summarize(
-    values: Mapping[str, Any], error_code: ErrorCode | None = None
+    values: Mapping[str, Any],
+    error_code: ErrorCode | None = None,
+    cancelled_stage: Stage | None = None,
 ) -> SessionSummary | None:
     if not values:
-        return None if error_code is None else SessionSummary(error_code=error_code)
+        if error_code is None and cancelled_stage is None:
+            return None
+        return SessionSummary(error_code=error_code, cancelled_stage=cancelled_stage)
     jd = values.get("jd")
     eligibility = values.get("eligibility")
     return SessionSummary(
@@ -44,4 +50,5 @@ def summarize(
         trust_report=values.get("trust_report"),
         warnings=[w.code for w in values.get("warnings", [])],
         error_code=error_code,
+        cancelled_stage=cancelled_stage,
     )

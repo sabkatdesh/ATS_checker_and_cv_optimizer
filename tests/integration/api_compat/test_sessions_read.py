@@ -57,6 +57,7 @@ def test_status_adds_pipeline_summary(client, backend):
         "trust_report": None,
         "warnings": [],
         "error_code": None,
+        "cancelled_stage": None,
     }
     assert ("summary", ("t1",), {}) in backend.pipeline.calls
 

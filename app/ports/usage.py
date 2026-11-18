@@ -16,7 +16,7 @@ class LlmCallRecord(BaseModel, frozen=True):
     prompt_version: int
     provider: str
     model: str
-    status: Literal["ok", "error"]
+    status: Literal["ok", "error", "cancelled"]
     error_kind: str | None
     usage: Usage
     cost_usd: Decimal

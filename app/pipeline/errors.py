@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from app.pipeline.hooks import Stage
+
 ErrorCode = Literal[
     "LLM_OUTPUT_INVALID",
     "CONTENT_REFUSED",
@@ -30,3 +32,15 @@ class NotAwaitingInput(Exception):
 
     def __init__(self) -> None:
         super().__init__(self.detail)
+
+
+class PipelineCancelled(Exception):
+    """The run was cancelled at a node boundary or during a node's LLM call."""
+
+    detail = "Run cancelled"
+
+    def __init__(self, node: str, stage: Stage, when: Literal["before", "during", "after"]) -> None:
+        self.node = node
+        self.stage: Stage = stage
+        self.when: Literal["before", "during", "after"] = when
+        super().__init__(f"{node} cancelled {when}")

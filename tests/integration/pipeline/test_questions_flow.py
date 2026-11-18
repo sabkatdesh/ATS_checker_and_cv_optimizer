@@ -32,7 +32,7 @@ def _service(questions: GapQuestions = QUESTIONS, eligibility: Eligibility = ELI
             "verify_claims": [JudgeFindings()],
         }
     )
-    return gw, PipelineService(build_graph(deps, new_checkpointer()))
+    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _start(svc: PipelineService) -> None:

@@ -6,7 +6,7 @@ import structlog
 
 from app.container import Container
 from app.domain.cv.profile_text import ProfileBuilder
-from app.pipeline.errors import NotAwaitingInput, PipelineStepFailed
+from app.pipeline.errors import NotAwaitingInput, PipelineCancelled, PipelineStepFailed
 from app.pipeline.state import RunOptions
 from app.ports.pipeline import JsonDict
 from app.services.finalize import finalize_session
@@ -36,6 +36,12 @@ def _step_failed(c: Container, thread_id: str, failure: PipelineStepFailed) -> N
     """A required step failed: mark the session errored (no render, no coin deduction)."""
     _log.warning("pipeline.failed", step=failure.step, code=failure.code)
     c.store.update_session(thread_id, {"status": "error"})
+
+
+def _cancelled(c: Container, thread_id: str, cancelled: PipelineCancelled) -> None:
+    """The user cancelled: mark the session cancelled (no render, no coin deduction)."""
+    _log.info("pipeline.cancelled", node=cancelled.node, stage=cancelled.stage, when=cancelled.when)
+    c.store.update_session(thread_id, {"status": "cancelled"})
 
 
 def _pause_status(c: Container, thread_id: str) -> bool:
@@ -85,6 +91,8 @@ def run_new_session(
         if not _pause_status(c, thread_id):
             finalize_session(c, thread_id, result, user_id, profile=profile)
 
+    except PipelineCancelled as cancelled:
+        _cancelled(c, thread_id, cancelled)
     except PipelineStepFailed as failure:
         _step_failed(c, thread_id, failure)
     except Exception:
@@ -103,6 +111,8 @@ def resume_after_answers(
     except NotAwaitingInput:
         _log.warning("pipeline.reply_not_awaited")
         c.store.update_session(thread_id, {"status": "error"})
+    except PipelineCancelled as cancelled:
+        _cancelled(c, thread_id, cancelled)
     except PipelineStepFailed as failure:
         _step_failed(c, thread_id, failure)
     except Exception:
@@ -117,6 +127,8 @@ def resume_after_cover_letter_options(
         result = c.pipeline.resume_cover_letter(thread_id, tone, length)
         profile = c.store.get_cv_profile(user_id)
         finalize_session(c, thread_id, result, user_id, profile=profile)
+    except PipelineCancelled as cancelled:
+        _cancelled(c, thread_id, cancelled)
     except PipelineStepFailed as failure:
         _step_failed(c, thread_id, failure)
     except Exception:

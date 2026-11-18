@@ -58,7 +58,7 @@ def run_fixture(name: str, settings: AppSettings, *, cover_letter: bool) -> dict
         prompts=PromptLibrary(),
         settings=settings.pipeline,
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     options = RunOptions(
         cover_letter=cover_letter,
         cover_letter_tone="formal" if cover_letter else None,

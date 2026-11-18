@@ -70,7 +70,7 @@ def test_full_run_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
         AppSettings(_env_file=None, env="test"),
         store=store,
         auth=FakeAuth(),
-        pipeline=PipelineService(build_graph(deps, new_checkpointer())),
+        pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
@@ -104,7 +104,7 @@ def test_full_run_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
 def test_failed_step_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
     secret_error = LLMOutputInvalid(f"bad reply {JD_SENTINEL} {CV_SENTINEL} {ANS_SENTINEL}")
     gw, deps = deps_for(_script([secret_error]))
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     with caplog.at_level(logging.DEBUG), capture_logs() as logs:
         svc.run(
             job_description=JD_TEXT,

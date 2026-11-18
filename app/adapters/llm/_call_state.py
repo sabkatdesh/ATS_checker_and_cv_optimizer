@@ -22,7 +22,13 @@ async def first_of[R](work: Awaitable[R], cancel: CancelToken) -> R:
                 task.cancel()
         await asyncio.gather(send, waiter, return_exceptions=True)
     if cancel.is_cancelled:
-        raise LLMCancelled("cancelled")
+        err = LLMCancelled("cancelled")
+        # A send that completed as the cancel arrived was still billed: keep its usage (A11).
+        if send.done() and not send.cancelled() and send.exception() is None:
+            usage = getattr(send.result(), "usage", None)
+            if isinstance(usage, Usage):
+                err.usage = usage
+        raise err
     return send.result()
 
 

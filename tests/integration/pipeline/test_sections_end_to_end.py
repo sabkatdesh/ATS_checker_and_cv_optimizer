@@ -49,7 +49,7 @@ def _final(name: str) -> tuple[UniversalCVStructured, RewrittenCV, list[str]]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()))
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     final = svc.run(
         job_description=persona_jd_text(name),
         user_resume_text="cv text",
