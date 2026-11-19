@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-# cv_sessions columns in migrations/000_full_schema.sql; writes to anything else must fail.
+# cv_sessions columns in supabase/legacy/000_full_schema.sql; writes to anything else must fail.
 LEGACY_SESSION_COLUMNS = frozenset(
     {
         "id",
