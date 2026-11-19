@@ -97,3 +97,22 @@ def test_budget_known_usage_on_error_adds_that_cost():
     with pytest.raises(LLMTimeout):
         asyncio.run(gate.complete(_req()))
     assert gate.spent == Decimal("0.004")
+
+
+def test_budget_empty_usage_on_error_adds_worst():
+    gate = BudgetedGateway(
+        _Inner(error=LLMTimeout("slow", usage=Usage())),
+        Decimal("1"),
+        _worst,
+        usage_cost=lambda _r, _u: Decimal("0"),
+    )
+    with pytest.raises(LLMTimeout):
+        asyncio.run(gate.complete(_req()))
+    assert gate.spent == Decimal("0.06")
+
+
+def test_budget_cancel_adds_worst_and_reraises():
+    gate = BudgetedGateway(_Inner(error=asyncio.CancelledError()), Decimal("1"), _worst)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(gate.complete(_req()))
+    assert gate.spent == Decimal("0.06")

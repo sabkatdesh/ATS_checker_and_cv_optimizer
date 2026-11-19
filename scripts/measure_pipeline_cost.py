@@ -1,7 +1,7 @@
 """Measure the real LLM cost of the pipeline on the synthetic personas (budget-gated).
 
     uv run python scripts/measure_pipeline_cost.py --dry-run     # default: no network
-    uv run python scripts/measure_pipeline_cost.py --yes         # paid: needs the owner's yes
+    uv run python scripts/measure_pipeline_cost.py --no-dry-run --yes   # paid: owner's yes
 
 The cap defaults to $0.50 (the owner's hard total) and a larger cap is refused. Every call goes
 through BudgetedGateway, so no call starts if spent + its worst case would exceed the cap.
@@ -128,7 +128,7 @@ def _step_usage(step: str, records: Sequence[Any]) -> StepUsage:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="no network (the default)")
-    parser.add_argument("--no-dry-run", action="store_true", help="paid mode; also needs --yes")
+    parser.add_argument("--no-dry-run", action="store_true", help="paid mode; needs --yes too")
     parser.add_argument("--yes", action="store_true", help="the owner approved the paid run")
     parser.add_argument("--cap", default=str(MAX_CAP), help="total USD ceiling (max 0.50)")
     parser.add_argument("--personas", nargs="+", default=list(DEFAULT_PERSONAS))
@@ -180,6 +180,8 @@ def main(argv: Sequence[str] | None = None, *, settings: AppSettings | None = No
         cap = Decimal(args.cap)
     except InvalidOperation:
         return fail(f"invalid --cap {args.cap!r}")
+    if not cap.is_finite():
+        return fail(f"invalid --cap {args.cap!r}: must be a finite number")
     if cap > MAX_CAP:
         return fail(f"refused: --cap {cap} is above the hard total budget of {MAX_CAP}")
     if cap <= 0:
@@ -187,9 +189,10 @@ def main(argv: Sequence[str] | None = None, *, settings: AppSettings | None = No
     unknown = [p for p in args.personas if not (PERSONAS_DIR / p / "profile.json").is_file()]
     if unknown:
         return fail(f"unknown persona: {', '.join(unknown)}")
-    paid = (args.yes or args.no_dry_run) and not args.dry_run
-    if paid and not args.yes:
-        return fail("refused: a paid run needs --yes (the owner's explicit approval)")
+    wants_paid = (args.yes or args.no_dry_run) and not args.dry_run
+    paid = args.yes and args.no_dry_run and not args.dry_run
+    if wants_paid and not paid:
+        return fail("refused: a paid run needs both --no-dry-run and --yes (the owner's approval)")
     settings = settings if settings is not None else load_settings()
     if paid:
         return _paid(settings, args.personas, cap)

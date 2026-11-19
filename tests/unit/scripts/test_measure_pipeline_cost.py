@@ -56,6 +56,17 @@ def test_paid_requires_yes(capsys):
     assert "--yes" in capsys.readouterr().err
 
 
+def test_yes_alone_is_not_paid(capsys):
+    assert main(["--yes"], settings=SETTINGS) == 2
+    assert "--no-dry-run" in capsys.readouterr().err
+
+
+def test_non_finite_cap_refused(capsys):
+    for bad in ("NaN", "Infinity", "abc"):
+        assert main(["--cap", bad], settings=SETTINGS) == 2
+    assert "cap" in capsys.readouterr().err
+
+
 def test_cap_defaults_to_0_50(capsys):
     main(["--dry-run"], settings=SETTINGS)
     assert "cap $0.50" in capsys.readouterr().out

@@ -62,9 +62,11 @@ class BudgetedGateway:
             raise BudgetExceeded(f"step {req.step}: spent {self.spent} + worst {worst} > cap")
         try:
             result = await self._inner.complete(req, cancel)
-        except LLMError as err:
-            if err.usage is not None and self._usage_cost is not None:
-                self.spent += self._usage_cost(req, err.usage)
+        except BaseException as err:
+            usage = err.usage if isinstance(err, LLMError) else None
+            billed = usage is not None and (usage.input_tokens or usage.output_tokens)
+            if billed and usage is not None and self._usage_cost is not None:
+                self.spent += self._usage_cost(req, usage)
             else:
                 self.spent += worst  # unknown billing: assume the worst
             raise
