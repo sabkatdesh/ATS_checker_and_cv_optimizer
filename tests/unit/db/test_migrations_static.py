@@ -39,7 +39,34 @@ def test_every_public_table_enables_rls():
 def test_no_client_write_policies():
     for name, sql in MIGRATIONS:
         for p in sqlscan.policies(sql):
-            assert not (WRITE_POLICY.search(p) and CLIENT_ROLE.search(p)), (name, p)
+            if WRITE_POLICY.search(p):
+                # No TO clause defaults to PUBLIC, which includes client roles.
+                assert re.search(r"\bto\b", p, re.I), (name, p)
+                assert not CLIENT_ROLE.search(p), (name, p)
+
+
+def test_all_create_tables_are_public_qualified():
+    for name, sql in MIGRATIONS:
+        assert not sqlscan.unqualified_create_tables(sql), name
+
+
+def test_lint_flags_unqualified_tables():
+    assert sqlscan.unqualified_create_tables('create table "public"."x" (a int);')
+    assert sqlscan.unqualified_create_tables("create table x (a int);")
+    assert not sqlscan.unqualified_create_tables("create table public.x (a int);")
+
+
+def test_lg_schema_revoked_from_client_roles():
+    sql = " ".join(s for _, s in MIGRATIONS)
+    m = re.search(r"revoke\s+all\s+on\s+schema\s+lg\s+from\s+([^;]+);", sql, re.I)
+    assert m, "lg must be revoked"
+    assert {r.strip() for r in m.group(1).split(",")} >= {"public", "anon", "authenticated"}
+
+
+def test_app_backend_role_has_no_password():
+    sql = sqlscan.strip_comments(" ".join(s for _, s in MIGRATIONS))
+    assert re.search(r"create\s+role\s+app_backend", sql, re.I)
+    assert not re.search(r"password", sql, re.I)
 
 
 def test_definer_functions_pin_search_path():

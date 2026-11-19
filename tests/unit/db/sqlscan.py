@@ -55,6 +55,21 @@ def definer_functions(sql: str) -> list[str]:
     ]
 
 
+def unqualified_create_tables(sql: str) -> list[str]:
+    """create table statements that are not plain `public.<name>` (lint bypass)."""
+    clean = strip_comments(sql)
+    stmts = re.findall(r"create\s+(?:\w+\s+)*?table\s+[^\n(]*", clean, re.I)
+    return [s for s in stmts if not _TABLE.match(s)]
+
+
+def table_block(sql: str, name: str) -> str:
+    """Body of `create table public.<name> ( ... );` (closing paren at line start)."""
+    m = re.search(
+        rf"create\s+table\s+public\.{name}\s*\(.*?^\);", strip_comments(sql), re.I | re.S | re.M
+    )
+    return m.group(0) if m else ""
+
+
 def grants(sql: str) -> list[str]:
     return [
         " ".join(m.group(0).split())
