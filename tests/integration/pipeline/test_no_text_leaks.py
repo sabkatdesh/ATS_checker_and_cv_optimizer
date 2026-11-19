@@ -23,7 +23,7 @@ from app.services.generation import resume_after_answers, run_new_session
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
-from tests.pipeline.helpers import deps_for, persona_cv, tech_jd
+from tests.pipeline.helpers import deps_for, legacy_profile, persona_cv, tech_jd
 from tests.pipeline.scripted_gateway import Outcome
 
 JD_SENTINEL = "SENTINEL-JD-7f3a"
@@ -44,7 +44,6 @@ def _source_cv():
 def _script(rewrite: list[Outcome]) -> dict[str, list[Outcome]]:
     return {
         "jd_extract": [tech_jd()],
-        "cv_extract": [_source_cv()],
         "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
         "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
         "rewrite": rewrite,
@@ -63,7 +62,7 @@ def test_full_run_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
     _, deps = deps_for(_script([draft, draft, draft]))
     store = MemoryStore()
     store.balances[USER_A] = 5
-    profile = {"full_name": "Test Person", "email": CV_EMAIL, "summary": f"Engineer {CV_SENTINEL}"}
+    profile = legacy_profile(_source_cv())
     store.profiles[USER_A] = profile
     store.create_session(USER_A, TID, JD_TEXT, cover_letter_requested=False)
     c = Container(
@@ -108,7 +107,7 @@ def test_failed_step_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.DEBUG), capture_logs() as logs:
         svc.run(
             job_description=JD_TEXT,
-            user_resume_text=f"CV {CV_SENTINEL} {CV_EMAIL}",
+            profile=legacy_profile(_source_cv()),
             thread_id=TID,
             options=RunOptions(),
         )

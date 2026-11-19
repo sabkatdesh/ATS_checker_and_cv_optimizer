@@ -42,7 +42,6 @@ def test_verdict_has_the_eligible_score():
 
 STEP_CASES = {
     "jd_extract": JobDescriptionStructured,
-    "cv_extract": UniversalCVStructured,
     "eligibility": Eligibility,
     "gap_questions": GapQuestions,
     "rewrite": RewrittenCV,

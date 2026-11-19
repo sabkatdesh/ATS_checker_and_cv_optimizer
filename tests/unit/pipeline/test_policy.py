@@ -47,7 +47,7 @@ def test_failure_text_is_constant():
 
 
 def test_policy_table():
-    required = {"jd_extract", "cv_extract", "rewrite", "revise_flagged"}
+    required = {"jd_extract", "rewrite", "revise_flagged"}
     assert {s for s, v in POLICY.items() if v == "required"} == required
     optional = {"eligibility", "gap_questions", "verify_claims", "cover_letter"}
     assert {s for s, v in POLICY.items() if v == "optional"} == optional

@@ -1,0 +1,46 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Mim Example",
+  "email": "mim@example.com",
+  "phone": "+880 1700-000006",
+  "location": "Khulna",
+  "skills": {
+    "hard_skills": [
+      "Report writing"
+    ],
+    "tools": [
+      "Microsoft Office"
+    ]
+  },
+  "experience": [],
+  "education": [
+    {
+      "degree": "BBA",
+      "field_of_study": "Marketing",
+      "institution": "Example University",
+      "graduation_year": 2026
+    }
+  ],
+  "projects": [
+    {
+      "title": "Retail survey",
+      "description": "Surveyed 120 local shoppers for a class project."
+    }
+  ],
+  "certifications": [],
+  "domain": "general",
+  "licenses": [],
+  "publications": [],
+  "clinical_practice": [],
+  "trade_qualifications": [],
+  "languages": [],
+  "volunteering": [],
+  "awards": [],
+  "references_available": false,
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

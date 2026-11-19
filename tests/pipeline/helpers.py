@@ -43,6 +43,28 @@ def persona_cv(name: str = "tech_backend") -> UniversalCVStructured:
     )
 
 
+def persona_profile(name: str = "tech_backend") -> dict[str, Any]:
+    """The persona's saved profile (legacy `cv_profiles` row shape); it converts to cv.json."""
+    profile: dict[str, Any] = json.loads(
+        (PERSONAS / name / "profile.json").read_text(encoding="utf-8")
+    )
+    return profile
+
+
+def legacy_profile(cv: UniversalCVStructured) -> dict[str, Any]:
+    """A saved-profile row that converts back to `cv` (for tests that build their own CV)."""
+    data = cv.model_dump(mode="json", exclude={"quality_flags"})
+    meta = data.pop("meta")
+    links = meta.pop("optional_links") or {}
+    profile = {k: v for k, v in meta.items() if v is not None}
+    for label, key in (("GitHub", "github"), ("Portfolio", "portfolio")):
+        if label in links:
+            profile[key] = links[label]
+    profile["summary"] = data.pop("professional_summary")
+    profile["experience"] = data.pop("work_experience")
+    return {**profile, **data}
+
+
 def persona_jd_text(name: str = "tech_backend") -> str:
     return (PERSONAS / name / "jd.txt").read_text(encoding="utf-8")
 

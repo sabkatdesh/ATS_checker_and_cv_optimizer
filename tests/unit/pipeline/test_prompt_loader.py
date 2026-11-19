@@ -8,7 +8,6 @@ from app.pipeline.prompts.loader import PROMPTS_DIR, PromptLibrary
 
 STEPS = [
     "jd_extract",
-    "cv_extract",
     "eligibility",
     "gap_questions",
     "rewrite",

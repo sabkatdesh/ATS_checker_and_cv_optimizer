@@ -48,7 +48,12 @@ def test_profile_post_logs_no_pii(client, buf):  # noqa: F811
 def test_sessions_start_logs_no_jd_text(client, backend, buf):  # noqa: F811
     from tests.fakes.fake_auth import USER_A
 
-    backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
+    backend.store.profiles[USER_A] = {
+        "user_id": USER_A,
+        "full_name": "Test Person",
+        "email": "test@example.com",
+        "education": [{"degree": "BSc"}],
+    }
     backend.pipeline.next_nodes = []
     client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())
     words = JD.split()

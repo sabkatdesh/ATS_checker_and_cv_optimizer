@@ -17,7 +17,7 @@ from app.pipeline.nodes.ats_score import ats_score
 from app.pipeline.nodes.await_answers import await_answers
 from app.pipeline.nodes.cover_letter import cover_letter
 from app.pipeline.nodes.cover_letter_options import cover_letter_options, route_cover_letter
-from app.pipeline.nodes.cv_extract import cv_extract
+from app.pipeline.nodes.cv_snapshot import cv_snapshot
 from app.pipeline.nodes.eligibility import eligibility
 from app.pipeline.nodes.gap_questions import gap_questions
 from app.pipeline.nodes.gate import route_after_eligibility
@@ -42,7 +42,7 @@ _log = structlog.get_logger("pipeline")
 
 _NODES: dict[str, NodeFn] = {
     "jd_extract": jd_extract,
-    "cv_extract": cv_extract,
+    "cv_snapshot": cv_snapshot,
     "eligibility": eligibility,
     "gap_questions": gap_questions,
     "await_answers": await_answers,
@@ -103,8 +103,8 @@ def build_graph(deps: PipelineDeps, checkpointer: BaseCheckpointSaver) -> Compil
         workflow.add_node(name, _bind(name, fn, deps))
 
     workflow.add_edge(START, "jd_extract")
-    workflow.add_edge("jd_extract", "cv_extract")
-    workflow.add_edge("cv_extract", "eligibility")
+    workflow.add_edge("jd_extract", "cv_snapshot")
+    workflow.add_edge("cv_snapshot", "eligibility")
     workflow.add_conditional_edges(
         "eligibility",
         route_after_eligibility,

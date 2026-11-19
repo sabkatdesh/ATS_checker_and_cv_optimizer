@@ -20,6 +20,8 @@ def _run(client, backend, result, profile=None):
     backend.store.profiles[USER_A] = {
         "user_id": USER_A,
         "full_name": "Test Person",
+        "email": "test@example.com",
+        "education": [{"degree": "BSc"}],
         **(profile or {}),
     }
     backend.pipeline.next_nodes = []

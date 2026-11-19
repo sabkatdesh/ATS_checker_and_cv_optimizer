@@ -35,7 +35,6 @@ def test_nurse_fixture_runs_offline_and_prints_the_trust_report(capsys):
     assert out["summary"]["trust_report"]["status"] == "pass"
     assert out["steps"] == [
         "jd_extract",
-        "cv_extract",
         "eligibility",
         "gap_questions",
         "rewrite",

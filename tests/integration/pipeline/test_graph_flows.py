@@ -15,7 +15,14 @@ from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
-from tests.pipeline.helpers import deps_for, persona_answers, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import (
+    deps_for,
+    persona_answers,
+    persona_cv,
+    persona_jd_text,
+    persona_profile,
+    tech_jd,
+)
 from tests.pipeline.scripted_gateway import Outcome, ScriptedGateway
 
 QUESTIONS = GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])
@@ -30,7 +37,6 @@ def _draft() -> RewrittenCV:
 def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome]) -> dict:
     return {
         "jd_extract": [tech_jd()],
-        "cv_extract": [persona_cv()],
         "eligibility": [eligibility],
         "gap_questions": [QUESTIONS],
         "rewrite": [_draft() for _ in range(rewrites)],
@@ -47,7 +53,7 @@ def _service(script: dict) -> tuple[ScriptedGateway, PipelineService]:
 def _start(svc: PipelineService, options: RunOptions | None = None) -> dict:
     return svc.run(
         job_description=persona_jd_text(),
-        user_resume_text="cv text",
+        profile=persona_profile(),
         thread_id="t1",
         options=options or RunOptions(),
     )
@@ -69,13 +75,11 @@ def test_happy_path():
     assert isinstance(final["tailored_cv"], RewrittenCV)
     assert final["answers"] == persona_answers()
     assert final["passes"] >= 1
-    assert [r.step for r in gw.requests][:5] == [
-        "jd_extract",
-        "cv_extract",
-        "eligibility",
-        "gap_questions",
-        "rewrite",
-    ]
+    steps = [r.step for r in gw.requests]
+    assert "cv_extract" not in steps
+    assert steps[:4] == ["jd_extract", "eligibility", "gap_questions", "rewrite"]
+    assert set(steps[4:]) <= {"rewrite", "verify_claims"} and steps[-1] == "verify_claims"
+    assert final["source_cv"] == persona_cv()
     assert svc.get_state("t1")["next"] == []
     assert svc.get_state("t1")["interrupt"] is None
 

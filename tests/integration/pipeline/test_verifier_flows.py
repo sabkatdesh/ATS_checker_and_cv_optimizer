@@ -18,7 +18,14 @@ from app.services.finalize import finalize_session
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
-from tests.pipeline.helpers import deps_for, persona_answers, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import (
+    deps_for,
+    persona_answers,
+    persona_cv,
+    persona_jd_text,
+    persona_profile,
+    tech_jd,
+)
 from tests.pipeline.scripted_gateway import Outcome, ScriptedGateway
 
 INJECTION = Path(__file__).resolve().parents[2] / "fixtures" / "injection"
@@ -43,7 +50,6 @@ def _with_skill(skill: str) -> RewrittenCV:
 def _service(draft: RewrittenCV, **steps: list[Outcome]) -> tuple[ScriptedGateway, PipelineService]:
     script: dict[str, list[Outcome]] = {
         "jd_extract": [tech_jd()],
-        "cv_extract": [persona_cv()],
         "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
         "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
         "rewrite": [draft for _ in range(3)],
@@ -57,7 +63,7 @@ def _service(draft: RewrittenCV, **steps: list[Outcome]) -> tuple[ScriptedGatewa
 def _finish(svc: PipelineService, jd: str | None = None, reply: str | None = None) -> dict:
     svc.run(
         job_description=jd or persona_jd_text(),
-        user_resume_text="cv text",
+        profile=persona_profile(),
         thread_id="t1",
         options=RunOptions(),
     )
@@ -140,7 +146,6 @@ def test_judge_disabled_makes_no_call():
     gw, deps = deps_for(
         {
             "jd_extract": [tech_jd()],
-            "cv_extract": [persona_cv()],
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
             "rewrite": [_clean() for _ in range(3)],

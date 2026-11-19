@@ -13,7 +13,7 @@ from app.pipeline.errors import NotAwaitingInput
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
-from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import deps_for, persona_jd_text, persona_profile, tech_jd
 
 ELIGIBLE = Eligibility(score=60, gaps=["Kubernetes"])
 QUESTIONS = GapQuestions(
@@ -25,7 +25,6 @@ def _service(questions: GapQuestions = QUESTIONS, eligibility: Eligibility = ELI
     gw, deps = deps_for(
         {
             "jd_extract": [tech_jd()],
-            "cv_extract": [persona_cv()],
             "eligibility": [eligibility],
             "gap_questions": [questions],
             "rewrite": [RewrittenCV() for _ in range(3)],
@@ -38,7 +37,7 @@ def _service(questions: GapQuestions = QUESTIONS, eligibility: Eligibility = ELI
 def _start(svc: PipelineService) -> None:
     svc.run(
         job_description=persona_jd_text(),
-        user_resume_text="cv text",
+        profile=persona_profile(),
         thread_id="t1",
         options=RunOptions(),
     )

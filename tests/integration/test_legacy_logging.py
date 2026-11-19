@@ -18,7 +18,12 @@ def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplo
     from app.domain.ats.schemas import AtsMatch
 
     FakePdfRenderer.raise_on_render = RuntimeError("render failed")
-    backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
+    backend.store.profiles[USER_A] = {
+        "user_id": USER_A,
+        "full_name": "Test Person",
+        "email": "test@example.com",
+        "education": [{"degree": "BSc"}],
+    }
     backend.pipeline.next_nodes = []
     backend.pipeline.result = {
         "eligible": True,

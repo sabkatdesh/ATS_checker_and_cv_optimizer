@@ -128,11 +128,3 @@ class ProfileBuilder:
             if val:
                 parts.append(str(val))
         return " ".join(parts)
-
-
-# ── Compatibility shim for old callers ──────────────────────────────────────────
-
-
-def profile_to_resume_text(profile: dict[str, Any]) -> str:
-    """Legacy wrapper. New code should call ProfileBuilder.from_profile_dict()."""
-    return ProfileBuilder.from_profile_dict(profile)

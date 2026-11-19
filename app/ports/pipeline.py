@@ -14,7 +14,7 @@ class PipelineRunner(Protocol):
         self,
         *,
         job_description: str,
-        user_resume_text: str,
+        profile: Mapping[str, Any],
         thread_id: str,
         options: "RunOptions",
         hooks: "NodeHooks | None" = None,

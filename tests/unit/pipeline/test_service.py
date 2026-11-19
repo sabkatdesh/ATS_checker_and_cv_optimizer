@@ -22,7 +22,7 @@ from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
-from tests.pipeline.helpers import deps_for, persona_cv, tech_jd
+from tests.pipeline.helpers import deps_for, persona_profile, tech_jd
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -31,7 +31,6 @@ def _service() -> tuple[object, PipelineService]:
     gw, deps = deps_for(
         {
             "jd_extract": [tech_jd()],
-            "cv_extract": [persona_cv()],
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes depth"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
             "rewrite": [RewrittenCV(), RewrittenCV()],
@@ -44,7 +43,7 @@ def _service() -> tuple[object, PipelineService]:
 def _run(svc: PipelineService, tid: str = "t1") -> dict:
     return svc.run(
         job_description="jd text",
-        user_resume_text="cv text",
+        profile={**persona_profile(), "summary": "cv text"},
         thread_id=tid,
         options=RunOptions(),
     )
@@ -102,7 +101,7 @@ def test_stage_events_carry_no_text():
         _run(svc)
         svc.resume("t1", "my private answers")
     stages = [e["stage"] for e in logs if e["event"] == "pipeline.stage"]
-    assert stages[:3] == ["jd_extract", "cv_extract", "eligibility"]
+    assert stages[:3] == ["jd_extract", "cv_snapshot", "eligibility"]
     blob = json.dumps(logs, default=str)
     for secret in ("jd text", "cv text", "Kubernetes depth", "my private answers"):
         assert secret not in blob

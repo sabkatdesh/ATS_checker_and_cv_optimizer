@@ -9,7 +9,6 @@ Phase = Literal["started", "finished"]
 
 NODE_STAGES: dict[str, tuple[Stage, int]] = {
     "jd_extract": ("analysis", 10),
-    "cv_extract": ("analysis", 15),
     "cv_snapshot": ("analysis", 15),
     "eligibility": ("analysis", 25),
     "gap_questions": ("questions", 35),

@@ -18,7 +18,7 @@ from app.services.generation import resume_after_answers, run_new_session
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
-from tests.pipeline.helpers import deps_for, persona_cv, tech_jd
+from tests.pipeline.helpers import deps_for, persona_profile, tech_jd
 from tests.pipeline.scripted_gateway import Outcome
 
 SECRET = "SENTINEL-jd-text-do-not-log"
@@ -47,7 +47,7 @@ def _start(c: Container) -> None:
         c,
         user_id=USER_A,
         thread_id=TID,
-        profile={"full_name": "Test Person"},
+        profile=persona_profile(),
         job_description=f"job description {SECRET}",
         cover_letter=False,
         cover_letter_tone=None,
@@ -58,7 +58,6 @@ def _start(c: Container) -> None:
 def _script(rewrite: list[Outcome], gaps: list[str] | None = None) -> dict[str, list[Outcome]]:
     return {
         "jd_extract": [tech_jd()],
-        "cv_extract": [persona_cv()],
         "eligibility": [Eligibility(score=60, gaps=gaps or [])],
         "rewrite": rewrite,
     }

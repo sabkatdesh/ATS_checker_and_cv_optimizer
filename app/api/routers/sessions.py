@@ -6,9 +6,12 @@ import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.api.deps import get_container, require_user_id
+from app.api.errors import AppError
 from app.api.schemas.sessions import HITLReplyRequest, StartSessionRequest
 from app.container import Container
 from app.domain.credits.legacy import CV_GENERATION_COST
+from app.domain.cv.minimums import check_minimums
+from app.domain.cv.profile_to_cv import profile_to_universal_cv
 from app.domain.parsing.input_validator import validate_jd
 from app.services.generation import resume_after_answers, run_new_session
 
@@ -52,6 +55,17 @@ def start_session(
     if not profile:
         raise HTTPException(
             status_code=400, detail="Please complete your profile first before generating a CV"
+        )
+
+    # Step 2b — The profile must meet the generation minimums (spec 08 H1)
+    missing = check_minimums(profile_to_universal_cv(profile).cv)
+    if missing:
+        raise AppError(
+            "PROFILE_INCOMPLETE",
+            422,
+            "Profile incomplete",
+            "Add your name, one contact and at least one job or education entry first.",
+            missing=missing,
         )
 
     # Step 3 — Check coin balance

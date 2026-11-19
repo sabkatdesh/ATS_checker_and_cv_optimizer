@@ -49,7 +49,7 @@ class PipelineService:
         self,
         *,
         job_description: str,
-        user_resume_text: str,
+        profile: Mapping[str, Any],
         thread_id: str,
         options: RunOptions,
         hooks: NodeHooks | None = None,
@@ -58,7 +58,7 @@ class PipelineService:
         initial: PipelineState = {
             "session_id": thread_id,
             "jd_text": job_description,
-            "cv_text": user_resume_text,
+            "profile": dict(profile),
             "options": options,
             "passes": 0,
             "warnings": [],

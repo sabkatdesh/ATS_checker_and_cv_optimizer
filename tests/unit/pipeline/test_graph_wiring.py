@@ -4,7 +4,7 @@ from tests.pipeline.helpers import deps_for
 
 NODES = {
     "jd_extract",
-    "cv_extract",
+    "cv_snapshot",
     "eligibility",
     "gap_questions",
     "await_answers",
@@ -17,8 +17,8 @@ NODES = {
 }
 EDGES = {
     ("__start__", "jd_extract", False),
-    ("jd_extract", "cv_extract", False),
-    ("cv_extract", "eligibility", False),
+    ("jd_extract", "cv_snapshot", False),
+    ("cv_snapshot", "eligibility", False),
     ("eligibility", "gap_questions", True),
     ("eligibility", "__end__", True),
     ("gap_questions", "await_answers", False),

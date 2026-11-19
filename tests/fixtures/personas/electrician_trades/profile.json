@@ -1,12 +1,11 @@
 {
-  "domain": "trades",
-  "meta": {
-    "full_name": "Karim Example",
-    "location": "Gazipur",
-    "email": "karim@example.com",
-    "phone": "+880 1700-000003"
-  },
-  "professional_summary": "Industrial electrician with seven years of wiring, panel and maintenance work.",
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Karim Example",
+  "email": "karim@example.com",
+  "phone": "+880 1700-000003",
+  "location": "Gazipur",
+  "summary": "Industrial electrician with seven years of wiring, panel and maintenance work.",
   "skills": {
     "hard_skills": [
       "Industrial wiring",
@@ -18,13 +17,7 @@
       "Insulation tester"
     ]
   },
-  "experience_summary": {
-    "total_years": 7,
-    "seniority": "senior",
-    "role_type": "IC",
-    "relevant_years": 7
-  },
-  "work_experience": [
+  "experience": [
     {
       "job_title": "Senior Electrician",
       "company_name": "Example Garments Ltd",
@@ -51,14 +44,7 @@
       "graduation_year": 2014
     }
   ],
-  "licenses": [
-    {
-      "name": "Electrical Supervisor Licence",
-      "issuing_body": "Example Licensing Board",
-      "license_number": "EX-0001",
-      "valid_until": "Active"
-    }
-  ],
+  "projects": [],
   "certifications": [
     {
       "name": "Occupational Safety Basics",
@@ -71,6 +57,17 @@
       "year": 2022
     }
   ],
+  "domain": "trades",
+  "licenses": [
+    {
+      "name": "Electrical Supervisor Licence",
+      "issuing_body": "Example Licensing Board",
+      "license_number": "EX-0001",
+      "valid_until": "Active"
+    }
+  ],
+  "publications": [],
+  "clinical_practice": [],
   "trade_qualifications": [
     {
       "qualification": "NC-3 Electrical Installation",
@@ -88,5 +85,19 @@
       "language": "Bangla",
       "proficiency": "Native"
     }
-  ]
+  ],
+  "volunteering": [],
+  "awards": [],
+  "references_available": false,
+  "experience_summary": {
+    "total_years": 7,
+    "seniority": "senior",
+    "role_type": "IC",
+    "relevant_years": 7
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
 }

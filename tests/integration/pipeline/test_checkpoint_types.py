@@ -15,7 +15,14 @@ from app.pipeline.checkpoint_types import allowed_modules, new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
-from tests.pipeline.helpers import deps_for, persona_answers, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import (
+    deps_for,
+    persona_answers,
+    persona_cv,
+    persona_jd_text,
+    persona_profile,
+    tech_jd,
+)
 
 SERDE_LOGGER = "langgraph.checkpoint.serde.jsonplus"
 
@@ -39,7 +46,6 @@ def test_interrupt_resume_flow_logs_nothing_from_the_serde(
     _, deps = deps_for(
         {
             "jd_extract": [tech_jd()],
-            "cv_extract": [source],
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])],
             "rewrite": [RewrittenCV.model_validate(lossy) for _ in range(3)],
@@ -51,7 +57,7 @@ def test_interrupt_resume_flow_logs_nothing_from_the_serde(
     with caplog.at_level(logging.DEBUG, logger=SERDE_LOGGER):
         svc.run(
             job_description=persona_jd_text(),
-            user_resume_text="cv text",
+            profile=persona_profile(),
             thread_id="t1",
             options=RunOptions(cover_letter=True),
         )

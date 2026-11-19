@@ -13,7 +13,7 @@ from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
-from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, persona_profile, tech_jd
 
 PERSONAS = (
     "tech_backend",
@@ -43,7 +43,6 @@ def _final(name: str) -> tuple[UniversalCVStructured, RewrittenCV, list[str]]:
     _, deps = deps_for(
         {
             "jd_extract": [jd],
-            "cv_extract": [source],
             "eligibility": [Eligibility(score=70)],
             "rewrite": [_lossy_rewrite(source) for _ in range(3)],
             "verify_claims": [JudgeFindings()],
@@ -52,7 +51,7 @@ def _final(name: str) -> tuple[UniversalCVStructured, RewrittenCV, list[str]]:
     svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
     final = svc.run(
         job_description=persona_jd_text(name),
-        user_resume_text="cv text",
+        profile=persona_profile(name),
         thread_id="t1",
         options=RunOptions(),
     )

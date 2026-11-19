@@ -17,7 +17,14 @@ from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
-from tests.pipeline.helpers import deps_for, persona_answers, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import (
+    deps_for,
+    persona_answers,
+    persona_cv,
+    persona_jd_text,
+    persona_profile,
+    tech_jd,
+)
 from tests.pipeline.scripted_gateway import ScriptedGateway
 
 INJECTION = Path(__file__).resolve().parents[2] / "fixtures" / "injection"
@@ -40,7 +47,6 @@ def _run(jd_text: str, draft: RewrittenCV) -> tuple[ScriptedGateway, dict]:
     gw, deps = deps_for(
         {
             "jd_extract": [tech_jd()],
-            "cv_extract": [persona_cv()],
             "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
             "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
             "rewrite": [draft for _ in range(3)],
@@ -48,9 +54,7 @@ def _run(jd_text: str, draft: RewrittenCV) -> tuple[ScriptedGateway, dict]:
         }
     )
     svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
-    svc.run(
-        job_description=jd_text, user_resume_text="cv text", thread_id="t", options=RunOptions()
-    )
+    svc.run(job_description=jd_text, profile=persona_profile(), thread_id="t", options=RunOptions())
     return gw, svc.resume("t", persona_answers().free_text)
 
 

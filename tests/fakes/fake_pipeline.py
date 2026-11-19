@@ -26,14 +26,14 @@ class FakePipeline:
         self,
         *,
         job_description: str,
-        user_resume_text: str,
+        profile: Mapping[str, Any],
         thread_id: str,
         options: RunOptions,
         hooks: NodeHooks | None = None,
     ) -> dict:
         kwargs = {
             "job_description": job_description,
-            "user_resume_text": user_resume_text,
+            "profile": profile,
             "thread_id": thread_id,
             "options": options,
         }

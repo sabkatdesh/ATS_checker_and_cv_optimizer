@@ -1,7 +1,9 @@
 """The pipeline end to end on the real container, router and fake provider: no network."""
 
+import json
 import socket
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +20,14 @@ from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
 
 _LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+_PROFILE = Path(__file__).resolve().parents[1] / "fixtures" / "profiles" / "jane_example.json"
+
+
+def _profile() -> dict:
+    """The saved profile behind the fake provider's canned rewrite (Jane Example)."""
+    return json.loads(_PROFILE.read_text(encoding="utf-8"))
+
+
 JD = (
     "About the role: we are hiring a senior Python engineer to join our team. "
     "Responsibilities include building backend services. Requirements: five years of experience, "
@@ -57,7 +67,7 @@ def container() -> Container:
 def _run(c: Container, tid: str = "t1", options: RunOptions | None = None) -> None:
     c.pipeline.run(
         job_description=JD,
-        user_resume_text="Jane Doe, Python engineer.",
+        profile=_profile(),
         thread_id=tid,
         options=options or RunOptions(),
     )
@@ -66,7 +76,6 @@ def _run(c: Container, tid: str = "t1", options: RunOptions | None = None) -> No
 COVER = RunOptions(cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
 STEPS = {
     "jd_extract",
-    "cv_extract",
     "eligibility",
     "gap_questions",
     "rewrite",
@@ -112,7 +121,7 @@ def _profile_schema():
 
 
 def test_api_start_and_reply_offline(container):
-    container.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Jane Doe"}
+    container.store.profiles[USER_A] = {"user_id": USER_A, **_profile()}
     container.store.balances[USER_A] = 5
     client = TestClient(create_app(container), raise_server_exceptions=False)
     r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())

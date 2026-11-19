@@ -5,7 +5,6 @@ from typing import Any
 import structlog
 
 from app.container import Container
-from app.domain.cv.profile_text import ProfileBuilder
 from app.pipeline.errors import NotAwaitingInput, PipelineCancelled, PipelineStepFailed
 from app.pipeline.state import RunOptions
 from app.ports.pipeline import JsonDict
@@ -79,12 +78,9 @@ def run_new_session(
     cover_letter_length: str | None,
 ) -> None:
     try:
-        # Convert saved profile to resume text using domain-aware builder
-        resume_text = ProfileBuilder.from_profile_dict(profile)
-
         result = c.pipeline.run(
             job_description=job_description,
-            user_resume_text=resume_text,
+            profile=profile,
             thread_id=thread_id,
             options=_options(c, cover_letter, cover_letter_tone, cover_letter_length),
         )

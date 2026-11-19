@@ -66,7 +66,7 @@ def run_fixture(name: str, settings: AppSettings, *, cover_letter: bool) -> dict
     )
     svc.run(
         job_description=(folder / "jd.txt").read_text(encoding="utf-8"),
-        user_resume_text=(folder / "cv.json").read_text(encoding="utf-8"),
+        profile=json.loads((folder / "profile.json").read_text(encoding="utf-8")),
         thread_id=THREAD,
         options=options,
     )

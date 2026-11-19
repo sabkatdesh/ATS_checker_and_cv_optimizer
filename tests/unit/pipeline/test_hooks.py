@@ -5,7 +5,7 @@ from tests.pipeline.helpers import deps_for, run
 
 HAPPY_PATH = [
     "jd_extract",
-    "cv_extract",
+    "cv_snapshot",
     "eligibility",
     "gap_questions",
     "await_answers",
@@ -24,8 +24,9 @@ def test_every_graph_node_has_a_stage():
     assert nodes <= set(NODE_STAGES)
 
 
-def test_snapshot_node_shares_the_extract_stage():
-    assert NODE_STAGES["cv_snapshot"] == NODE_STAGES["cv_extract"] == ("analysis", 15)
+def test_snapshot_node_stage():
+    assert NODE_STAGES["cv_snapshot"] == ("analysis", 15)
+    assert "cv_extract" not in NODE_STAGES
 
 
 def test_progress_never_decreases_along_the_happy_path():

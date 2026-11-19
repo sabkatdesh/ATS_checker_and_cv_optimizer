@@ -35,7 +35,7 @@ from app.services.generation import resume_after_answers, run_new_session
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
-from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, tech_jd
+from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, persona_profile, tech_jd
 from tests.pipeline.scripted_gateway import Hang, Outcome, ScriptedGateway
 
 TID = "t-cancel"
@@ -44,7 +44,7 @@ OPTIONS = RunOptions(cover_letter=True, cover_letter_tone="formal", cover_letter
 # Node runs on the happy path, with questions answered and a cover letter requested.
 SEQUENCE = [
     "jd_extract",
-    "cv_extract",
+    "cv_snapshot",
     "eligibility",
     "gap_questions",
     "await_answers",
@@ -69,7 +69,6 @@ def _script(**extra: list[Outcome]) -> dict[str, list[Outcome]]:
     )
     return {
         "jd_extract": [tech_jd()],
-        "cv_extract": [persona_cv()],
         "eligibility": [Eligibility(score=60, gaps=["Kubernetes"])],
         "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="Kubernetes?")])],
         "rewrite": [_draft(), _draft()],
@@ -107,7 +106,7 @@ def _service(script: dict[str, list[Outcome]]) -> tuple[ScriptedGateway, Pipelin
 def _start(svc: PipelineService, hooks: object = None) -> None:
     svc.run(
         job_description=persona_jd_text(),
-        user_resume_text="cv text",
+        profile=persona_profile(),
         thread_id=TID,
         options=OPTIONS,
         hooks=hooks,  # type: ignore[arg-type]
@@ -239,7 +238,7 @@ def test_generation_marks_cancelled():
         c,
         user_id=USER_A,
         thread_id=TID,
-        profile={"full_name": "Test Person"},
+        profile=persona_profile(),
         job_description="job description",
         cover_letter=False,
         cover_letter_tone=None,

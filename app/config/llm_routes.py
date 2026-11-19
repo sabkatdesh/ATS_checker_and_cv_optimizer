@@ -14,7 +14,6 @@ from app.ports.llm_errors import LLMBadRequest
 KNOWN_STEPS = frozenset(
     {
         "jd_extract",
-        "cv_extract",
         "eligibility",
         "gap_questions",
         "rewrite",

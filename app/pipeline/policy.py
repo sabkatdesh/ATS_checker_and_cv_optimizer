@@ -23,7 +23,6 @@ _log = structlog.get_logger("pipeline")
 
 POLICY: dict[str, Literal["required", "optional"]] = {
     "jd_extract": "required",
-    "cv_extract": "required",
     "eligibility": "optional",  # invalid output falls back to deterministic_eligibility
     "rewrite": "required",
     "verify_claims": "optional",  # the LLM judge; the deterministic layer always runs

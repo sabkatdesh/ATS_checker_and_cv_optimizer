@@ -26,7 +26,6 @@ class RunOptions(BaseModel, frozen=True):
 class PipelineState(TypedDict, total=False):
     session_id: str
     jd_text: str
-    cv_text: str
     profile: dict[str, Any]
     options: RunOptions
     jd: JobDescriptionStructured
