@@ -58,8 +58,8 @@ def _run(provider, req):
 
 
 def test_fake_is_deterministic():
-    a = _run(_provider(), _req("legacy.verdict", Eligibility))
-    b = _run(_provider(), _req("legacy.verdict", Eligibility))
+    a = _run(_provider(), _req("eligibility", Eligibility))
+    b = _run(_provider(), _req("eligibility", Eligibility))
     assert a.output == b.output and a.usage == b.usage == Usage(input_tokens=10, output_tokens=5)
     assert a.output.score == 60
 
@@ -72,12 +72,10 @@ def test_fake_records_requests():
 
 
 def test_scripted_outcomes_pop_first_then_defaults():
-    p = _provider(
-        {"legacy.verdict": [Fail(LLMThrottled, retry_after_s=0.1), Reply('{"score": 0}')]}
-    )
-    res = _run(p, _req("legacy.verdict", Eligibility))
+    p = _provider({"eligibility": [Fail(LLMThrottled, retry_after_s=0.1), Reply('{"score": 0}')]})
+    res = _run(p, _req("eligibility", Eligibility))
     assert res.attempts == 2 and res.output.score == 0
-    assert _run(p, _req("legacy.verdict", Eligibility)).output.score == 60
+    assert _run(p, _req("eligibility", Eligibility)).output.score == 60
 
 
 def test_schema_default_instance_without_canned_file():

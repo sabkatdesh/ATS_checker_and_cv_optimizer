@@ -25,6 +25,9 @@ class ScriptedGateway:
         self.requests: list[LLMRequest[Any]] = []
         self.cancel_tokens: list[CancelToken | None] = []
 
+    def push(self, step: str, *outcomes: Outcome) -> None:
+        self._script.setdefault(step, []).extend(outcomes)
+
     async def complete(
         self, req: LLMRequest[Any], cancel: CancelToken | None = None
     ) -> LLMResult[Any]:

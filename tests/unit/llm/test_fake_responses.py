@@ -1,4 +1,4 @@
-"""Every canned legacy response must pass the parser the legacy pipeline uses for that chain."""
+"""Every canned step response must validate strictly against its step's schema."""
 
 import json
 from pathlib import Path
@@ -9,36 +9,9 @@ from app.adapters.llm.fake import DEFAULT_DIR
 from app.domain.cv.cover_letter import CoverLetterStructured
 from app.domain.cv.rewrite import RewrittenCV
 from app.domain.cv.universal_cv import UniversalCVStructured
-from app.domain.jd.schemas import JobDescriptionStructured, SummaryJD
-from app.domain.match.schemas import Eligibility, SummaryCV
+from app.domain.jd.schemas import JobDescriptionStructured
+from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestions
-
-CASES = {
-    "quick_jd": SummaryJD,
-    "quick_cv": SummaryCV,
-    "verdict": Eligibility,
-    "detailed_jd": JobDescriptionStructured,
-    "detailed_cv": UniversalCVStructured,
-    "rewrite": RewrittenCV,
-    "cover_letter": CoverLetterStructured,
-    "profile_import": UniversalCVStructured,
-}
-
-
-def _text(chain: str) -> str:
-    return (Path(DEFAULT_DIR) / f"legacy.{chain}.json").read_text(encoding="utf-8")
-
-
-@pytest.mark.parametrize(("chain", "model"), CASES.items())
-def test_canned_response_validates_strictly(chain, model):
-    parsed = model.model_validate_json(_text(chain))
-    assert parsed.model_dump(exclude_defaults=True), "canned response must carry real content"
-    assert set(json.loads(_text(chain))) <= set(model.model_fields)
-
-
-def test_verdict_has_the_eligible_score():
-    assert Eligibility.model_validate_json(_text("verdict")).score == 60
-
 
 STEP_CASES = {
     "jd_extract": JobDescriptionStructured,
@@ -46,6 +19,7 @@ STEP_CASES = {
     "gap_questions": GapQuestions,
     "rewrite": RewrittenCV,
     "cover_letter": CoverLetterStructured,
+    "profile_import": UniversalCVStructured,
 }
 
 
@@ -54,3 +28,8 @@ def test_step_canned_response_validates_strictly(step, model):
     text = (Path(DEFAULT_DIR) / f"{step}.json").read_text(encoding="utf-8")
     assert model.model_validate_json(text).model_dump(exclude_defaults=True)
     assert set(json.loads(text)) <= set(model.model_fields)
+
+
+def test_eligibility_has_the_eligible_score():
+    text = (Path(DEFAULT_DIR) / "eligibility.json").read_text(encoding="utf-8")
+    assert Eligibility.model_validate_json(text).score == 60

@@ -9,10 +9,10 @@ from app.container import Container
 from app.main import create_app
 from tests.fakes.backend import FakeBackend
 from tests.fakes.fake_auth import FakeAuth
-from tests.fakes.fake_llm import FakeStructuredLLM
 from tests.fakes.fake_pipeline import FakePipeline
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
+from tests.pipeline.scripted_gateway import ScriptedGateway
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def backend() -> FakeBackend:
         store=MemoryStore(),
         auth=FakeAuth(),
         pipeline=FakePipeline(),
-        llm=FakeStructuredLLM(),
+        llm=ScriptedGateway({}),
     )
 
 
@@ -36,7 +36,7 @@ def _build_client(backend: FakeBackend) -> TestClient:
         auth=backend.auth,
         pipeline=backend.pipeline,
         runner=InlineRunner(),
-        llm_factory=lambda: backend.llm,
+        llm=backend.llm,
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
     )

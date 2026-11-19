@@ -96,7 +96,7 @@ def test_builder_reading_another_property_does_not_deadlock(monkeypatch):
     c = Container(AppSettings(_env_file=None), store=object())  # type: ignore[arg-type]
     seen: list[object] = []
 
-    def pipeline_builder(settings, gateway):
+    def pipeline_builder(settings, gateway, prompts):
         seen.append(c.store)
         return object()
 

@@ -14,6 +14,7 @@ STEPS = [
     "verify_claims",
     "revise_flagged",
     "cover_letter",
+    "profile_import",
 ]
 
 

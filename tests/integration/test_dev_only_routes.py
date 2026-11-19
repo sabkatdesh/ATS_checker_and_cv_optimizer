@@ -6,7 +6,6 @@ from app.container import Container
 from app.main import create_app
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import FakeAuth
-from tests.fakes.fake_llm import FakeStructuredLLM
 from tests.fakes.fake_pipeline import FakePipeline
 from tests.fakes.memory_store import MemoryStore
 
@@ -20,7 +19,6 @@ def _client(env: str) -> TestClient:
         auth=FakeAuth(),
         pipeline=FakePipeline(),
         runner=InlineRunner(),
-        llm_factory=FakeStructuredLLM,
     )
     return TestClient(create_app(container), raise_server_exceptions=False)
 

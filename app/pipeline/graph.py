@@ -5,8 +5,8 @@ from functools import partial
 from typing import Any, Protocol
 
 import structlog
-from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.config import get_config
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -33,9 +33,7 @@ NodeFn = Callable[..., Awaitable[dict[str, Any]]]
 
 
 class BoundNode(Protocol):
-    def __call__(
-        self, state: PipelineState, config: RunnableConfig
-    ) -> Awaitable[dict[str, Any]]: ...
+    def __call__(self, state: PipelineState) -> Awaitable[dict[str, Any]]: ...
 
 
 _log = structlog.get_logger("pipeline")
@@ -73,8 +71,8 @@ def _bind(name: str, fn: NodeFn, deps: PipelineDeps) -> BoundNode:
     """
     stage, percent = NODE_STAGES[name]
 
-    async def node(state: PipelineState, config: RunnableConfig) -> dict[str, Any]:
-        ctx = deps.runs.get(str(config["configurable"]["thread_id"]))
+    async def node(state: PipelineState) -> dict[str, Any]:
+        ctx = deps.runs.get(str(get_config()["configurable"]["thread_id"]))
         if ctx.cancel.is_cancelled:
             raise PipelineCancelled(name, stage, "before")
 

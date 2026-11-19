@@ -1,5 +1,6 @@
 """The pipeline end to end on the real container, router and fake provider: no network."""
 
+import asyncio
 import json
 import socket
 from decimal import Decimal
@@ -14,6 +15,7 @@ from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
 from app.main import create_app
 from app.pipeline.state import RunOptions
+from app.services.profile_import import import_profile
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
@@ -106,18 +108,12 @@ def test_cover_letter_path_offline(container):
 def test_usage_records_cover_every_pipeline_step(container):
     _run(container, options=COVER)
     container.pipeline.resume("t1", "answers")
-    container.make_llm_client().invoke_structured("x" * 120, _profile_schema())
+    asyncio.run(import_profile(container.llm, container.prompts, "x" * 120))
     recs = container.usage_sink.records()  # type: ignore[attr-defined]
-    assert {r.prompt_id for r in recs} == STEPS | {"legacy.profile_import"}
+    assert {r.prompt_id for r in recs} == STEPS | {"profile_import"}
     assert all(r.provider == "fake" and r.status == "ok" for r in recs)
     assert all(r.cost_usd == Decimal(0) for r in recs)
-    assert all(r.step == r.prompt_id for r in recs if r.prompt_id in STEPS)
-
-
-def _profile_schema():
-    from app.domain.cv.universal_cv import UniversalCVStructured
-
-    return UniversalCVStructured
+    assert all(r.step == r.prompt_id for r in recs)
 
 
 def test_api_start_and_reply_offline(container):

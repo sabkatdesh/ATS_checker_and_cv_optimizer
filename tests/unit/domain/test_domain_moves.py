@@ -13,14 +13,6 @@ def test_single_seniority_enum():
     assert schemas.SeniorityLevel is universal_cv.SeniorityLevel
 
 
-def test_profile_text_identical_for_fixture():
-    from app.domain.cv.profile_text import ProfileBuilder
-
-    profile = json.loads((FIXTURES / "profile_basic.json").read_text(encoding="utf-8"))
-    expected = (FIXTURES / "profile_basic.resume.txt").read_text(encoding="utf-8")
-    assert ProfileBuilder.from_profile_dict(profile) == expected
-
-
 @pytest.mark.parametrize(
     ("module", "name"),
     [
