@@ -218,6 +218,13 @@ class Container:
         """Load prices and routes; raises ConfigError. Needs no credentials or network."""
         return self._llm_stack.routes
 
+    def close(self) -> None:
+        """Close the pool if it was opened; never opens one. Safe to call twice."""
+        with self._lock:
+            pool, self._pool = self._pool, None
+        if pool is not None:
+            pool.close()
+
     def make_pdf_renderer(self) -> CvPdfRenderer:
         return self._pdf_factory()
 

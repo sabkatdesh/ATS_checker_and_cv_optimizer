@@ -26,7 +26,10 @@ def render_path(user_id: str, session_id: str, kind: Literal["cv", "cover_letter
 def signed_url_for_user(
     storage: BlobStorage, user_id: str, bucket: str, path: str, ttl_s: int
 ) -> str:
-    """Sign only objects inside the caller's own prefix."""
-    if not user_id or path.split("/", 1)[0] != user_id:
+    """Sign only objects inside the caller's own prefix; '.' and '..' segments are refused."""
+    prefix = f"{user_id}/"
+    rest = path[len(prefix) :] if user_id and path.startswith(prefix) else ""
+    segments = rest.split("/")
+    if not rest or any(seg in ("", ".", "..") for seg in segments):
         raise StorageError("Storage path is not owned by this user")
     return storage.signed_url(bucket, path, ttl_s)

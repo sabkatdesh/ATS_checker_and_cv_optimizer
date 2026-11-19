@@ -1,3 +1,6 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,7 +25,15 @@ def create_app(container: Container | None = None) -> FastAPI:
     container.validate_llm_config()
     configure_logging(container.settings.obs)
     init_sentry(container.settings)
-    app = FastAPI(title="CV Optimizer API")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            container.close()
+
+    app = FastAPI(title="CV Optimizer API", lifespan=lifespan)
     app.state.container = container
     app.add_middleware(
         CORSMiddleware,

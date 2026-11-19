@@ -46,6 +46,30 @@ def test_signed_url_refuses_foreign_prefix():
     )
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "user_a",
+        "user_a/",
+        "user_ab/s/cv.pdf",
+        "user_a/../user_b/s/cv.pdf",
+        "user_a/s/../../user_b/cv.pdf",
+        "user_a/./../x.pdf",
+        "user_a/s/..",
+    ],
+)
+def test_signed_url_refuses_prefix_tricks_and_dot_dot(path):
+    fake = FakeBlobStorage()
+    with pytest.raises(StorageError):
+        signed_url_for_user(fake, "user_a", "renders", path, 600)
+    assert fake.signed == []
+
+
+def test_signed_url_refuses_empty_user():
+    with pytest.raises(StorageError):
+        signed_url_for_user(FakeBlobStorage(), "", "renders", "/s/cv.pdf", 600)
+
+
 def test_storage_error_message_has_no_url():
     store, bucket = _store()
     bucket.create_signed_url.side_effect = _Boom(500)

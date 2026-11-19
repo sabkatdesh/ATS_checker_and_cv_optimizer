@@ -1,7 +1,10 @@
-"""Shared domain primitives used by CV and JD schemas."""
+"""Shared domain primitives used by CV and JD schemas, plus UUIDv7 ids."""
 
 from __future__ import annotations
 
+import secrets
+import time
+import uuid
 from enum import Enum
 from typing import Any
 
@@ -39,3 +42,15 @@ class SeniorityLevel(str, Enum):  # noqa: UP042
     MANAGER = "manager"
     DIRECTOR = "director"
     UNKNOWN = "unknown"
+
+
+# ─── Ids ────────────────────────────────────────────────────────────────────────
+
+
+def uuid7() -> str:
+    """RFC 9562 UUIDv7: 48-bit unix-ms timestamp, then random bits (sorts by creation time)."""
+    ms = time.time_ns() // 1_000_000
+    value = (ms & ((1 << 48) - 1)) << 80 | secrets.randbits(80)
+    value = (value & ~(0xF << 76)) | (0x7 << 76)  # version 7
+    value = (value & ~(0x3 << 62)) | (0x2 << 62)  # RFC 4122 variant
+    return str(uuid.UUID(int=value))

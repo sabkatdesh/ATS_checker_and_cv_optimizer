@@ -5,7 +5,7 @@ from app.adapters.db.errors import DbConflict, DbUnavailable, map_db_errors
 from app.adapters.db.master_profile_repo import PgMasterProfileRepo
 from app.adapters.db.profile_repo import PgProfileRepo
 from app.adapters.db.template_repo import PgTemplateRepo
-from tests.fakes.recording_pool import RecordingPool
+from tests.fakes.recording_pool import RecordingPool, assert_user_scoped
 
 UID = "11111111-1111-1111-1111-111111111111"
 
@@ -29,8 +29,7 @@ def test_every_repo_query_scopes_by_user():
     for sql, params in pool.log:
         assert "%(user_id)s" in sql
         assert params["user_id"] == UID
-        if not sql.startswith("insert"):  # inserts bind user_id in VALUES
-            assert "user_id = %(user_id)s" in sql
+        assert_user_scoped(sql)
 
 
 def test_template_query_is_public_and_active_only():
@@ -82,6 +81,17 @@ def test_db_errors_mapped_to_constant_messages():
 def test_unique_violation_maps_to_conflict():
     with pytest.raises(DbConflict), map_db_errors():
         raise psycopg.errors.UniqueViolation("dup key secret")
+
+
+def test_foreign_key_violation_maps_to_conflict():
+    with pytest.raises(DbConflict), map_db_errors():
+        raise psycopg.errors.ForeignKeyViolation("fk secret")
+
+
+def test_insert_scoping_check_rejects_insert_without_user_column():
+    with pytest.raises(AssertionError):
+        assert_user_scoped("insert into public.x (id) values (%(user_id)s)")
+    assert_user_scoped("insert into public.x (id, user_id) values (%(id)s, %(user_id)s)")
 
 
 def test_repo_maps_pool_failure():

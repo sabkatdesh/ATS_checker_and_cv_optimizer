@@ -19,6 +19,7 @@ class DbConflict(Exception):
 
 _CONFLICTS = (
     psycopg.errors.UniqueViolation,
+    psycopg.errors.ForeignKeyViolation,
     psycopg.errors.SerializationFailure,
     psycopg.errors.DeadlockDetected,
 )
