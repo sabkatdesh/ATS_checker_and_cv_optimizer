@@ -34,6 +34,7 @@ def _build_client(backend: FakeBackend) -> TestClient:
         AppSettings(_env_file=None, env="test"),
         store=backend.store,
         auth=backend.auth,
+        storage=backend.storage,
         pipeline=backend.pipeline,
         runner=InlineRunner(),
         llm=backend.llm,

@@ -91,16 +91,6 @@ class SupabaseLegacyStore:
         )
         return result.data or []  # type: ignore[return-value]
 
-    # -- Storage --
-
-    def upload_pdf_to_storage(self, thread_id: str, user_id: str, local_path: str) -> str:
-        storage_path = f"pdfs/{user_id}/{thread_id}.pdf"
-        with open(local_path, "rb") as f:
-            self._sb.storage.from_("cv-pdfs").upload(
-                storage_path, f, {"content-type": "application/pdf", "upsert": "true"}
-            )
-        return self._sb.storage.from_("cv-pdfs").get_public_url(storage_path)
-
     # -- CV Templates --
 
     def get_cv_templates(self) -> list[JsonDict]:

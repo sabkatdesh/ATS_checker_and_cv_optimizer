@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.ports.auth import TokenVerifier
 from app.ports.legacy_store import LegacyStore
@@ -6,6 +6,7 @@ from app.ports.llm import LLMGateway
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
 from tests.fakes.fake_auth import TOKEN_A, FakeAuth
+from tests.fakes.fake_blob_storage import FakeBlobStorage
 from tests.fakes.fake_pipeline import FakePipeline
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
@@ -26,6 +27,7 @@ class FakeBackend:
     auth: FakeAuth
     pipeline: FakePipeline
     llm: ScriptedGateway
+    storage: FakeBlobStorage = field(default_factory=FakeBlobStorage)
 
 
 def auth_header(token: str = TOKEN_A) -> dict[str, str]:

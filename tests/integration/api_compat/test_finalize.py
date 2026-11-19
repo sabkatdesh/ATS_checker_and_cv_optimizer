@@ -52,7 +52,7 @@ def test_ineligible(client, backend):
     _, row = _run(client, backend, result)
     assert row["status"] == "ineligible"
     assert row["eligibility_score"] == 20
-    assert backend.store.uploads == []
+    assert backend.storage.objects == {}
     assert FakePdfRenderer.calls == []
     assert not [c for c in backend.store.calls if c[0] == "deduct_coins"]
 
@@ -62,7 +62,7 @@ def test_complete_cv_only(client, backend):
     assert row["status"] == "complete"
     assert row["ats_score"] == 82
     assert row["eligibility_score"] == 70
-    assert row["pdf_url"] == f"https://storage.test/user-a/{tid}.pdf"
+    assert row["pdf_url"] == f"user-a/{tid}/cv.pdf"
     assert row["cover_letter_text"] is None
     assert row["cover_letter_pdf_url"] is None
     assert FakePdfRenderer.calls == [
@@ -114,7 +114,7 @@ def test_complete_with_cover_letter(client, backend):
     assert render[2]["candidate_name"] == "Test Person"
     assert row["status"] == "complete"
     assert row["cover_letter_text"] == "PLAIN COVER LETTER"
-    assert row["cover_letter_pdf_url"].endswith(f"/{tid}_cover_letter.pdf")
+    assert row["cover_letter_pdf_url"] == f"user-a/{tid}/cover_letter.pdf"
 
 
 def test_pdf_failure_still_completes(client, backend):
@@ -146,7 +146,7 @@ def test_requested_but_skipped_cover_letter_completes_with_cv_only(client, backe
         ),
     )
     assert row["status"] == "complete"
-    assert row["pdf_url"] == f"https://storage.test/user-a/{tid}.pdf"
+    assert row["pdf_url"] == f"user-a/{tid}/cv.pdf"
     assert [c[0] for c in FakePdfRenderer.calls] == ["render"]
     assert FakeCoverLetterRenderer.calls == []
     assert row["cover_letter_text"] is None and row["cover_letter_pdf_url"] is None

@@ -16,6 +16,7 @@ from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
 from app.services.finalize import finalize_session
 from tests.fakes.fake_auth import USER_A, FakeAuth
+from tests.fakes.fake_blob_storage import FakeBlobStorage
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
 from tests.pipeline.helpers import (
@@ -103,6 +104,7 @@ def _pdf_container(svc: PipelineService) -> Container:
         AppSettings(_env_file=None, env="test"),
         store=store,
         auth=FakeAuth(),
+        storage=FakeBlobStorage(),
         pipeline=svc,
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,

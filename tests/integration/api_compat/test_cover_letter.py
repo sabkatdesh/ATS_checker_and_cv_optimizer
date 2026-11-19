@@ -83,7 +83,7 @@ def test_pdf_missing_404(client, backend):
 
 
 def test_pdf_redirects(client, backend):
-    _session(backend, cover_letter_pdf_url="https://storage.test/cl.pdf")
+    _session(backend, cover_letter_pdf_url="user-a/t1/cover_letter.pdf")
     r = client.get("/sessions/t1/cover-letter.pdf", headers=auth_header())
     assert r.status_code == 307
-    assert r.headers["location"] == "https://storage.test/cl.pdf"
+    assert r.headers["location"] == "https://signed.test/renders/user-a/t1/cover_letter.pdf?ttl=600"

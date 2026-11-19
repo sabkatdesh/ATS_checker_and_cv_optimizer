@@ -1,10 +1,9 @@
 import logging
-import os
-import tempfile
 
 from app.container import Container
 from app.domain.credits.legacy import CV_GENERATION_COST
 from app.pipeline.summary import ats_score_of
+from app.ports.blob_storage import RENDERS_BUCKET, render_path
 from app.ports.pipeline import JsonDict
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ def finalize_session(
     Called after pipeline finishes.
     1. Generates CV PDF (WeasyPrint via PDFGenerator)
     2. Optionally generates cover letter PDF (WeasyPrint via CoverLetterService)
-    3. Uploads both PDFs to Supabase storage
+    3. Uploads both PDFs to the private renders bucket (stores the path)
     4. Deducts coins
     5. Updates session as complete
     """
@@ -69,17 +68,10 @@ def finalize_session(
                 domain=domain,
             )
 
-            local_path = os.path.join(tempfile.gettempdir(), f"{thread_id}.pdf")
-            with open(local_path, "wb") as fh:
-                fh.write(pdf_bytes)
-
-            # Upload to Supabase storage
-            pdf_url = c.store.upload_pdf_to_storage(thread_id, user_id, local_path)
+            path = render_path(user_id, thread_id, "cv")
+            c.storage.put(RENDERS_BUCKET, path, pdf_bytes, "application/pdf")
+            pdf_url = path  # a bucket path; the API signs it per request
             logger.info("[PDF] Uploaded successfully for %s", thread_id)
-
-            # Clean up local file
-            if os.path.exists(local_path):
-                os.remove(local_path)
 
         except Exception:
             logger.exception("[PDF] Generation failed for %s", thread_id)
@@ -107,16 +99,9 @@ def finalize_session(
             # Plain text version — stored so frontend can show editable draft
             cover_letter_text = cl_service.to_plain_text(cl_result, candidate_name)
 
-            cl_local_path = os.path.join(tempfile.gettempdir(), f"{thread_id}_cl.pdf")
-            with open(cl_local_path, "wb") as fh:
-                fh.write(cl_pdf_bytes)
-
-            cover_letter_pdf_url = c.store.upload_pdf_to_storage(
-                f"{thread_id}_cover_letter", user_id, cl_local_path
-            )
-
-            if os.path.exists(cl_local_path):
-                os.remove(cl_local_path)
+            cl_path = render_path(user_id, thread_id, "cover_letter")
+            c.storage.put(RENDERS_BUCKET, cl_path, cl_pdf_bytes, "application/pdf")
+            cover_letter_pdf_url = cl_path
 
         except Exception:
             logger.exception("Cover letter PDF generation failed for %s", thread_id)

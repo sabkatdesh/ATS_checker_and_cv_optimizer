@@ -41,7 +41,6 @@ class MemoryStore:
         self.balances: dict[str, int] = {}
         self.transactions: list[dict] = []
         self.templates: list[dict] = []
-        self.uploads: list[tuple[str, str, bytes]] = []
         self.calls: list[tuple[str, tuple, dict]] = []
         self.raise_on: dict[str, Exception] = {}
 
@@ -111,12 +110,6 @@ class MemoryStore:
     def get_user_sessions(self, user_id):
         self._enter("get_user_sessions", (user_id,), {})
         return [s for s in self.sessions.values() if s.get("user_id") == user_id]
-
-    def upload_pdf_to_storage(self, thread_id, user_id, local_path):
-        self._enter("upload_pdf_to_storage", (thread_id, user_id, local_path), {})
-        with open(local_path, "rb") as f:
-            self.uploads.append((thread_id, user_id, f.read()))
-        return f"https://storage.test/{user_id}/{thread_id}.pdf"
 
     def get_cv_templates(self):
         self._enter("get_cv_templates", (), {})

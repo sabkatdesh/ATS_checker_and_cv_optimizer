@@ -7,6 +7,7 @@ from app.api.deps import get_container, require_user_id
 from app.api.schemas.cover_letters import CoverLetterEditRequest, CoverLetterOptionsRequest
 from app.container import Container
 from app.services.generation import resume_after_cover_letter_options
+from app.services.pdf_links import signed_pdf_url
 
 router = APIRouter()
 
@@ -89,7 +90,7 @@ def download_cover_letter_pdf(
 ):
     """
     Download the cover letter PDF for a completed session.
-    Returns the Supabase storage URL (redirect) or the file bytes directly.
+    Redirects to a fresh short-lived signed URL.
     """
     user_id = require_user_id(c, authorization)
     session = c.store.get_session(thread_id)
@@ -99,7 +100,7 @@ def download_cover_letter_pdf(
     if session["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
-    pdf_url = session.get("cover_letter_pdf_url")
+    pdf_url = signed_pdf_url(c, user_id, session.get("cover_letter_pdf_url"))
     if not pdf_url:
         raise HTTPException(
             status_code=404,

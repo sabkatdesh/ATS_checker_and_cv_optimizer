@@ -9,6 +9,7 @@ from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
 from app.adapters.llm.stack import LlmStack
 from app.adapters.llm.usage_recorder import UsageRecorder
+from app.adapters.storage.supabase_storage import SupabaseBlobStorage
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
 from app.config.settings import AppSettings, ConfigError, load_settings
@@ -19,6 +20,7 @@ from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
+from app.ports.blob_storage import BlobStorage
 from app.ports.embeddings import EmbeddingProvider
 from app.ports.legacy_store import LegacyStore
 from app.ports.llm import LLMGateway
@@ -30,6 +32,10 @@ from supabase import Client
 
 def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> LegacyStore:
     return SupabaseLegacyStore(supabase())
+
+
+def _default_storage(settings: AppSettings, supabase: Callable[[], Client]) -> BlobStorage:
+    return SupabaseBlobStorage(supabase())
 
 
 def _default_auth(settings: AppSettings, supabase: Callable[[], Client]) -> TokenVerifier:
@@ -66,6 +72,7 @@ class Container:
         *,
         store: LegacyStore | None = None,
         auth: TokenVerifier | None = None,
+        storage: BlobStorage | None = None,
         pipeline: PipelineRunner | None = None,
         runner: BackgroundRunner | None = None,
         pdf_factory: Callable[[], CvPdfRenderer] | None = None,
@@ -79,6 +86,7 @@ class Container:
         self._lock = threading.RLock()
         self._store = store
         self._auth = auth
+        self._storage = storage
         self._pipeline = pipeline
         self._runner = runner
         self._supabase: Client | None = None
@@ -109,6 +117,13 @@ class Container:
             if self._store is None:
                 self._store = _default_store(self.settings, self._supabase_client)
             return self._store
+
+    @property
+    def storage(self) -> BlobStorage:
+        with self._lock:
+            if self._storage is None:
+                self._storage = _default_storage(self.settings, self._supabase_client)
+            return self._storage
 
     @property
     def auth(self) -> TokenVerifier:

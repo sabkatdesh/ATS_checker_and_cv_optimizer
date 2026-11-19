@@ -14,6 +14,7 @@ from app.domain.cv.minimums import check_minimums
 from app.domain.cv.profile_to_cv import profile_to_universal_cv
 from app.domain.parsing.input_validator import validate_jd
 from app.services.generation import resume_after_answers, run_new_session
+from app.services.pdf_links import with_signed_urls
 
 router = APIRouter()
 _log = structlog.get_logger("pipeline")
@@ -170,7 +171,7 @@ def session_status(
     if session["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
-    return {**session, "pipeline": _pipeline_summary(c, thread_id)}
+    return {**with_signed_urls(c, user_id, session), "pipeline": _pipeline_summary(c, thread_id)}
 
 
 @router.get("/sessions")
@@ -178,4 +179,4 @@ def list_sessions(authorization: str = Header(None), c: Container = Depends(get_
     """Get all past CV generations for the logged-in user"""
     user_id = require_user_id(c, authorization)
     sessions = c.store.get_user_sessions(user_id)
-    return {"sessions": sessions}
+    return {"sessions": [with_signed_urls(c, user_id, s) for s in sessions]}

@@ -90,20 +90,6 @@ def test_update_session_query():
     client.table.return_value.update.return_value.eq.assert_called_once_with("thread_id", "t")
 
 
-def test_upload_pdf_path_and_public_url(tmp_path):
-    store, client = _store()
-    pdf = tmp_path / "a.pdf"
-    pdf.write_bytes(b"%PDF")
-    bucket = client.storage.from_.return_value
-    bucket.get_public_url.return_value = "https://x/pdf"
-    assert store.upload_pdf_to_storage("t1", "u1", str(pdf)) == "https://x/pdf"
-    client.storage.from_.assert_called_with("cv-pdfs")
-    args = bucket.upload.call_args.args
-    assert args[0] == "pdfs/u1/t1.pdf"
-    assert args[2] == {"content-type": "application/pdf", "upsert": "true"}
-    bucket.get_public_url.assert_called_once_with("pdfs/u1/t1.pdf")
-
-
 def test_get_coin_balance_defaults_zero_on_error():
     store, client = _store()
     client.table.side_effect = RuntimeError("down")

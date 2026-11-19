@@ -18,6 +18,7 @@ from app.pipeline.state import RunOptions
 from app.services.profile_import import import_profile
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, FakeAuth
+from tests.fakes.fake_blob_storage import FakeBlobStorage
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
 
@@ -60,6 +61,7 @@ def container() -> Container:
         AppSettings(_env_file=None, env="test", llm={"default_provider": "fake"}),
         store=MemoryStore(),
         auth=FakeAuth(),
+        storage=FakeBlobStorage(),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
