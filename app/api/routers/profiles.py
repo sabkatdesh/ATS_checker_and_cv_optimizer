@@ -29,7 +29,7 @@ _IMPORT_ERRORS: dict[ImportErrorCode, tuple[int, str, str]] = {
 def get_profile(authorization: str = Header(None), c: Container = Depends(get_container)):
     """Get the logged-in user's saved CV profile"""
     user_id = require_user_id(c, authorization)
-    profile = c.store.get_cv_profile(user_id)
+    profile = c.master_profiles.get_default(user_id)
     return {"profile": profile}
 
 
@@ -51,7 +51,7 @@ def update_profile(
     if not data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    c.store.save_cv_profile(user_id, data)
+    c.master_profiles.upsert_default(user_id, data)
     return {"message": "Profile saved successfully"}
 
 

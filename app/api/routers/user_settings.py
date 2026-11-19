@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/settings")
 def get_settings(authorization: str = Header(None), c: Container = Depends(get_container)):
     user_id = require_user_id(c, authorization)
-    settings = c.store.get_user_settings(user_id)
+    settings = c.profiles.get_preferences(user_id)
     return {"settings": settings or {}}
 
 
@@ -24,5 +24,5 @@ def update_settings(
     data = {k: v for k, v in body.dict().items() if v is not None}
     if not data:
         raise HTTPException(status_code=400, detail="No settings provided")
-    c.store.save_user_settings(user_id, data)
+    c.profiles.save_preferences(user_id, data)
     return {"message": "Settings saved"}

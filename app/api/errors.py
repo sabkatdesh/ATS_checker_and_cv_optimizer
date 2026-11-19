@@ -3,6 +3,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.adapters.db.errors import DbConflict, DbUnavailable
+
 
 class AppError(Exception):
     def __init__(
@@ -30,5 +32,20 @@ async def _handle_app_error(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(body, status_code=exc.status, media_type="application/problem+json")
 
 
+async def _handle_db_unavailable(request: Request, exc: Exception) -> JSONResponse:
+    return await _handle_app_error(
+        request,
+        AppError("DB_UNAVAILABLE", 503, "Service unavailable", "Please try again shortly."),
+    )
+
+
+async def _handle_db_conflict(request: Request, exc: Exception) -> JSONResponse:
+    return await _handle_app_error(
+        request, AppError("DB_CONFLICT", 409, "Conflict", "Please retry the request.")
+    )
+
+
 def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
+    app.add_exception_handler(DbUnavailable, _handle_db_unavailable)
+    app.add_exception_handler(DbConflict, _handle_db_conflict)

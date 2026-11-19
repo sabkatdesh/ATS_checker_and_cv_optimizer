@@ -5,7 +5,7 @@ def test_root_health(client):
 
 
 def test_templates_needs_no_auth(client, backend):
-    backend.store.templates = [{"id": "classic"}]
+    backend.templates.rows = [{"id": "classic"}]
     r = client.get("/templates")
     assert r.status_code == 200
     assert r.json() == {"templates": [{"id": "classic"}]}

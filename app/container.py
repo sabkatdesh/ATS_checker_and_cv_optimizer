@@ -3,10 +3,16 @@
 import threading
 from collections.abc import Callable
 
+from psycopg_pool import ConnectionPool
+
 from app.adapters.background.thread_runner import ThreadRunner
+from app.adapters.db.master_profile_repo import PgMasterProfileRepo
+from app.adapters.db.pool import make_pool
+from app.adapters.db.profile_repo import PgProfileRepo
 from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
+from app.adapters.db.template_repo import PgTemplateRepo
 from app.adapters.llm.stack import LlmStack
 from app.adapters.llm.usage_recorder import UsageRecorder
 from app.adapters.storage.supabase_storage import SupabaseBlobStorage
@@ -26,6 +32,7 @@ from app.ports.legacy_store import LegacyStore
 from app.ports.llm import LLMGateway
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
+from app.ports.repositories import MasterProfileRepo, ProfileRepo, TemplateRepo
 from app.ports.usage import UsageSink
 from supabase import Client
 
@@ -80,6 +87,10 @@ class Container:
         llm: LLMGateway | None = None,
         embeddings: EmbeddingProvider | None = None,
         usage_sink: UsageSink | None = None,
+        pool: ConnectionPool | None = None,
+        profiles: ProfileRepo | None = None,
+        master_profiles: MasterProfileRepo | None = None,
+        templates: TemplateRepo | None = None,
     ) -> None:
         self.settings = settings
         # Reentrant: a default builder may read another lazy property (e.g. pipeline -> store).
@@ -90,6 +101,10 @@ class Container:
         self._pipeline = pipeline
         self._runner = runner
         self._supabase: Client | None = None
+        self._pool = pool
+        self._profiles = profiles
+        self._master_profiles = master_profiles
+        self._templates = templates
         self._llm = llm
         self._embeddings = embeddings
         self.prompts = PromptLibrary()
@@ -117,6 +132,40 @@ class Container:
             if self._store is None:
                 self._store = _default_store(self.settings, self._supabase_client)
             return self._store
+
+    @property
+    def pool(self) -> ConnectionPool:
+        """One shared sync pool, opened on first use (connections are made lazily)."""
+        with self._lock:
+            if self._pool is None:
+                dsn = self.settings.db.dsn
+                if dsn is None:
+                    raise ConfigError("Database access needs DB__DSN")
+                pool = make_pool(self.settings.db)
+                pool.open(wait=False)
+                self._pool = pool
+            return self._pool
+
+    @property
+    def profiles(self) -> ProfileRepo:
+        with self._lock:
+            if self._profiles is None:
+                self._profiles = PgProfileRepo(self.pool)
+            return self._profiles
+
+    @property
+    def master_profiles(self) -> MasterProfileRepo:
+        with self._lock:
+            if self._master_profiles is None:
+                self._master_profiles = PgMasterProfileRepo(self.pool)
+            return self._master_profiles
+
+    @property
+    def templates(self) -> TemplateRepo:
+        with self._lock:
+            if self._templates is None:
+                self._templates = PgTemplateRepo(self.pool)
+            return self._templates
 
     @property
     def storage(self) -> BlobStorage:

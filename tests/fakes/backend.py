@@ -9,6 +9,7 @@ from tests.fakes.fake_auth import TOKEN_A, FakeAuth
 from tests.fakes.fake_blob_storage import FakeBlobStorage
 from tests.fakes.fake_pipeline import FakePipeline
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
+from tests.fakes.memory_repos import MemoryMasterProfileRepo, MemoryProfileRepo, MemoryTemplateRepo
 from tests.fakes.memory_store import MemoryStore
 from tests.pipeline.scripted_gateway import ScriptedGateway
 
@@ -28,6 +29,9 @@ class FakeBackend:
     pipeline: FakePipeline
     llm: ScriptedGateway
     storage: FakeBlobStorage = field(default_factory=FakeBlobStorage)
+    profiles: MemoryProfileRepo = field(default_factory=MemoryProfileRepo)
+    master_profiles: MemoryMasterProfileRepo = field(default_factory=MemoryMasterProfileRepo)
+    templates: MemoryTemplateRepo = field(default_factory=MemoryTemplateRepo)
 
 
 def auth_header(token: str = TOKEN_A) -> dict[str, str]:

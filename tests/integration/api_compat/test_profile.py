@@ -3,7 +3,7 @@ from tests.fakes.fake_auth import USER_A
 
 
 def test_get_profile_returns_saved_profile(client, backend):
-    backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
+    backend.master_profiles.default[USER_A] = {"full_name": "Test Person"}
     r = client.get("/profile", headers=auth_header())
     assert r.status_code == 200
     assert r.json() == {"profile": {"user_id": USER_A, "full_name": "Test Person"}}
@@ -25,4 +25,4 @@ def test_save_profile_drops_none_fields(client, backend):
     r = client.post("/profile", json={"full_name": "A", "email": None}, headers=auth_header())
     assert r.status_code == 200
     assert r.json() == {"message": "Profile saved successfully"}
-    assert backend.store.profiles[USER_A] == {"full_name": "A", "user_id": USER_A}
+    assert backend.master_profiles.default[USER_A] == {"full_name": "A"}

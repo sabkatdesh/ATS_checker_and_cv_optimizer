@@ -9,5 +9,5 @@ router = APIRouter()
 @router.get("/templates")
 def list_templates(c: Container = Depends(get_container)):
     """Return all available CV templates (public — no auth required)"""
-    templates = c.store.get_cv_templates()
+    templates = c.templates.list_active()
     return {"templates": templates}

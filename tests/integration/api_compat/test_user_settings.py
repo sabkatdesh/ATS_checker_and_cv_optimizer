@@ -18,4 +18,4 @@ def test_post_settings_saves(client, backend):
     r = client.post("/settings", json={"accent_color": "#112233"}, headers=auth_header())
     assert r.status_code == 200
     assert r.json() == {"message": "Settings saved"}
-    assert backend.store.settings[USER_A] == {"accent_color": "#112233"}
+    assert backend.profiles.prefs[USER_A] == {"accent_color": "#112233"}
