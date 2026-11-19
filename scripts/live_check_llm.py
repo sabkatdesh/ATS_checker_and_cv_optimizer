@@ -25,7 +25,6 @@ sys.path.insert(0, str(ROOT))
 
 from app.adapters.llm._breaker import BreakerRegistry  # noqa: E402
 from app.adapters.llm._pricing import PriceTable  # noqa: E402
-from app.adapters.llm._structured import json_instruction  # noqa: E402
 from app.adapters.llm.registry import ProviderRegistry  # noqa: E402
 from app.adapters.llm.router import LLMRouter  # noqa: E402
 from app.config.llm_routes import RouteTable  # noqa: E402
@@ -35,12 +34,12 @@ from app.domain.cv.rewrite import RewrittenCV  # noqa: E402
 from app.domain.jd.schemas import JobDescriptionStructured  # noqa: E402
 from app.ports.llm import CallMeta, LLMRequest, Message, Usage  # noqa: E402
 from app.ports.llm_errors import LLMError  # noqa: E402
+from scripts._cost_gate import est_input_tokens, worst_case_usd  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures" / "llm"
 CAP_USD = Decimal("0.20")
 CAPS = {"jd_extract": 1500, "gap_questions": 800, "rewrite": 2500}
 EMBED_RESERVE = Decimal("0.0001")
-MARGIN = 1.3  # chars/4 under-counts JSON and prose; pad the input estimate
 
 
 class GapQuestion(BaseModel):
@@ -94,13 +93,6 @@ def build_requests() -> list[LLMRequest[Any]]:
     ]
 
 
-def est_input_tokens(req: LLMRequest[Any]) -> int:
-    model = req.output_schema
-    schema = json_instruction(model.model_json_schema()) if model else ""
-    chars = len(req.system) + len(schema) + sum(len(m.content) for m in req.messages)
-    return int(chars / 4 * MARGIN) + 50
-
-
 def capped_table(full: RouteTable) -> RouteTable:
     """Cap max_tokens via override, then drop every fallback (override keeps fallbacks)."""
     table = full
@@ -119,9 +111,10 @@ def worst_case(
     for req in reqs:
         route = table.resolve(req.step)
         cap, tin = route.max_tokens, est_input_tokens(req)
+        both = worst_case_usd(route, tin, prices, provider=route.provider)
         main = prices.cost(route.provider, route.model, Usage(input_tokens=tin, output_tokens=cap))
+        repair = both - main
         repair_in = Usage(input_tokens=tin + cap, output_tokens=cap)
-        repair = prices.cost(route.provider, route.model, repair_in)
         fb = full.fallback_for(req.step)
         fb_cost = Decimal(0)
         if fb is not None:
