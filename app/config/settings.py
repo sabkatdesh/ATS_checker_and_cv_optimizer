@@ -16,6 +16,13 @@ from pydantic import (
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic_settings.exceptions import SettingsError
 
+from app.config.db_settings import (
+    AuthSettings,
+    BonusSettings,
+    DbSettings,
+    DeletionSettings,
+    StorageSettings,
+)
 from app.config.llm_settings import LlmSettings
 from app.config.pipeline_settings import PipelineSettings
 
@@ -60,10 +67,6 @@ class ApiSettings(BaseModel):
         return v
 
 
-class AuthSettings(BaseModel):
-    supabase_url: str | None = None
-
-
 class ObsSettings(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["json", "console"] = "json"
@@ -86,6 +89,12 @@ class AppSettings(BaseSettings):
     obs: ObsSettings = Field(default_factory=ObsSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
     pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
+    db: DbSettings = Field(default_factory=DbSettings)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
+    bonus: BonusSettings = Field(
+        default_factory=BonusSettings, validation_alias=AliasChoices("bonus", "guards")
+    )
+    deletion: DeletionSettings = Field(default_factory=DeletionSettings)
     sentry_dsn: SecretStr | None = None
     supabase_url_legacy: str | None = Field(default=None, validation_alias="SUPABASE_URL")
     supabase_secret_key: SecretStr | None = Field(
@@ -106,6 +115,12 @@ class AppSettings(BaseSettings):
                     raise ValueError(
                         f"api.cors_origins: localhost origins are not allowed when env={self.env}"
                     )
+        return self
+
+    @model_validator(mode="after")
+    def _no_hs256_outside_dev(self) -> "AppSettings":
+        if self.auth.hs256_secret is not None and self.env not in ("dev", "test"):
+            raise ValueError(f"auth.hs256_secret: not allowed when env={self.env}")
         return self
 
     @property
