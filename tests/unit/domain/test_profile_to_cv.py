@@ -151,3 +151,10 @@ def test_total_years_derived_from_dates_when_no_summary():
 def test_non_mapping_profile_sections_are_dropped():
     conversion = profile_to_universal_cv({"education": "BSc", "skills": 5})
     assert conversion.cv.education == [] and conversion.dropped_entries == 2
+
+
+def test_invisible_only_strings_count_as_blank():
+    profile = {"full_name": "​⁠", "email": " ﻿ ", "summary": "Eng​ineer"}
+    cv = profile_to_universal_cv(profile).cv
+    assert (cv.meta.full_name, cv.meta.email) == (None, None)
+    assert cv.professional_summary == "Engineer"

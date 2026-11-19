@@ -145,3 +145,14 @@ def test_start_builds_run_options(client, backend):
     assert options == RunOptions(
         cover_letter=True, cover_letter_tone=None, cover_letter_length="short", max_passes=2
     )
+
+
+def test_zero_width_name_is_422_before_session_or_coins(client, backend):
+    _ready(backend, profile={**COMPLETE, "full_name": "​‌⁠﻿"})
+    r = _start(client)
+    assert r.status_code == 422
+    assert r.json()["code"] == "PROFILE_INCOMPLETE"
+    assert r.json()["missing"] == ["NAME"]
+    assert backend.store.sessions == {}
+    assert not [c for c in backend.store.calls if c[0] in ("create_session", "deduct_coins")]
+    assert backend.store.balances[USER_A] == 5

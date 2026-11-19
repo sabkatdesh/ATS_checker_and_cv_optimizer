@@ -6,6 +6,8 @@ Uses minimal stub objects so no LLM calls are needed.
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.domain.ats.checker import (
     _flexible_match,
     _match_education,
@@ -14,6 +16,7 @@ from app.domain.ats.checker import (
     _safe_div,
     compute_final_match,
 )
+from app.domain.common import SeniorityLevel
 
 # ── Helpers to build stub JD / CV objects ─────────────────────────────────────
 
@@ -148,6 +151,22 @@ def test_experience_score_never_negative():
     cv = _cv(total_years=1, seniority="intern")
     result = _match_experience(jd, cv)
     assert result["score"] >= 0
+
+
+@pytest.mark.parametrize(
+    ("jd_seniority", "cv_seniority", "score"),
+    [
+        ("unknown", "mid", 100),
+        ("mid", "unknown", 100),
+        (SeniorityLevel.UNKNOWN, SeniorityLevel.SENIOR, 100),
+        ("senior", "mid", 90),
+        ("mid", "mid", 100),
+    ],
+)
+def test_seniority_penalty_only_when_both_known_and_different(jd_seniority, cv_seniority, score):
+    jd = _jd(seniority=jd_seniority)
+    cv = _cv(seniority=cv_seniority)
+    assert _match_experience(jd, cv)["score"] == score
 
 
 # ── _match_education ───────────────────────────────────────────────────────────

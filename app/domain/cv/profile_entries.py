@@ -4,6 +4,7 @@ from typing import Any
 
 from app.domain.cv.profile_dates import parse_profile_date, to_ascii_digits
 from app.domain.cv.universal_cv import EmploymentType
+from app.domain.text.invisible import strip_invisible
 
 _DATE_FIELDS = frozenset({"start_date", "end_date"})
 _YEAR_FIELDS = frozenset({"graduation_year", "year", "expiry_year"})
@@ -14,16 +15,16 @@ _EMPLOYMENT_TYPES = frozenset(t.value for t in EmploymentType)
 
 
 def clean_text(value: object) -> str | None:
-    """A trimmed string; blank or non-string values become None."""
+    """A trimmed string without invisible characters; blank or non-string values become None."""
     if not isinstance(value, str):
         return None
-    return value.strip() or None
+    return strip_invisible(value).strip() or None
 
 
 def clean_value(value: object) -> Any:
     """Trim every string inside a JSON value; blank strings become None, blank list items go."""
     if isinstance(value, str):
-        return value.strip() or None
+        return clean_text(value)
     if isinstance(value, list):
         return [item for item in (clean_value(v) for v in value) if item is not None]
     if isinstance(value, dict):

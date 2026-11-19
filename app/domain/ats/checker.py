@@ -15,6 +15,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.domain.common import SeniorityLevel
+
 # ── Utilities ─────────────────────────────────────────────────────────────────────
 
 
@@ -88,7 +90,9 @@ def _match_experience(jd: Any, cv: Any) -> dict[str, Any]:
     if jd.experience.min_years and cv.experience_summary.total_years:
         if cv.experience_summary.total_years < jd.experience.min_years:
             score -= 30
-    if jd.experience.seniority != cv.experience_summary.seniority:
+    jd_level, cv_level = jd.experience.seniority, cv.experience_summary.seniority
+    # An unknown level on either side is no evidence of a mismatch.
+    if SeniorityLevel.UNKNOWN not in (jd_level, cv_level) and jd_level != cv_level:
         score -= 10
     return {
         "score": max(score, 0),
