@@ -1,9 +1,0 @@
-{
-  "domain": "tech",
-  "summary": "Backend engineer building Python services on a cloud platform.",
-  "tools": ["Python", "PostgreSQL", "Docker"],
-  "Job": "Backend Engineer",
-  "responsiblity": "Design, build and operate REST services for a hiring platform.",
-  "experience": 3,
-  "subject": ["Computer Science"]
-}

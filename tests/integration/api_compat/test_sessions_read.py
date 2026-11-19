@@ -1,3 +1,6 @@
+from app.domain.cv.domain_config import Domain
+from app.domain.jd.meta import JdMeta
+from app.pipeline.summary import SessionSummary
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, USER_B
 
@@ -26,7 +29,51 @@ def test_status_returns_row_verbatim(client, backend):
     backend.store.sessions["t1"] = row
     r = client.get("/sessions/t1/status", headers=auth_header())
     assert r.status_code == 200
-    assert r.json() == row
+    assert r.json() == {**row, "pipeline": None}
+
+
+def test_status_adds_pipeline_summary(client, backend):
+    backend.store.sessions["t1"] = {"thread_id": "t1", "user_id": USER_A, "status": "running"}
+    backend.pipeline.summary_value = SessionSummary(
+        jd=JdMeta(title="Staff Nurse", company="Example", domain=Domain.MEDICAL),
+        domain="medical",
+        eligibility_score=60,
+    )
+    r = client.get("/sessions/t1/status", headers=auth_header())
+    assert r.json()["pipeline"]["jd"]["title"] == "Staff Nurse"
+    assert r.json()["pipeline"] == {
+        "jd": {
+            "title": "Staff Nurse",
+            "company": "Example",
+            "domain": "medical",
+            "location": None,
+            "deadline": None,
+            "application_email": None,
+        },
+        "domain": "medical",
+        "eligibility_score": 60,
+        "ats_before": None,
+        "ats_after": None,
+        "trust_report": None,
+        "warnings": [],
+        "error_code": None,
+        "cancelled_stage": None,
+    }
+    assert ("summary", ("t1",), {}) in backend.pipeline.calls
+
+
+def test_status_survives_a_failing_summary(client, backend):
+    from structlog.testing import capture_logs
+
+    row = {"thread_id": "t1", "user_id": USER_A, "status": "running"}
+    backend.store.sessions["t1"] = row
+    backend.pipeline.summary_error = RuntimeError("SENTINEL secret cv text")
+    with capture_logs() as logs:
+        r = client.get("/sessions/t1/status", headers=auth_header())
+    assert r.status_code == 200
+    assert r.json() == {**row, "pipeline": None}
+    failed = [e for e in logs if e["event"] == "pipeline.summary_failed"]
+    assert len(failed) == 1 and "SENTINEL" not in str(logs)
 
 
 def test_list_sessions(client, backend):

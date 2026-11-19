@@ -1,0 +1,86 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Rafi Example",
+  "email": "rafi@example.com",
+  "phone": "+880 1700-000001",
+  "location": "Dhaka",
+  "linkedin": "linkedin.com/in/rafi-example",
+  "summary": "Backend engineer with four years of Python and REST API experience.",
+  "skills": {
+    "hard_skills": [
+      "API design",
+      "Database modelling"
+    ],
+    "soft_skills": [
+      "Communication"
+    ],
+    "tools": [
+      "Python",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "frameworks": [
+      "FastAPI"
+    ],
+    "cloud_platforms": [
+      "AWS"
+    ]
+  },
+  "experience": [
+    {
+      "job_title": "Software Engineer",
+      "company_name": "Example Logistics",
+      "employment_type": "full_time",
+      "start_date": "2021-03-01",
+      "responsibilities": [
+        "Built REST services",
+        "Maintained the database schema"
+      ],
+      "achievements": [
+        "Cut document processing time by 40%"
+      ],
+      "tools_used": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BSc",
+      "field_of_study": "Computer Science",
+      "institution": "Example University",
+      "graduation_year": 2020
+    }
+  ],
+  "projects": [],
+  "certifications": [
+    {
+      "name": "Cloud Practitioner",
+      "issuer": "Example Academy",
+      "year": 2022
+    }
+  ],
+  "domain": "tech",
+  "licenses": [],
+  "publications": [],
+  "clinical_practice": [],
+  "trade_qualifications": [],
+  "languages": [],
+  "volunteering": [],
+  "awards": [],
+  "references_available": false,
+  "experience_summary": {
+    "total_years": 4,
+    "seniority": "mid",
+    "role_type": "IC",
+    "relevant_years": 4
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

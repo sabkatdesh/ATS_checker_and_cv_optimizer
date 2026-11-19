@@ -1,0 +1,37 @@
+{
+  "domain": "tech",
+  "job_title": "Backend Engineer",
+  "company_name": "Example Company",
+  "location": "Dhaka",
+  "employment_type": "full_time",
+  "requirements": {
+    "must_have": [
+      "Python",
+      "SQL",
+      "REST API design"
+    ],
+    "nice_to_have": [
+      "Kubernetes"
+    ]
+  },
+  "skills": {
+    "hard_skills": [
+      "API design"
+    ],
+    "tools": [
+      "Python",
+      "PostgreSQL",
+      "Docker"
+    ]
+  },
+  "experience": {
+    "min_years": 3,
+    "max_years": 6
+  },
+  "education": {
+    "degree_required": "Bachelor's degree",
+    "fields_of_study": [
+      "Computer Science"
+    ]
+  }
+}

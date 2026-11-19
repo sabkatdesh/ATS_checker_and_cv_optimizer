@@ -204,7 +204,6 @@ cv-optimizer/
 ├── profile_builder.py                  # CV text generator from profile
 ├── generate_pdf.py                     # Production-safe PDF generation
 ├── pydantic_class.py                   # Data schemas (CV/JD structures)
-├── safe_parser.py                      # LLM output parsing with fallbacks
 ├── input_validator.py                  # JD/CV validation
 ├── database.py                         # Supabase helper functions
 ├── streamlit_app.py                    # Frontend UI (Streamlit)
@@ -345,9 +344,6 @@ pytest tests/
 
 # Test ATS matching
 python -m pytest tests/test_ats_checker.py
-
-# Test LLM parsing
-python -m pytest tests/test_safe_parser.py
 ```
 
 ---

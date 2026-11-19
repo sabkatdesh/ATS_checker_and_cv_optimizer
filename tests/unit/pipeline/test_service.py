@@ -3,66 +3,79 @@ import os
 import re
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 import pytest
 import structlog
-from langgraph.checkpoint.memory import MemorySaver
 from structlog.testing import capture_logs
 
 from app.config.settings import AppSettings
 from app.container import Container
-from app.domain.match.schemas import SummaryCV
-from app.domain.parsing.safe_parser import safe_llm_parse
-from app.pipeline.chains import build_chains
+from app.domain.cv.rewrite import RewrittenCV
+from app.domain.match.schemas import Eligibility
+from app.domain.questions.schemas import GapQuestion, GapQuestions
+from app.domain.trust.judge import JudgeFindings
+from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.errors import PipelineStepFailed
 from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
-from tests.fakes.fake_chat_model import RoutingFakeChatModel
+from app.pipeline.state import RunOptions
+from app.ports.llm_errors import LLMOutputInvalid
+from tests.pipeline.helpers import deps_for, persona_profile, tech_jd
 
 ROOT = Path(__file__).resolve().parents[3]
 
-_VERDICT = {
-    "score": 60,
-    "verdict": "Partially Align 60%",
-    "reason": ["ok"],
-    "gaps_to_consider": ["Kubernetes depth"],
-}
 
-
-def _fake() -> RoutingFakeChatModel:
-    return RoutingFakeChatModel(
-        routes=[
-            ("Assess whether this candidate", json.dumps(_VERDICT)),
-            ("EVIDENCE-ONLY RULE", "{}"),
-        ],
-        default="{}",
+def _service() -> tuple[object, PipelineService]:
+    gw, deps = deps_for(
+        {
+            "jd_extract": [tech_jd()],
+            "eligibility": [Eligibility(score=60, gaps=["Kubernetes depth"])],
+            "gap_questions": [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])],
+            "rewrite": [RewrittenCV(), RewrittenCV()],
+            "verify_claims": [JudgeFindings()],
+        }
     )
-
-
-def _service(llm=None) -> PipelineService:
-    graph = build_graph(build_chains(llm or _fake()), MemorySaver())
-    return PipelineService(graph)
+    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _run(svc: PipelineService, tid: str = "t1") -> dict:
     return svc.run(
         job_description="jd text",
-        user_resume_text="cv text",
+        profile={**persona_profile(), "summary": "cv text"},
         thread_id=tid,
-        cover_letter_requested=False,
+        options=RunOptions(),
     )
 
 
-def test_run_pauses_at_hitl_then_resume_finishes():
-    svc = _service()
+def test_run_pauses_at_await_answers_then_resume_finishes():
+    _, svc = _service()
     _run(svc)
     state = svc.get_state("t1")
-    assert state["next"] == ["hitl_node"]
-    assert state["is_paused_at_hitl"] is True
+    assert state["next"] == ["await_answers"]
+    assert state["interrupt"]["type"] == "gap_questions"
     final = svc.resume("t1", "answers")
-    assert final["user_qna"] == "answers"
-    assert final["counter"] >= 1
+    assert final["answers"].free_text == "answers"
+    assert final["passes"] >= 1
     assert svc.get_state("t1")["next"] == []
+
+
+def test_calls_get_the_thread_id_and_one_cancel_token_per_invocation():
+    gw, svc = _service()
+    _run(svc)
+    first = len(gw.cancel_tokens)  # type: ignore[attr-defined]
+    svc.resume("t1", "answers")
+    assert {r.metadata.session_id for r in gw.requests} == {"t1"}  # type: ignore[attr-defined]
+    tokens = gw.cancel_tokens  # type: ignore[attr-defined]
+    run_tokens, resume_tokens = {id(t) for t in tokens[:first]}, {id(t) for t in tokens[first:]}
+    assert len(run_tokens) == 1 and len(resume_tokens) == 1  # svc.cancel reaches every call
+    assert run_tokens != resume_tokens
+
+
+def test_get_state_of_unknown_thread_is_empty():
+    _, svc = _service()
+    assert svc.get_state("nope") == {"values": {}, "next": [], "interrupt": None}
 
 
 @pytest.fixture
@@ -74,7 +87,7 @@ def stdlib_structlog():
 
 
 def test_no_print_in_pipeline(capsys, stdlib_structlog):
-    svc = _service()
+    _, svc = _service()
     _run(svc)
     svc.resume("t1", "answers")
     out = capsys.readouterr()
@@ -83,52 +96,53 @@ def test_no_print_in_pipeline(capsys, stdlib_structlog):
 
 
 def test_stage_events_carry_no_text():
-    svc = _service()
+    _, svc = _service()
     with capture_logs() as logs:
         _run(svc)
         svc.resume("t1", "my private answers")
-    assert any(entry["event"] == "pipeline.stage" for entry in logs)
+    stages = [e["stage"] for e in logs if e["event"] == "pipeline.stage"]
+    assert stages[:3] == ["jd_extract", "cv_snapshot", "eligibility"]
     blob = json.dumps(logs, default=str)
     for secret in ("jd text", "cv text", "Kubernetes depth", "my private answers"):
         assert secret not in blob
 
 
-def test_parse_fail_log_has_no_raw_text():
-    garbage = "secret cv line nothing parseable here"
-    with capture_logs() as logs:
-        safe_llm_parse(garbage, SummaryCV, SummaryCV())
-    assert logs
-    assert any(entry["event"] == "llm.parse_failed" for entry in logs)
-    assert "secret cv line" not in json.dumps(logs, default=str)
-
-
-def test_pipeline_parse_failure_does_not_leak(capsys):
-    llm = RoutingFakeChatModel(default="secret cv line garbage")
-    svc = _service(llm)
-    with capture_logs() as logs:
+def test_pipeline_parse_failure_does_not_leak():
+    secret = "SENTINEL secret cv line"
+    _, deps = deps_for({"jd_extract": [LLMOutputInvalid(f"bad reply: {secret}")]})
+    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    with capture_logs() as logs, pytest.raises(PipelineStepFailed) as exc:
         _run(svc)
-    captured = capsys.readouterr()
-    assert "secret cv line" not in captured.out + captured.err
-    assert "secret cv line" not in json.dumps(logs, default=str)
+    assert exc.value.code == "LLM_OUTPUT_INVALID"
+    summary = svc.summary("t1")
+    assert summary is not None and summary.error_code == "LLM_OUTPUT_INVALID"
+    shown = "".join(traceback.format_exception(exc.value)) + repr(exc.value) + str(exc.value)
+    shown += json.dumps(logs, default=str) + summary.model_dump_json()
+    assert secret not in shown and "SENTINEL" not in shown
 
 
 def test_container_builds_pipeline_lazily(monkeypatch):
     import app.container as container_mod
 
-    calls: list[int] = []
-    real = container_mod.build_chains
+    calls: list[object] = []
+    real = container_mod.build_graph
 
-    def spy(llm):
-        calls.append(1)
-        return real(llm)
+    def spy(deps, checkpointer):
+        calls.append(deps)
+        return real(deps, checkpointer)
 
-    monkeypatch.setattr(container_mod, "build_chains", spy)
-    c = Container(AppSettings(_env_file=None, llm={"default_provider": "fake"}))
+    monkeypatch.setattr(container_mod, "build_graph", spy)
+    settings = AppSettings(
+        _env_file=None, llm={"default_provider": "fake"}, pipeline={"ats_target": 80}
+    )
+    c = Container(settings)
     assert calls == []
     first = c.pipeline
     assert isinstance(first, PipelineService)
     assert c.pipeline is first
-    assert calls == [1]
+    assert len(calls) == 1
+    assert calls[0].settings.ats_target == 80  # type: ignore[attr-defined]
+    assert calls[0].gateway is c.llm  # type: ignore[attr-defined]
 
 
 def test_graph_and_main_import_without_azure_env(tmp_path):

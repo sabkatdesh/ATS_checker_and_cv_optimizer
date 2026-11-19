@@ -1,32 +1,38 @@
-"""Eligibility match models."""
+"""Eligibility models."""
 
 from __future__ import annotations
 
-from typing import Literal
+import math
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain.common import NullSafeListMixin
 from app.domain.cv.domain_config import Domain
 
 
-class Match(NullSafeListMixin, BaseModel):
-    score: Literal[0, 30, 60, 100] | None = None
-    verdict: (
-        Literal[
-            "Doesn't Align at all 0%",
-            "Somewhat Align 30%",
-            "Partially Align 60%",
-            "Perfectly Align 100%",
-        ]
-        | None
-    ) = None
-    reason: list[str] = Field(default_factory=list)
-    gaps_to_consider: list[str] = Field(default_factory=list)
+def round_half_up(value: float) -> int:
+    return math.floor(value + 0.5)
+
+
+class Eligibility(NullSafeListMixin, BaseModel):
+    """How well the candidate fits the job, 0-100; the threshold decision is made in code."""
+
+    score: int = Field(ge=0, le=100)
+    rationale: list[str] = Field(default_factory=list)
+    gaps: list[str] = Field(default_factory=list)
+    blockers: list[str] = Field(default_factory=list)  # informational (D4)
+
+    @field_validator("score", mode="before")
+    @classmethod
+    def _round_float(cls, value: Any) -> Any:
+        if isinstance(value, float) and math.isfinite(value):
+            return round_half_up(value)
+        return value
 
 
 class SummaryCV(NullSafeListMixin, BaseModel):
-    """Lightweight CV summary used for fast eligibility check."""
+    """Lightweight CV summary used by the legacy quick-CV chain."""
 
     domain: Domain = Domain.GENERAL
     summary: str | None = None

@@ -26,6 +26,10 @@ REPAIR_TEXT = (
     "Your previous reply was not valid. Reply again with only a corrected JSON object "
     "that conforms to the schema. Problems found:\n"
 )
+TRUNCATION_REPAIR_TEXT = (
+    "Your previous reply was cut off at the length limit. "
+    "Reply again with the complete JSON object, written more concisely."
+)
 EMPTY_REPLY = "(empty reply)"
 _MAX_ERROR_LINES = 10
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -134,10 +138,12 @@ def parse_structured[T: BaseModel](text: str, model: type[T]) -> T:
         raise LLMOutputInvalid(_error_summary(exc, model)) from None
 
 
-def repair_turns(messages: list[Message], bad_text: str, error_summary: str) -> list[Message]:
+def repair_turns(
+    messages: list[Message], bad_text: str, error_summary: str, *, lead: str = REPAIR_TEXT
+) -> list[Message]:
     return [
         *messages,
         # Providers reject blank turns with a 400, so an empty reply gets a placeholder.
         Message(role="assistant", content=bad_text if bad_text.strip() else EMPTY_REPLY),
-        Message(role="user", content=REPAIR_TEXT + error_summary),
+        Message(role="user", content=lead + error_summary),
     ]

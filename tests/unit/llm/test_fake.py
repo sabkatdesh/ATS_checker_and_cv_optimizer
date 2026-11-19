@@ -8,7 +8,7 @@ from app.adapters.llm._breaker import BreakerRegistry
 from app.adapters.llm._pricing import ModelPrice, PriceTable
 from app.adapters.llm._retry import RetryPolicy
 from app.adapters.llm.fake import Fail, Hang, Reply, build_fake_provider
-from app.domain.match.schemas import Match
+from app.domain.match.schemas import Eligibility
 from app.ports.llm import CallMeta, CancelToken, LLMRequest, Message, Route, Usage
 from app.ports.llm_errors import LLMBadRequest, LLMThrottled
 
@@ -58,8 +58,8 @@ def _run(provider, req):
 
 
 def test_fake_is_deterministic():
-    a = _run(_provider(), _req("legacy.verdict", Match))
-    b = _run(_provider(), _req("legacy.verdict", Match))
+    a = _run(_provider(), _req("eligibility", Eligibility))
+    b = _run(_provider(), _req("eligibility", Eligibility))
     assert a.output == b.output and a.usage == b.usage == Usage(input_tokens=10, output_tokens=5)
     assert a.output.score == 60
 
@@ -72,10 +72,10 @@ def test_fake_records_requests():
 
 
 def test_scripted_outcomes_pop_first_then_defaults():
-    p = _provider({"legacy.verdict": [Fail(LLMThrottled, retry_after_s=0.1), Reply("{}")]})
-    res = _run(p, _req("legacy.verdict", Match))
-    assert res.attempts == 2 and res.output.score is None
-    assert _run(p, _req("legacy.verdict", Match)).output.score == 60
+    p = _provider({"eligibility": [Fail(LLMThrottled, retry_after_s=0.1), Reply('{"score": 0}')]})
+    res = _run(p, _req("eligibility", Eligibility))
+    assert res.attempts == 2 and res.output.score == 0
+    assert _run(p, _req("eligibility", Eligibility)).output.score == 60
 
 
 def test_schema_default_instance_without_canned_file():

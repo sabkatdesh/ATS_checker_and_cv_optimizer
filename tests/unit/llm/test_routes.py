@@ -58,6 +58,26 @@ def test_shipped_routes_load() -> None:
     assert t.embeddings.dimensions == 512
 
 
+def test_revise_flagged_route() -> None:
+    r = _load().resolve("revise_flagged")
+    assert (r.max_tokens, r.temperature, r.timeout_s, r.stream) == (6000, 0.2, 120, True)
+
+
+@pytest.mark.parametrize(
+    ("step", "timeout"),
+    [
+        ("jd_extract", 60),
+        ("eligibility", 45),
+        ("gap_questions", 45),
+        ("verify_claims", 45),
+        ("cover_letter", 60),
+        ("rewrite", 150),
+    ],
+)
+def test_per_step_timeouts(step: str, timeout: int) -> None:
+    assert _load().resolve(step).timeout_s == timeout
+
+
 def test_structured_mode_per_step() -> None:
     t = _load()
     assert t.resolve("gap_questions").structured_mode == "native"

@@ -1,0 +1,78 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Nadia Example",
+  "email": "nadia@example.com",
+  "phone": "+880 1700-000002",
+  "location": "Chattogram",
+  "summary": "Registered nurse with five years of critical care experience.",
+  "skills": {
+    "hard_skills": [
+      "Ventilator management",
+      "Patient assessment"
+    ],
+    "soft_skills": [
+      "Teamwork"
+    ]
+  },
+  "experience": [
+    {
+      "job_title": "Staff Nurse",
+      "company_name": "Example General Hospital",
+      "start_date": "2020-01-01",
+      "responsibilities": [
+        "Cared for ventilated patients",
+        "Administered medication"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BSc Nursing",
+      "institution": "Example College of Nursing",
+      "graduation_year": 2019
+    }
+  ],
+  "projects": [],
+  "certifications": [],
+  "domain": "medical",
+  "licenses": [
+    {
+      "name": "Registered Nurse",
+      "issuing_body": "Example Nursing Council",
+      "valid_until": "Active"
+    }
+  ],
+  "publications": [],
+  "clinical_practice": [
+    {
+      "setting": "ICU",
+      "role": "Staff Nurse",
+      "institution": "Example General Hospital",
+      "start_date": "2020-01-01"
+    },
+    {
+      "setting": "Emergency Department",
+      "role": "Student Nurse",
+      "institution": "Example Teaching Hospital",
+      "start_date": "2018-06-01",
+      "end_date": "2019-05-31"
+    }
+  ],
+  "trade_qualifications": [],
+  "languages": [],
+  "volunteering": [],
+  "awards": [],
+  "references_available": false,
+  "experience_summary": {
+    "total_years": 5,
+    "seniority": "mid",
+    "role_type": "IC",
+    "relevant_years": 5
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

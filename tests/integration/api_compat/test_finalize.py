@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+from app.domain.ats.schemas import AtsMatch
+from app.pipeline.state import RunOptions
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
@@ -18,6 +20,8 @@ def _run(client, backend, result, profile=None):
     backend.store.profiles[USER_A] = {
         "user_id": USER_A,
         "full_name": "Test Person",
+        "email": "test@example.com",
+        "education": [{"degree": "BSc"}],
         **(profile or {}),
     }
     backend.pipeline.next_nodes = []
@@ -30,20 +34,20 @@ def _run(client, backend, result, profile=None):
 
 def _eligible(**extra):
     return {
-        "is_eligible": True,
-        "final_match": {"overall_score": 82},
-        "eligibility_verdict": SimpleNamespace(score=70),
-        "structured_cv": CV,
-        "detected_domain": "tech",
+        "eligible": True,
+        "ats": AtsMatch(applies=True, score=82),
+        "eligibility": SimpleNamespace(score=70),
+        "tailored_cv": CV,
+        "domain": "tech",
         **extra,
     }
 
 
 def test_ineligible(client, backend):
     result = {
-        "is_eligible": False,
-        "eligibility_verdict": SimpleNamespace(score=20),
-        "structured_cv": CV,
+        "eligible": False,
+        "eligibility": SimpleNamespace(score=20),
+        "tailored_cv": CV,
     }
     _, row = _run(client, backend, result)
     assert row["status"] == "ineligible"
@@ -101,8 +105,8 @@ def test_complete_with_cover_letter(client, backend):
         client,
         backend,
         _eligible(
-            cover_letter_result={"body": "x"},
-            cover_letter_tone="conversational",
+            cover_letter={"body": "x"},
+            options=RunOptions(cover_letter=True, cover_letter_tone="conversational"),
         ),
     )
     render = [c for c in FakeCoverLetterRenderer.calls if c[0] == "render_to_pdf"][0]
@@ -122,8 +126,27 @@ def test_pdf_failure_still_completes(client, backend):
 
 def test_no_structured_cv_completes_without_pdf(client, backend):
     result = _eligible()
-    del result["structured_cv"]
+    del result["tailored_cv"]
     _, row = _run(client, backend, result)
     assert row["status"] == "complete"
     assert row["pdf_url"] is None
     assert FakePdfRenderer.calls == []
+
+
+def test_requested_but_skipped_cover_letter_completes_with_cv_only(client, backend):
+    from app.pipeline.warnings import PipelineWarning
+
+    tid, row = _run(
+        client,
+        backend,
+        _eligible(
+            cover_letter=None,
+            options=RunOptions(cover_letter=True, cover_letter_tone="formal"),
+            warnings=[PipelineWarning(code="COVER_LETTER_SKIPPED", step="cover_letter")],
+        ),
+    )
+    assert row["status"] == "complete"
+    assert row["pdf_url"] == f"https://storage.test/user-a/{tid}.pdf"
+    assert [c[0] for c in FakePdfRenderer.calls] == ["render"]
+    assert FakeCoverLetterRenderer.calls == []
+    assert row["cover_letter_text"] is None and row["cover_letter_pdf_url"] is None

@@ -6,6 +6,8 @@ Uses minimal stub objects so no LLM calls are needed.
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.domain.ats.checker import (
     _flexible_match,
     _match_education,
@@ -14,6 +16,7 @@ from app.domain.ats.checker import (
     _safe_div,
     compute_final_match,
 )
+from app.domain.common import SeniorityLevel
 
 # ── Helpers to build stub JD / CV objects ─────────────────────────────────────
 
@@ -150,6 +153,22 @@ def test_experience_score_never_negative():
     assert result["score"] >= 0
 
 
+@pytest.mark.parametrize(
+    ("jd_seniority", "cv_seniority", "score"),
+    [
+        ("unknown", "mid", 100),
+        ("mid", "unknown", 100),
+        (SeniorityLevel.UNKNOWN, SeniorityLevel.SENIOR, 100),
+        ("senior", "mid", 90),
+        ("mid", "mid", 100),
+    ],
+)
+def test_seniority_penalty_only_when_both_known_and_different(jd_seniority, cv_seniority, score):
+    jd = _jd(seniority=jd_seniority)
+    cv = _cv(seniority=cv_seniority)
+    assert _match_experience(jd, cv)["score"] == score
+
+
 # ── _match_education ───────────────────────────────────────────────────────────
 
 
@@ -219,3 +238,18 @@ def test_compute_final_match_score_in_range():
     )
     result = compute_final_match(jd, cv)
     assert 0 <= result["overall_score"] <= 100
+
+
+# ── Stop words ────────────────────────────────────────────────────────────────
+
+
+def test_flexible_match_ignores_stop_words():
+    assert _flexible_match("Python and Django", "Java and Spring") is False
+
+
+def test_flexible_match_still_matches_tokens():
+    assert _flexible_match("Python", "python 3") is True
+
+
+def test_flexible_match_ignores_one_character_tokens():
+    assert _flexible_match("C level reporting", "a b c") is False

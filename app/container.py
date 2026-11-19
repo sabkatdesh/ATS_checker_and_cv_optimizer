@@ -3,43 +3,29 @@
 import threading
 from collections.abc import Callable
 
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
-from app.adapters.llm.legacy_structured import GatewayStructuredLLM
 from app.adapters.llm.stack import LlmStack
 from app.adapters.llm.usage_recorder import UsageRecorder
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
 from app.config.settings import AppSettings, ConfigError, load_settings
-from app.pipeline.chains import build_chains
+from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.deps import PipelineDeps
 from app.pipeline.graph import build_graph
+from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
 from app.ports.embeddings import EmbeddingProvider
 from app.ports.legacy_store import LegacyStore
 from app.ports.llm import LLMGateway
-from app.ports.llm_legacy import StructuredLLM
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
 from app.ports.usage import UsageSink
 from supabase import Client
-
-# Legacy chain name -> route step (llm_routes.yaml); prompt ids are "legacy.<chain>".
-LEGACY_CHAIN_ROUTES: dict[str, str] = {
-    "quick_jd": "jd_extract",
-    "detailed_jd": "jd_extract",
-    "quick_cv": "profile_import",
-    "detailed_cv": "profile_import",
-    "verdict": "eligibility",
-    "rewrite": "rewrite",
-    "cover_letter": "cover_letter",
-}
 
 
 def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> LegacyStore:
@@ -48,10 +34,6 @@ def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> Leg
 
 def _default_auth(settings: AppSettings, supabase: Callable[[], Client]) -> TokenVerifier:
     return SupabaseTokenVerifier(supabase())
-
-
-def _default_llm(settings: AppSettings, gateway: LLMGateway) -> StructuredLLM:
-    return GatewayStructuredLLM(gateway)
 
 
 def _default_pdf() -> CvPdfRenderer:
@@ -66,15 +48,11 @@ def _default_cover_letter() -> CoverLetterRenderer:
     return CoverLetterService()
 
 
-def _default_pipeline(settings: AppSettings, gateway: LLMGateway) -> PipelineRunner:
-    from app.adapters.llm.langchain_bridge import GatewayChatModel
-
-    chains = build_chains(
-        lambda chain: GatewayChatModel(
-            gateway=gateway, step=LEGACY_CHAIN_ROUTES[chain], prompt_id=f"legacy.{chain}"
-        )
-    )
-    return PipelineService(build_graph(chains, MemorySaver(serde=JsonPlusSerializer())))
+def _default_pipeline(
+    settings: AppSettings, gateway: LLMGateway, prompts: PromptLibrary
+) -> PipelineRunner:
+    deps = PipelineDeps(gateway=gateway, prompts=prompts, settings=settings.pipeline)
+    return PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:
@@ -90,7 +68,6 @@ class Container:
         auth: TokenVerifier | None = None,
         pipeline: PipelineRunner | None = None,
         runner: BackgroundRunner | None = None,
-        llm_factory: Callable[[], StructuredLLM] | None = None,
         pdf_factory: Callable[[], CvPdfRenderer] | None = None,
         cover_letter_factory: Callable[[], CoverLetterRenderer] | None = None,
         llm: LLMGateway | None = None,
@@ -107,9 +84,9 @@ class Container:
         self._supabase: Client | None = None
         self._llm = llm
         self._embeddings = embeddings
+        self.prompts = PromptLibrary()
         self.usage_sink: UsageSink = usage_sink if usage_sink is not None else MemoryUsageSink()
         self._llm_stack = LlmStack(settings, self.usage_sink)
-        self._llm_factory = llm_factory or (lambda: _default_llm(self.settings, self.llm))
         self._pdf_factory = pdf_factory or _default_pdf
         self._cover_letter_factory = cover_letter_factory or _default_cover_letter
 
@@ -144,7 +121,7 @@ class Container:
     def pipeline(self) -> PipelineRunner:
         with self._lock:
             if self._pipeline is None:
-                self._pipeline = _default_pipeline(self.settings, self.llm)
+                self._pipeline = _default_pipeline(self.settings, self.llm, self.prompts)
             return self._pipeline
 
     @property
@@ -176,9 +153,6 @@ class Container:
     def validate_llm_config(self) -> RouteTable:
         """Load prices and routes; raises ConfigError. Needs no credentials or network."""
         return self._llm_stack.routes
-
-    def make_llm_client(self) -> StructuredLLM:
-        return self._llm_factory()
 
     def make_pdf_renderer(self) -> CvPdfRenderer:
         return self._pdf_factory()

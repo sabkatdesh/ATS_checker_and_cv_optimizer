@@ -1,16 +1,32 @@
 import uuid
 from functools import partial
+from typing import Any
 
+import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.api.deps import get_container, require_user_id
+from app.api.errors import AppError
 from app.api.schemas.sessions import HITLReplyRequest, StartSessionRequest
 from app.container import Container
 from app.domain.credits.legacy import CV_GENERATION_COST
+from app.domain.cv.minimums import check_minimums
+from app.domain.cv.profile_to_cv import profile_to_universal_cv
 from app.domain.parsing.input_validator import validate_jd
 from app.services.generation import resume_after_answers, run_new_session
 
 router = APIRouter()
+_log = structlog.get_logger("pipeline")
+
+
+def _pipeline_summary(c: Container, thread_id: str) -> dict[str, Any] | None:
+    """The status poll must not fail because the summary could not be built."""
+    try:
+        summary = c.pipeline.summary(thread_id)
+        return summary.model_dump(mode="json") if summary else None
+    except Exception as exc:
+        _log.error("pipeline.summary_failed", error_type=type(exc).__name__)
+        return None
 
 
 @router.post("/sessions/start")
@@ -39,6 +55,17 @@ def start_session(
     if not profile:
         raise HTTPException(
             status_code=400, detail="Please complete your profile first before generating a CV"
+        )
+
+    # Step 2b — The profile must meet the generation minimums (spec 08 H1)
+    missing = check_minimums(profile_to_universal_cv(profile).cv)
+    if missing:
+        raise AppError(
+            "PROFILE_INCOMPLETE",
+            422,
+            "Profile incomplete",
+            "Add your name, one contact and at least one job or education entry first.",
+            missing=missing,
         )
 
     # Step 3 — Check coin balance
@@ -118,7 +145,7 @@ def hitl_reply(
             c,
             user_id=user_id,
             thread_id=thread_id,
-            user_qna=body.user_qna,
+            reply=body.to_reply(),
         )
     )
 
@@ -143,7 +170,7 @@ def session_status(
     if session["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
-    return session
+    return {**session, "pipeline": _pipeline_summary(c, thread_id)}
 
 
 @router.get("/sessions")

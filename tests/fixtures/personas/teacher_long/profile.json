@@ -1,0 +1,380 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Shirin Example",
+  "email": "shirin@example.com",
+  "phone": "+880 1700-000007",
+  "location": "Rajshahi",
+  "linkedin": "linkedin.com/in/shirin-example",
+  "summary": "Secondary mathematics teacher and school leader with over twenty years of classroom, curriculum and staff development experience across twelve schools.",
+  "skills": {
+    "hard_skills": [
+      "Lesson planning",
+      "Assessment design",
+      "Curriculum development",
+      "Timetabling",
+      "Data-informed teaching"
+    ],
+    "soft_skills": [
+      "Mentoring",
+      "Parent communication",
+      "Team leadership"
+    ],
+    "tools": [
+      "Excel",
+      "Google Classroom"
+    ]
+  },
+  "experience": [
+    {
+      "job_title": "Assistant Teacher (Mathematics)",
+      "company_name": "Example Model School",
+      "employment_type": "full_time",
+      "start_date": "2004-01-01",
+      "end_date": "2005-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 6 to 9 across 3 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 5 percentage points",
+        "Mentored 2 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Assistant Teacher (Mathematics)",
+      "company_name": "Example Girls High School",
+      "employment_type": "full_time",
+      "start_date": "2006-01-01",
+      "end_date": "2007-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 7 to 10 across 4 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 6 percentage points",
+        "Mentored 3 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Senior Teacher (Mathematics)",
+      "company_name": "Example Cantonment College",
+      "employment_type": "full_time",
+      "start_date": "2008-01-01",
+      "end_date": "2009-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 8 to 11 across 5 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 7 percentage points",
+        "Mentored 4 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Senior Teacher (Mathematics)",
+      "company_name": "Example Public School",
+      "employment_type": "full_time",
+      "start_date": "2010-01-01",
+      "end_date": "2011-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 6 to 9 across 6 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 8 percentage points",
+        "Mentored 5 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Mathematics Coordinator",
+      "company_name": "Example Ideal School",
+      "employment_type": "full_time",
+      "start_date": "2012-01-01",
+      "end_date": "2013-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 7 to 10 across 3 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 9 percentage points",
+        "Mentored 6 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Assistant Head of Mathematics",
+      "company_name": "Example Collegiate School",
+      "employment_type": "full_time",
+      "start_date": "2014-01-01",
+      "end_date": "2015-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 8 to 11 across 4 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 10 percentage points",
+        "Mentored 2 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Head of Mathematics",
+      "company_name": "Example Residential School",
+      "employment_type": "full_time",
+      "start_date": "2016-01-01",
+      "end_date": "2017-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 6 to 9 across 5 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 11 percentage points",
+        "Mentored 3 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Head of Mathematics",
+      "company_name": "Example Laboratory School",
+      "employment_type": "full_time",
+      "start_date": "2018-01-01",
+      "end_date": "2019-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 7 to 10 across 6 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 12 percentage points",
+        "Mentored 4 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Academic Coordinator",
+      "company_name": "Example City College",
+      "employment_type": "full_time",
+      "start_date": "2020-01-01",
+      "end_date": "2021-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 8 to 11 across 3 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 13 percentage points",
+        "Mentored 5 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Assistant Headteacher",
+      "company_name": "Example Grammar School",
+      "employment_type": "full_time",
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 6 to 9 across 4 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 14 percentage points",
+        "Mentored 6 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Deputy Headteacher",
+      "company_name": "Example Riverside Academy",
+      "employment_type": "full_time",
+      "start_date": "2024-01-01",
+      "end_date": "2025-12-01",
+      "responsibilities": [
+        "Taught mathematics to grades 7 to 10 across 5 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 15 percentage points",
+        "Mentored 2 newly qualified teachers through their first year"
+      ]
+    },
+    {
+      "job_title": "Head of Secondary",
+      "company_name": "Example International School",
+      "employment_type": "full_time",
+      "start_date": "2026-01-01",
+      "responsibilities": [
+        "Taught mathematics to grades 8 to 11 across 6 sections",
+        "Planned schemes of work aligned with the national curriculum",
+        "Designed and moderated term and annual assessments",
+        "Ran weekly remedial sessions for students below the expected level",
+        "Met parents each term to review progress and set learning targets"
+      ],
+      "achievements": [
+        "Raised the pass rate in secondary mathematics by 16 percentage points",
+        "Mentored 3 newly qualified teachers through their first year"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "MEd",
+      "field_of_study": "Educational Leadership",
+      "institution": "Example University",
+      "graduation_year": 2012,
+      "grade": "First class"
+    },
+    {
+      "degree": "BEd",
+      "institution": "Example Teachers College",
+      "graduation_year": 2003
+    },
+    {
+      "degree": "BSc",
+      "field_of_study": "Mathematics",
+      "institution": "Example University",
+      "graduation_year": 2002,
+      "grade": "3.6 CGPA"
+    }
+  ],
+  "projects": [],
+  "certifications": [
+    {
+      "name": "Certificate in School Leadership",
+      "issuer": "Example Academy",
+      "year": 2015
+    },
+    {
+      "name": "Digital Classroom Practitioner",
+      "issuer": "Example Academy",
+      "year": 2020
+    }
+  ],
+  "domain": "education",
+  "licenses": [],
+  "publications": [
+    {
+      "title": "Group work in secondary mathematics",
+      "journal_or_venue": "Example Education Review",
+      "year": 2010,
+      "authors": "Shirin Example"
+    },
+    {
+      "title": "Formative assessment in large classes",
+      "journal_or_venue": "Example Education Review",
+      "year": 2013,
+      "authors": "Shirin Example, Example Coauthor"
+    },
+    {
+      "title": "Teaching proof to fourteen-year-olds",
+      "journal_or_venue": "Example Mathematics Teacher",
+      "year": 2016,
+      "authors": "Shirin Example"
+    },
+    {
+      "title": "Mentoring new mathematics teachers",
+      "journal_or_venue": "Example Journal of Teacher Development",
+      "year": 2019,
+      "authors": "Shirin Example"
+    },
+    {
+      "title": "Remedial mathematics after school closures",
+      "journal_or_venue": "Example Education Review",
+      "year": 2022,
+      "authors": "Shirin Example, Example Coauthor"
+    }
+  ],
+  "clinical_practice": [],
+  "trade_qualifications": [],
+  "languages": [
+    {
+      "language": "Bangla",
+      "proficiency": "Native"
+    },
+    {
+      "language": "English",
+      "proficiency": "Fluent"
+    }
+  ],
+  "volunteering": [
+    {
+      "organization": "Example Literacy Trust",
+      "role": "Weekend tutor",
+      "start_date": "2008-06-01",
+      "end_date": "2014-12-01",
+      "description": "Tutored children in reading and arithmetic."
+    },
+    {
+      "organization": "Example Maths Olympiad Committee",
+      "role": "Regional coordinator",
+      "start_date": "2015-01-01",
+      "description": "Organised the regional round of the national mathematics olympiad."
+    },
+    {
+      "organization": "Example Teachers Association",
+      "role": "Workshop facilitator",
+      "start_date": "2018-03-01",
+      "description": "Led termly workshops on assessment for member teachers."
+    }
+  ],
+  "awards": [
+    {
+      "title": "Teacher of the Year",
+      "issuer": "Example Model School",
+      "year": 2007
+    },
+    {
+      "title": "District Best Mathematics Teacher",
+      "issuer": "Example District Education Office",
+      "year": 2012
+    },
+    {
+      "title": "Excellence in Mentoring",
+      "issuer": "Example Teachers Association",
+      "year": 2019
+    },
+    {
+      "title": "Outstanding School Leader",
+      "issuer": "Example Education Board",
+      "year": 2024
+    }
+  ],
+  "references_available": true,
+  "experience_summary": {
+    "total_years": 22,
+    "seniority": "lead",
+    "role_type": "Teacher",
+    "relevant_years": 22
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

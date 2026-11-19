@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.adapters.llm._breaker import BreakerRegistry
 from app.adapters.llm._pricing import ModelPrice, PriceTable
-from app.adapters.llm._structured import REPAIR_TEXT
+from app.adapters.llm._structured import REPAIR_TEXT, TRUNCATION_REPAIR_TEXT
 from app.ports.llm import CallMeta, CancelToken, LLMRequest, Message, Route, Usage
 from app.ports.llm_errors import (
     LLMBadRequest,
@@ -175,11 +175,22 @@ def test_empty_text_raises(harness, prices, instant_retry):
         call(harness, prices, instant_retry, req=request(schema=None))
 
 
-def test_max_tokens_structured_raises_truncated(harness, prices, instant_retry):
-    harness.script(h.Truncated('{"answer": "ye'))
-    with pytest.raises(LLMOutputTruncated):
+def test_truncated_then_valid_is_repaired(harness, prices, instant_retry):
+    harness.script(h.Truncated('{"answer": "ye'), h.Ok(VALID))
+    res = call(harness, prices, instant_retry)
+    assert res.repaired is True and res.output == Answer(answer="yes", score=7)
+    bodies = harness.sent_bodies()
+    assert len(bodies) == 2
+    last = bodies[1]["messages"][-1]
+    assert last["role"] == "user" and TRUNCATION_REPAIR_TEXT in last["content"]
+
+
+def test_truncated_twice_raises_truncated(harness, prices, instant_retry):
+    harness.script(h.Truncated('{"answer": "ye'), h.Truncated('{"answer": "y'))
+    with pytest.raises(LLMOutputTruncated) as exc:
         call(harness, prices, instant_retry)
-    assert len(harness.sent_bodies()) == 1
+    assert exc.value.usage is not None and exc.value.usage.input_tokens > 0
+    assert len(harness.sent_bodies()) == 2
 
 
 def test_max_tokens_text_returns_with_stop_reason(harness, prices, instant_retry):
@@ -215,7 +226,7 @@ def test_error_messages_carry_no_prompt_text(harness, prices, instant_retry):
         [h.Timeout()] * 4,
         [h.Refusal()],
         [h.BadRequest()],
-        [h.Truncated(SENTINEL)],
+        [h.Truncated(SENTINEL), h.Truncated(SENTINEL)],
         [h.Ok(SENTINEL), h.Ok(SENTINEL)],
         [h.Empty(), h.Empty()],
     ]

@@ -1,36 +1,48 @@
-import json
-from pathlib import Path
-
-from langgraph.checkpoint.memory import MemorySaver
-
-from app.pipeline.chains import build_chains
+from app.pipeline.checkpoint_types import new_checkpointer
 from app.pipeline.graph import build_graph
-from tests.fakes.fake_chat_model import RoutingFakeChatModel
+from tests.pipeline.helpers import deps_for
 
-FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "pipeline_edges.json"
-LEGACY_NODES = {
-    "quick_extract_jd",
-    "quick_extract_cv",
-    "eligibility_check",
-    "hitl_node",
-    "start_detailed_phase",
-    "detailed_extract_jd",
-    "detailed_extract_cv",
-    "compute_match",
-    "rewrite_cv",
-    "cover_letter_hitl",
-    "generate_cover_letter",
+NODES = {
+    "jd_extract",
+    "cv_snapshot",
+    "eligibility",
+    "gap_questions",
+    "await_answers",
+    "ats_score",
+    "rewrite",
+    "verify_claims",
+    "revise_flagged",
+    "cover_letter_options",
+    "cover_letter",
+}
+EDGES = {
+    ("__start__", "jd_extract", False),
+    ("jd_extract", "cv_snapshot", False),
+    ("cv_snapshot", "eligibility", False),
+    ("eligibility", "gap_questions", True),
+    ("eligibility", "__end__", True),
+    ("gap_questions", "await_answers", False),
+    ("await_answers", "ats_score", False),
+    ("ats_score", "rewrite", True),
+    ("ats_score", "verify_claims", True),
+    ("rewrite", "ats_score", False),
+    ("verify_claims", "revise_flagged", True),
+    ("verify_claims", "cover_letter_options", True),
+    ("revise_flagged", "verify_claims", False),
+    ("cover_letter_options", "cover_letter", True),
+    ("cover_letter_options", "__end__", True),
+    ("cover_letter", "__end__", False),
 }
 
 
 def _graph():
-    return build_graph(build_chains(RoutingFakeChatModel()), MemorySaver()).get_graph()
+    _, deps = deps_for({})
+    return build_graph(deps, new_checkpointer()).get_graph()
 
 
-def test_node_names_match_legacy():
-    assert set(_graph().nodes) - {"__start__", "__end__"} == LEGACY_NODES
+def test_node_names():
+    assert set(_graph().nodes) - {"__start__", "__end__"} == NODES
 
 
-def test_edges_match_legacy():
-    expected = [tuple(p) for p in json.loads(FIXTURE.read_text())]
-    assert sorted((e.source, e.target) for e in _graph().edges) == expected
+def test_edges():
+    assert {(e.source, e.target, e.conditional) for e in _graph().edges} == EDGES

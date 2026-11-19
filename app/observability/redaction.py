@@ -21,6 +21,7 @@ SENSITIVE_KEYS: frozenset[str] = frozenset(
         "job_description",
         "user_resume",
         "user_resume_text",
+        "profile",
         "user_qna",
         "resume_text",
         "cover_letter_text",

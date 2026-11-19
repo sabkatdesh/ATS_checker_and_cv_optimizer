@@ -2,6 +2,36 @@
 
 from datetime import UTC, datetime
 
+# cv_sessions columns in migrations/000_full_schema.sql; writes to anything else must fail.
+LEGACY_SESSION_COLUMNS = frozenset(
+    {
+        "id",
+        "user_id",
+        "thread_id",
+        "job_description",
+        "status",
+        "domain",
+        "template_id",
+        "ats_score",
+        "semantic_score",
+        "improvement_score",
+        "structured_cv",
+        "pdf_url",
+        "eligibility_score",
+        "gaps",
+        "hitl_question",
+        "cover_letter_requested",
+        "cover_letter_tone",
+        "cover_letter_length",
+        "cover_letter_text",
+        "cover_letter_pdf_url",
+        "token_cost_input",
+        "token_cost_output",
+        "created_at",
+        "updated_at",
+    }
+)
+
 
 class MemoryStore:
     def __init__(self):
@@ -69,6 +99,9 @@ class MemoryStore:
 
     def update_session(self, thread_id, updates):
         self._enter("update_session", (thread_id, updates), {})
+        unknown = sorted(set(updates) - LEGACY_SESSION_COLUMNS)
+        if unknown:
+            raise ValueError(f"unknown cv_sessions column(s): {', '.join(unknown)}")
         self.sessions.setdefault(thread_id, {"thread_id": thread_id}).update(updates)
 
     def get_session(self, thread_id):

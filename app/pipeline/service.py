@@ -1,98 +1,113 @@
 """PipelineService: runs, inspects and resumes the compiled graph (implements PipelineRunner)."""
 
+from collections.abc import Mapping
 from typing import Any
 
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Command
 
-from app.pipeline.state import CombinedState
+from app.adapters.llm._sync import run_sync
+from app.pipeline.errors import ErrorCode, NotAwaitingInput, PipelineCancelled, PipelineStepFailed
+from app.pipeline.hooks import NodeHooks, Stage
+from app.pipeline.runs import RunRegistry
+from app.pipeline.state import PipelineState, RunOptions
+from app.pipeline.summary import SessionSummary, summarize
 
 JsonDict = dict[str, Any]
 
 
+def _config(thread_id: str) -> Any:
+    return {"configurable": {"thread_id": thread_id}}
+
+
 class PipelineService:
-    def __init__(self, graph: CompiledStateGraph, max_iterations: int = 2) -> None:
+    def __init__(self, graph: CompiledStateGraph, runs: RunRegistry) -> None:
+        """`runs` must be the registry the graph was built with (`deps.runs`)."""
         self._graph = graph
-        self._max_iterations = max_iterations
+        self._runs = runs
+        # A failed or cancelled node leaves no checkpoint write, so the outcome is kept here.
+        self._failures: dict[str, ErrorCode] = {}
+        self._cancelled: dict[str, Stage] = {}
+
+    def _invoke(self, payload: Any, thread_id: str, hooks: NodeHooks | None) -> JsonDict:
+        self._runs.open(thread_id, hooks)
+        try:
+            run_sync(self._graph.ainvoke(payload, _config(thread_id)))
+        except PipelineStepFailed as failure:
+            self._failures[thread_id] = failure.code
+            raise
+        except PipelineCancelled as cancelled:
+            self._cancelled[thread_id] = cancelled.stage
+            raise
+        finally:
+            self._runs.close(thread_id)
+        self._failures.pop(thread_id, None)
+        self._cancelled.pop(thread_id, None)
+        return dict(self._graph.get_state(_config(thread_id)).values)
 
     def run(
         self,
         *,
         job_description: str,
-        user_resume_text: str,
+        profile: Mapping[str, Any],
         thread_id: str,
-        cover_letter_requested: bool = False,
-        cover_letter_tone: str | None = None,
-        cover_letter_length: str | None = None,
+        options: RunOptions,
+        hooks: NodeHooks | None = None,
     ) -> JsonDict:
-        """Start a fresh pipeline run. Returns final state dict."""
-        config: Any = {"configurable": {"thread_id": thread_id}}
-
-        initial_state: CombinedState = {
-            "job_description": job_description,
-            "user_resume": user_resume_text,
-            "detected_domain": "general",
-            "quick_jd": None,
-            "quick_cv": None,
-            "eligibility_verdict": None,
-            "is_eligible": False,
-            "eligibility_message": None,
-            "structured_jd": None,
-            "structured_cv": None,
-            "final_match": None,
-            "re_write_cv": None,
-            "counter": 0,
-            "max_iterations": self._max_iterations,
-            "gaps_identified": [],
-            "user_qna": None,
-            "hitl_session_id": thread_id,
-            "hitl_awaiting_input": False,
-            "cover_letter_requested": cover_letter_requested,
-            "cover_letter_tone": cover_letter_tone,
-            "cover_letter_length": cover_letter_length,
-            "cover_letter_result": None,
-            "cover_letter_hitl_done": False,
+        """Start a fresh run; returns the state values (paused or finished)."""
+        initial: PipelineState = {
+            "session_id": thread_id,
+            "jd_text": job_description,
+            "profile": dict(profile),
+            "options": options,
+            "passes": 0,
+            "warnings": [],
         }
-
-        return self._graph.invoke(initial_state, config)
+        return self._invoke(initial, thread_id, hooks)
 
     def get_state(self, thread_id: str) -> JsonDict:
-        """Return current pipeline state; checks for HITL pause."""
-        config: Any = {"configurable": {"thread_id": thread_id}}
-        state = self._graph.get_state(config)
-
-        if not state:
-            return {"status": "not_found"}
-
-        is_paused_at_hitl = bool(state.next and "hitl_node" in state.next)
-
+        snapshot = self._graph.get_state(_config(thread_id))
+        interrupts = snapshot.interrupts
         return {
-            "values": state.values,
-            "is_paused_at_hitl": is_paused_at_hitl,
-            "next": list(state.next) if state.next else [],
+            "values": dict(snapshot.values),
+            "next": list(snapshot.next),
+            "interrupt": interrupts[0].value if interrupts else None,
         }
 
-    def resume(self, thread_id: str, user_qna: str) -> JsonDict:
-        """Inject HITL answers and resume execution to completion."""
-        config: Any = {"configurable": {"thread_id": thread_id}}
-        self._graph.update_state(config, {"user_qna": user_qna})
+    def resume(
+        self,
+        thread_id: str,
+        reply: Mapping[str, Any] | str | None,
+        *,
+        hooks: NodeHooks | None = None,
+    ) -> JsonDict:
+        """Answer the gap questions and run to the next pause or the end."""
+        if "await_answers" not in self._graph.get_state(_config(thread_id)).next:
+            raise NotAwaitingInput
+        # langgraph ignores a None resume and misreads {} as a map of interrupt ids; both mean
+        # "nothing to say", which the node turns into skipped answers.
+        return self._invoke(Command(resume=reply or ""), thread_id, hooks)
 
-        for _ in self._graph.stream(None, config):
-            pass
+    def resume_cover_letter(
+        self, thread_id: str, tone: str, length: str, *, hooks: NodeHooks | None = None
+    ) -> JsonDict:
+        return self._invoke(Command(resume={"tone": tone, "length": length}), thread_id, hooks)
 
-        return self._graph.get_state(config).values
+    def cancel(self, thread_id: str) -> bool:
+        """Cancel a running or paused thread; False when there is nothing to cancel.
 
-    def resume_cover_letter(self, thread_id: str, tone: str, length: str) -> JsonDict:
-        """Inject cover letter options (tone+length) and resume execution."""
-        config: Any = {"configurable": {"thread_id": thread_id}}
-        self._graph.update_state(
-            config,
-            {
-                "cover_letter_tone": tone,
-                "cover_letter_length": length,
-            },
+        A paused thread is marked, so its next resume stops before any node runs.
+        """
+        if self._runs.cancel(thread_id):
+            return True
+        if not self._graph.get_state(_config(thread_id)).next:
+            return False
+        self._runs.open(thread_id)
+        return self._runs.cancel(thread_id)
+
+    def summary(self, thread_id: str) -> SessionSummary | None:
+        return summarize(
+            self._graph.get_state(_config(thread_id)).values,
+            self._failures.get(thread_id),
+            self._cancelled.get(thread_id),
         )
-
-        for _ in self._graph.stream(None, config):
-            pass
-
-        return self._graph.get_state(config).values

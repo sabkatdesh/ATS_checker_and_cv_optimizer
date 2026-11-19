@@ -1,11 +1,28 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.api.deps import get_container, require_user_id
+from app.api.errors import AppError
 from app.api.schemas.profiles import ImportCVRequest, ProfileUpdateRequest
 from app.container import Container
-from app.domain.cv.profile_text import ProfileBuilder
+from app.domain.text.invisible import strip_invisible
+from app.services.profile_import import ImportErrorCode, ProfileImportFailed, import_profile
 
 router = APIRouter()
+
+# Constant messages only: never the CV text or the provider's error.
+_IMPORT_ERRORS: dict[ImportErrorCode, tuple[int, str, str]] = {
+    "CV_IMPORT_FAILED": (
+        422,
+        "CV import failed",
+        "We could not read this CV. Please check the text and try again.",
+    ),
+    "CONTENT_REFUSED": (422, "CV import refused", "This CV text could not be processed."),
+    "LLM_UNAVAILABLE": (
+        503,
+        "CV import unavailable",
+        "CV import is temporarily unavailable. Please try again shortly.",
+    ),
+}
 
 
 @router.get("/profile")
@@ -39,7 +56,7 @@ def update_profile(
 
 
 @router.post("/profile/import-cv")
-def import_cv(
+async def import_cv(
     body: ImportCVRequest, authorization: str = Header(None), c: Container = Depends(get_container)
 ):
     """
@@ -48,7 +65,7 @@ def import_cv(
     """
     require_user_id(c, authorization)
 
-    cv_text = body.cv_text.strip()
+    cv_text = strip_invisible(body.cv_text).strip()
     if len(cv_text) < 100:
         raise HTTPException(status_code=400, detail="CV text is too short to parse.")
     if len(cv_text) > 15000:
@@ -57,25 +74,8 @@ def import_cv(
         )
 
     try:
-        from app.domain.cv.universal_cv import UniversalCVStructured
-
-        client = c.make_llm_client()
-        prompt = (
-            "Extract all information from the following CV into the structured JSON format. "
-            "Fill every field you can find. Use the domain field to classify the profession "
-            "(tech/medical/education/trades/finance/legal/creative/general). "
-            "Return only the JSON object — no extra text.\n\n"
-            f"CV TEXT:\n{cv_text}"
-        )
-        structured: UniversalCVStructured = client.invoke_structured(prompt, UniversalCVStructured)
-
-        # Detect domain if LLM left it as GENERAL
-        raw = structured.model_dump()
-        if raw.get("domain") == "general":
-            detected = ProfileBuilder.detect_domain(raw).value
-            raw["domain"] = detected
-
-        return {"profile": raw}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CV parsing failed: {str(e)}") from None
+        structured = await import_profile(c.llm, c.prompts, cv_text)
+    except ProfileImportFailed as err:
+        status, title, detail = _IMPORT_ERRORS[err.code]
+        raise AppError(err.code, status, title, detail) from None
+    return {"profile": structured.model_dump(mode="json")}

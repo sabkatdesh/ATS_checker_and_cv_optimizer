@@ -1,22 +1,35 @@
-"""The legacy pipeline end to end on the real container, router and fake provider: no network."""
+"""The pipeline end to end on the real container, router and fake provider: no network."""
 
+import asyncio
+import json
 import socket
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.adapters.background.inline_runner import InlineRunner
 from app.config.settings import AppSettings
-from app.container import LEGACY_CHAIN_ROUTES, Container
+from app.container import Container
 from app.domain.cv.rewrite import RewrittenCV
 from app.main import create_app
+from app.pipeline.state import RunOptions
+from app.services.profile_import import import_profile
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, FakeAuth
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_store import MemoryStore
 
 _LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+_PROFILE = Path(__file__).resolve().parents[1] / "fixtures" / "profiles" / "jane_example.json"
+
+
+def _profile() -> dict:
+    """The saved profile behind the fake provider's canned rewrite (Jane Example)."""
+    return json.loads(_PROFILE.read_text(encoding="utf-8"))
+
+
 JD = (
     "About the role: we are hiring a senior Python engineer to join our team. "
     "Responsibilities include building backend services. Requirements: five years of experience, "
@@ -53,64 +66,58 @@ def container() -> Container:
     )
 
 
-def _run(c: Container, tid: str = "t1", **kw: object) -> None:
+def _run(c: Container, tid: str = "t1", options: RunOptions | None = None) -> None:
     c.pipeline.run(
-        job_description=JD, user_resume_text="Jane Doe, Python engineer.", thread_id=tid, **kw
-    )  # type: ignore[arg-type]
+        job_description=JD,
+        profile=_profile(),
+        thread_id=tid,
+        options=options or RunOptions(),
+    )
+
+
+COVER = RunOptions(cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
+STEPS = {
+    "jd_extract",
+    "eligibility",
+    "gap_questions",
+    "rewrite",
+    "verify_claims",
+    "cover_letter",
+}
 
 
 def test_full_pipeline_runs_offline_on_fake_provider(container):
     _run(container)
     state = container.pipeline.get_state("t1")
-    assert state["next"] == ["hitl_node"]
+    assert state["next"] == ["await_answers"]
+    assert state["interrupt"]["type"] == "gap_questions"
     final = container.pipeline.resume("t1", "I have used Kubernetes for two years.")
-    # The legacy graph stores the rewrite in structured_cv (re_write_cv is never written).
-    assert isinstance(final["structured_cv"], RewrittenCV)
-    assert final["counter"] >= 1
-    assert final["final_match"] is not None
+    assert isinstance(final["tailored_cv"], RewrittenCV)
+    assert final["passes"] >= 1
+    assert final["ats"] is not None
     assert container.pipeline.get_state("t1")["next"] == []
 
 
 def test_cover_letter_path_offline(container):
-    _run(
-        container,
-        cover_letter_requested=True,
-        cover_letter_tone="formal",
-        cover_letter_length="short",
-    )
+    _run(container, options=COVER)
     final = container.pipeline.resume("t1", "answers")
-    assert final["cover_letter_result"] is not None
-    assert final["cover_letter_result"].opening_paragraph != (
-        "I am excited to apply for this position."
-    )
+    assert final["cover_letter"] is not None
+    assert final["cover_letter"].opening_paragraph.startswith("Cutting document processing")
 
 
-def test_usage_records_cover_every_legacy_prompt(container):
-    _run(
-        container,
-        cover_letter_requested=True,
-        cover_letter_tone="formal",
-        cover_letter_length="short",
-    )
+def test_usage_records_cover_every_pipeline_step(container):
+    _run(container, options=COVER)
     container.pipeline.resume("t1", "answers")
-    container.make_llm_client().invoke_structured("x" * 120, _profile_schema())
+    asyncio.run(import_profile(container.llm, container.prompts, "x" * 120))
     recs = container.usage_sink.records()  # type: ignore[attr-defined]
-    expected = {f"legacy.{chain}" for chain in LEGACY_CHAIN_ROUTES} | {"legacy.profile_import"}
-    assert {r.prompt_id for r in recs} == expected
+    assert {r.prompt_id for r in recs} == STEPS | {"profile_import"}
     assert all(r.provider == "fake" and r.status == "ok" for r in recs)
     assert all(r.cost_usd == Decimal(0) for r in recs)
-    steps = {r.prompt_id: r.step for r in recs}
-    assert all(steps[f"legacy.{c}"] == s for c, s in LEGACY_CHAIN_ROUTES.items())
-
-
-def _profile_schema():
-    from app.domain.cv.universal_cv import UniversalCVStructured
-
-    return UniversalCVStructured
+    assert all(r.step == r.prompt_id for r in recs)
 
 
 def test_api_start_and_reply_offline(container):
-    container.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Jane Doe"}
+    container.store.profiles[USER_A] = {"user_id": USER_A, **_profile()}
     container.store.balances[USER_A] = 5
     client = TestClient(create_app(container), raise_server_exceptions=False)
     r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())
@@ -124,8 +131,9 @@ def test_api_start_and_reply_offline(container):
     assert r.status_code == 200
     assert r.json()["status"] == "complete"
     assert r.json()["pdf_url"]
+    assert r.json()["pipeline"]["jd"]["title"] == "Backend Engineer"
     values = container.pipeline.get_state(tid)["values"]
-    assert isinstance(values["structured_cv"], RewrittenCV) and values["counter"] >= 1
+    assert isinstance(values["tailored_cv"], RewrittenCV) and values["passes"] >= 1
     assert FakePdfRenderer.calls
 
 

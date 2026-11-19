@@ -1,0 +1,103 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Karim Example",
+  "email": "karim@example.com",
+  "phone": "+880 1700-000003",
+  "location": "Gazipur",
+  "summary": "Industrial electrician with seven years of wiring, panel and maintenance work.",
+  "skills": {
+    "hard_skills": [
+      "Industrial wiring",
+      "Panel installation",
+      "Fault finding"
+    ],
+    "tools": [
+      "Multimeter",
+      "Insulation tester"
+    ]
+  },
+  "experience": [
+    {
+      "job_title": "Senior Electrician",
+      "company_name": "Example Garments Ltd",
+      "start_date": "2020-02-01",
+      "responsibilities": [
+        "Maintained factory distribution panels",
+        "Led a team of three electricians"
+      ]
+    },
+    {
+      "job_title": "Electrician",
+      "company_name": "Example Builders",
+      "start_date": "2017-01-01",
+      "end_date": "2020-01-31",
+      "responsibilities": [
+        "Installed wiring in residential buildings"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "SSC",
+      "institution": "Example High School",
+      "graduation_year": 2014
+    }
+  ],
+  "projects": [],
+  "certifications": [
+    {
+      "name": "Occupational Safety Basics",
+      "issuer": "Example Safety Institute",
+      "year": 2021
+    },
+    {
+      "name": "Working at Heights",
+      "issuer": "Example Safety Institute",
+      "year": 2022
+    }
+  ],
+  "domain": "trades",
+  "licenses": [
+    {
+      "name": "Electrical Supervisor Licence",
+      "issuing_body": "Example Licensing Board",
+      "license_number": "EX-0001",
+      "valid_until": "Active"
+    }
+  ],
+  "publications": [],
+  "clinical_practice": [],
+  "trade_qualifications": [
+    {
+      "qualification": "NC-3 Electrical Installation",
+      "certifying_body": "Example Technical Board",
+      "year": 2016
+    },
+    {
+      "qualification": "NC-2 Electrical Installation",
+      "certifying_body": "Example Technical Board",
+      "year": 2015
+    }
+  ],
+  "languages": [
+    {
+      "language": "Bangla",
+      "proficiency": "Native"
+    }
+  ],
+  "volunteering": [],
+  "awards": [],
+  "references_available": false,
+  "experience_summary": {
+    "total_years": 7,
+    "seniority": "senior",
+    "role_type": "IC",
+    "relevant_years": 7
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

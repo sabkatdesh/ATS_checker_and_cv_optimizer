@@ -121,13 +121,10 @@ def test_no_skills_invented_marker():
         "Never invent job titles, dates, metrics, company names, certifications, "
         "or technologies that are not already present in the user's profile."
     )
-    from app.pipeline.prompts import REWRITE_PROMPT
+    from app.pipeline.prompts.loader import PromptLibrary
 
-    prompt_text = REWRITE_PROMPT.template
+    prompt_text = PromptLibrary().get("rewrite").system
     assert any(
         keyword in prompt_text.lower()
-        for keyword in ["never invent", "do not invent", "evidence-only", "fabricat"]
-    ), (
-        "REWRITE_PROMPT must contain an explicit anti-hallucination instruction. "
-        "Check core/pipeline/prompts.py."
-    )
+        for keyword in ["never invent", "never add", "do not invent", "evidence only", "fabricat"]
+    ), "rewrite.md must contain an explicit anti-hallucination instruction."

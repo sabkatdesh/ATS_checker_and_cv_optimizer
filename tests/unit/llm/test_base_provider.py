@@ -191,11 +191,11 @@ def test_refusal_not_retried_not_repaired() -> None:
     assert "help" not in str(ei.value)
 
 
-def test_structured_max_tokens_is_truncated_without_repair() -> None:
-    t = Script(ok('{"x": ', stop="max_tokens"))
+def test_structured_max_tokens_twice_is_truncated_after_one_repair() -> None:
+    t = Script(ok('{"x": ', stop="max_tokens"), ok('{"x": ', stop="max_tokens"))
     with pytest.raises(LLMOutputTruncated):
         call(provider(t), route())
-    assert len(t.wires) == 1
+    assert len(t.wires) == 2
 
 
 def test_text_output_empty_invalid_and_max_tokens_returned() -> None:

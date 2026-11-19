@@ -1,101 +1,54 @@
-"""Cover letter nodes: options HITL, gate and generation."""
-
-from __future__ import annotations
+"""Write the cover letter from the tailored CV; invented contacts and markup are removed."""
 
 from typing import Any
 
-import structlog
-from langgraph.types import interrupt
-
 from app.domain.cv.cover_letter import CoverLetterStructured
-from app.domain.parsing.safe_parser import safe_llm_parse
-from app.pipeline.chains import Chains
-from app.pipeline.nodes._helpers import _safe_json
-from app.pipeline.state import CombinedState
+from app.domain.cv.output_checks import scrub_contacts, strip_markup
+from app.pipeline.blocks import DataTag
+from app.pipeline.context import RunContext
+from app.pipeline.deps import PipelineDeps
+from app.pipeline.llm_call import call_step
+from app.pipeline.policy import run_optional, skip_warning
+from app.pipeline.state import PipelineState, RunOptions
+from app.pipeline.warnings import PipelineWarning
 
-log = structlog.get_logger(__name__)
+_WORD_TARGETS = {"short": 150, "standard": 300}
+_REWRITE_NOTES = {"change_log", "gaps_unaddressed"}
 
 
-def cover_letter_hitl_node(state: CombinedState) -> dict[str, Any]:
-    """
-    Second HITL interrupt: pauses so the user can confirm tone + length.
-    - If cover_letter_requested=False -> sets hitl_done=False, graph routes to END.
-    - If tone+length already set -> sets hitl_done=True, graph routes to generate.
-    - Otherwise -> interrupts pipeline, waiting for POST /cover-letter-options.
-    """
-    if not state.get("cover_letter_requested"):
-        return {"cover_letter_hitl_done": False}
+def _blocks(state: PipelineState) -> list[tuple[DataTag, str]]:
+    cv = state["tailored_cv"]
+    blocks: list[tuple[DataTag, str]] = [
+        ("cv", cv.model_dump_json(exclude=_REWRITE_NOTES)),
+        ("job_requirements", state["jd"].model_dump_json()),
+    ]
+    if cv.gaps_unaddressed:
+        blocks.append(("gaps", "\n".join(f"- {gap}" for gap in cv.gaps_unaddressed)))
+    return blocks
 
-    tone = state.get("cover_letter_tone")
-    length = state.get("cover_letter_length")
 
-    if tone and length:
-        log.info("pipeline.stage", stage="cover_letter_hitl", tone=tone, length=length)
-        return {"cover_letter_hitl_done": True}
-
-    log.info("pipeline.stage", stage="cover_letter_hitl_paused")
-
-    interrupt(
-        {
-            "type": "cover_letter_options",
-            "message": (
-                "Choose cover letter options:\n"
-                "  tone:   'formal' or 'conversational'\n"
-                "  length: 'short' (~150 words) or 'standard' (~300 words)"
-            ),
-        }
+async def cover_letter(
+    state: PipelineState, *, deps: PipelineDeps, ctx: RunContext
+) -> dict[str, Any]:
+    options = state.get("options", RunOptions())
+    tone = options.cover_letter_tone or "formal"
+    length = options.cover_letter_length or "standard"
+    letter = await run_optional(
+        "cover_letter",
+        call_step(
+            deps,
+            ctx,
+            step="cover_letter",
+            schema=CoverLetterStructured,
+            blocks=_blocks(state),
+            task_params={"tone": tone, "length": length, "word_target": _WORD_TARGETS[length]},
+        ),
     )
-
-    return {"cover_letter_hitl_done": True}
-
-
-def check_cover_letter_gate(state: CombinedState) -> str:
-    """Conditional edge after cover_letter_hitl: route to generate or END."""
-    return "generate" if state.get("cover_letter_hitl_done") else "done"
-
-
-def _fallback_cover_letter() -> CoverLetterStructured:
-    return CoverLetterStructured(
-        salutation="Dear Hiring Manager,",
-        opening_paragraph="I am excited to apply for this position.",
-        body_paragraphs=[],
-        closing_paragraph="Thank you for your consideration.",
-        sign_off="Sincerely,",
-    )
-
-
-def generate_cover_letter_node(state: CombinedState, *, chains: Chains) -> dict[str, Any]:
-    """Generate the cover letter using the LLM."""
-    tone = state.get("cover_letter_tone") or "formal"
-    length = state.get("cover_letter_length") or "standard"
-    word_target = 150 if length == "short" else 300
-
-    structured_cv = state.get("structured_cv")
-    structured_jd = state.get("structured_jd")
-    gaps = state.get("gaps_identified", [])
-
-    log.info(
-        "pipeline.stage",
-        stage="generate_cover_letter",
-        tone=tone,
-        length=length,
-        word_target=word_target,
-    )
-
-    raw = chains.cover_letter.invoke(
-        {
-            "tone": tone,
-            "length": length,
-            "word_target": word_target,
-            "cv_text": _safe_json(structured_cv) if structured_cv else state.get("user_resume", ""),
-            "jd_text": _safe_json(structured_jd)
-            if structured_jd
-            else state.get("job_description", ""),
-            "gaps": "\n".join(f"- {g}" for g in gaps) if gaps else "None",
-        }
-    )
-
-    result = safe_llm_parse(raw, CoverLetterStructured, _fallback_cover_letter())
-    log.info("pipeline.stage", stage="generate_cover_letter_done")
-
-    return {"cover_letter_result": result}
+    if letter is None:
+        return {"cover_letter": None, "warnings": [skip_warning("cover_letter")]}
+    source = state.get("source_cv") or state["tailored_cv"]
+    letter, removed = scrub_contacts(strip_markup(letter), source)
+    if removed:
+        warning = PipelineWarning(code="FOREIGN_CONTACT_REMOVED", step="cover_letter")
+        return {"cover_letter": letter, "warnings": [warning]}
+    return {"cover_letter": letter}

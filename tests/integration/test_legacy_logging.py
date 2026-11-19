@@ -15,14 +15,21 @@ JD = (
 def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplog):  # noqa: F811
     from types import SimpleNamespace
 
+    from app.domain.ats.schemas import AtsMatch
+
     FakePdfRenderer.raise_on_render = RuntimeError("render failed")
-    backend.store.profiles[USER_A] = {"user_id": USER_A, "full_name": "Test Person"}
+    backend.store.profiles[USER_A] = {
+        "user_id": USER_A,
+        "full_name": "Test Person",
+        "email": "test@example.com",
+        "education": [{"degree": "BSc"}],
+    }
     backend.pipeline.next_nodes = []
     backend.pipeline.result = {
-        "is_eligible": True,
-        "final_match": {"overall_score": 82},
-        "eligibility_verdict": SimpleNamespace(score=70),
-        "structured_cv": {"full_name": "Test Person"},
+        "eligible": True,
+        "ats": AtsMatch(applies=True, score=82),
+        "eligibility": SimpleNamespace(score=70),
+        "tailored_cv": {"full_name": "Test Person"},
     }
     with caplog.at_level(logging.ERROR):
         r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())

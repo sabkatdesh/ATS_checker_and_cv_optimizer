@@ -1,4 +1,10 @@
-from typing import Any, Protocol
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from app.pipeline.hooks import NodeHooks
+    from app.pipeline.state import RunOptions
+    from app.pipeline.summary import SessionSummary
 
 JsonDict = dict[str, Any]
 
@@ -8,15 +14,26 @@ class PipelineRunner(Protocol):
         self,
         *,
         job_description: str,
-        user_resume_text: str,
+        profile: Mapping[str, Any],
         thread_id: str,
-        cover_letter_requested: bool = False,
-        cover_letter_tone: str | None = None,
-        cover_letter_length: str | None = None,
+        options: "RunOptions",
+        hooks: "NodeHooks | None" = None,
     ) -> JsonDict: ...
 
-    def get_state(self, thread_id: str) -> JsonDict: ...
+    def get_state(self, thread_id: str) -> JsonDict: ...  # {"values", "next", "interrupt"}
 
-    def resume(self, thread_id: str, user_qna: str) -> JsonDict: ...
+    def resume(
+        self,
+        thread_id: str,
+        reply: Mapping[str, Any] | str | None,
+        *,
+        hooks: "NodeHooks | None" = None,
+    ) -> JsonDict: ...
 
-    def resume_cover_letter(self, thread_id: str, tone: str, length: str) -> JsonDict: ...
+    def resume_cover_letter(
+        self, thread_id: str, tone: str, length: str, *, hooks: "NodeHooks | None" = None
+    ) -> JsonDict: ...
+
+    def summary(self, thread_id: str) -> "SessionSummary | None": ...
+
+    def cancel(self, thread_id: str) -> bool: ...

@@ -1,0 +1,86 @@
+{
+  "id": 1,
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "full_name": "Tanvir Example",
+  "email": "tanvir@example.com",
+  "phone": "+880 1700-000005",
+  "location": "Dhaka",
+  "linkedin": "linkedin.com/in/tanvir-example",
+  "summary": "Credit analyst with five years in SME lending. ক্রেডিট বিশ্লেষণে পাঁচ বছরের অভিজ্ঞতা।",
+  "skills": {
+    "hard_skills": [
+      "Credit analysis",
+      "Financial statement analysis",
+      "Loan structuring"
+    ],
+    "tools": [
+      "Excel",
+      "SQL"
+    ]
+  },
+  "experience": [
+    {
+      "job_title": "Senior Officer, SME Credit",
+      "company_name": "Example Bank PLC",
+      "start_date": "2021-07-01",
+      "responsibilities": [
+        "Assessed SME loan proposals",
+        "এসএমই ঋণ প্রস্তাব যাচাই করেছি"
+      ],
+      "achievements": [
+        "Kept the portfolio non-performing ratio under 3%"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "MBA",
+      "field_of_study": "Finance",
+      "institution": "Example University",
+      "graduation_year": 2019
+    }
+  ],
+  "projects": [],
+  "certifications": [
+    {
+      "name": "Banking Diploma Part 1",
+      "issuer": "Example Institute of Bankers",
+      "year": 2022
+    }
+  ],
+  "domain": "finance",
+  "licenses": [],
+  "publications": [],
+  "clinical_practice": [],
+  "trade_qualifications": [],
+  "languages": [
+    {
+      "language": "Bangla",
+      "proficiency": "Native"
+    },
+    {
+      "language": "English",
+      "proficiency": "Professional"
+    }
+  ],
+  "volunteering": [],
+  "awards": [
+    {
+      "title": "Best SME Desk",
+      "issuer": "Example Bank PLC",
+      "year": 2023
+    }
+  ],
+  "references_available": false,
+  "experience_summary": {
+    "total_years": 5,
+    "seniority": "mid",
+    "role_type": "IC",
+    "relevant_years": 5
+  },
+  "preferred_template": "classic",
+  "accent_color": "#4361ee",
+  "bangla_mode": false,
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-01-01T00:00:00+00:00"
+}

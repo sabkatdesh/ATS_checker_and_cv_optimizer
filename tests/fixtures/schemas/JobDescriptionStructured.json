@@ -188,6 +188,18 @@
   },
   "description": "Full structured JD used for ATS scoring and rewriting.",
   "properties": {
+    "application_email": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Application Email"
+    },
     "company_name": {
       "anyOf": [
         {
@@ -199,6 +211,19 @@
       ],
       "default": null,
       "title": "Company Name"
+    },
+    "deadline": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deadline"
     },
     "domain": {
       "$ref": "#/$defs/Domain",
@@ -233,6 +258,13 @@
       ],
       "default": null,
       "title": "Job Title"
+    },
+    "keywords": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Keywords",
+      "type": "array"
     },
     "location": {
       "anyOf": [

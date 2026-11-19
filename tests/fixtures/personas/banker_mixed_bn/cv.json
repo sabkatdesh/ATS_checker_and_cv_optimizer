@@ -1,0 +1,26 @@
+{
+  "domain": "finance",
+  "meta": {
+    "full_name": "Tanvir Example",
+    "location": "Dhaka",
+    "email": "tanvir@example.com",
+    "phone": "+880 1700-000005",
+    "linkedin": "linkedin.com/in/tanvir-example"
+  },
+  "professional_summary": "Credit analyst with five years in SME lending. ক্রেডিট বিশ্লেষণে পাঁচ বছরের অভিজ্ঞতা।",
+  "skills": {"hard_skills": ["Credit analysis", "Financial statement analysis", "Loan structuring"], "tools": ["Excel", "SQL"]},
+  "experience_summary": {"total_years": 5, "seniority": "mid", "role_type": "IC", "relevant_years": 5},
+  "work_experience": [
+    {
+      "job_title": "Senior Officer, SME Credit",
+      "company_name": "Example Bank PLC",
+      "start_date": "2021-07-01",
+      "responsibilities": ["Assessed SME loan proposals", "এসএমই ঋণ প্রস্তাব যাচাই করেছি"],
+      "achievements": ["Kept the portfolio non-performing ratio under 3%"]
+    }
+  ],
+  "education": [{"degree": "MBA", "field_of_study": "Finance", "institution": "Example University", "graduation_year": 2019}],
+  "certifications": [{"name": "Banking Diploma Part 1", "issuer": "Example Institute of Bankers", "year": 2022}],
+  "languages": [{"language": "Bangla", "proficiency": "Native"}, {"language": "English", "proficiency": "Professional"}],
+  "awards": [{"title": "Best SME Desk", "issuer": "Example Bank PLC", "year": 2023}]
+}
