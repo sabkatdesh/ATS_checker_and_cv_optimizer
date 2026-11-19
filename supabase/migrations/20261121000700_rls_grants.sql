@@ -33,6 +33,10 @@ revoke all on all tables in schema public from anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 alter default privileges in schema public revoke all on functions from public, anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
+revoke all on all functions in schema public from public, anon, authenticated;
+grant usage, select on all sequences in schema public to app_backend;
+alter default privileges in schema public grant usage, select on sequences to app_backend;
 
 -- Credit tables: no direct DML for anyone but the owner/definer functions, and
 -- no TRUNCATE (it bypasses the append-only row trigger on the ledger).

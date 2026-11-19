@@ -151,3 +151,35 @@ def test_no_lg_grants_to_client_roles():
     for g in sqlscan.grants(ALL_SQL):
         if re.search(r"\blg\b", g):
             assert not re.search(r"\b(anon|authenticated|public)\b", g.split(" to ")[-1], re.I), g
+
+
+def test_backend_has_sequence_privileges():
+    assert re.search(
+        r"grant usage, select on all sequences in schema public to app_backend;", ALL_SQL, re.I
+    )
+    assert re.search(
+        r"alter default privileges in schema public grant usage, select on sequences "
+        r"to app_backend;",
+        ALL_SQL,
+        re.I,
+    )
+    serial = [
+        t
+        for _, sql in MIGRATIONS
+        for t in sqlscan.tables(sql)
+        if re.search(
+            r"bigserial|generated\s+\w+\s+as\s+identity", sqlscan.table_block(sql, t), re.I
+        )
+    ]
+    assert serial, "expected tables with serial/identity ids"
+
+
+def test_client_roles_revoked_from_existing_sequences_and_functions():
+    assert re.search(
+        r"revoke all on all sequences in schema public from anon, authenticated;", ALL_SQL, re.I
+    )
+    assert re.search(
+        r"revoke all on all functions in schema public from public, anon, authenticated;",
+        ALL_SQL,
+        re.I,
+    )
