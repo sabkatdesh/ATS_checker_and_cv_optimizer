@@ -51,7 +51,7 @@ def test_credit_functions_definer_and_revoked():
 
 def test_credit_functions_idempotent_ledger_and_lock():
     sql = " ".join(_sql("_credit_functions.sql").lower().split())
-    assert sql.count("on conflict (idempotency_key) do nothing") >= 5
+    assert sql.count("on conflict (idempotency_key) do nothing") >= 3
     for code in ("insufficient_credits", "invalid_amount", "reservation_settled"):
         assert code in sql
     assert "for update" in sql
@@ -82,3 +82,46 @@ def test_user_email_verified_backend_only():
         in sql
     )
     assert len(sqlscan.definer_functions(_sql("_auth_hooks.sql"))) == 3
+
+
+def _fn(name: str) -> str:
+    sql = " ".join(_sql("_credit_functions.sql").lower().split())
+    start = sql.index(f"create or replace function public.{name}(")
+    nxt = sql.find("create or replace function", start + 10)
+    return sql[start : nxt if nxt != -1 else len(sql)]
+
+
+FUNCS = ("credits_grant", "credits_reserve", "credits_settle", "credits_tier_upgrade")
+
+
+def test_null_key_guard_in_all_functions():
+    for name in FUNCS:
+        body = _fn(name)
+        assert "if p_idem is null or btrim(p_idem) = '' then" in body, name
+        assert "'invalid_idempotency_key'" in body.lower(), name
+
+
+def test_null_argument_guards():
+    assert "p_user is null" in _fn("credits_grant")
+    for name in ("credits_reserve", "credits_tier_upgrade"):
+        assert "p_user is null" in _fn(name) and "p_session is null" in _fn(name), name
+    assert "p_reservation is null" in _fn("credits_settle")
+    assert "'invalid_kind'" in _fn("credits_grant")
+
+
+def test_replay_verifies_same_operation():
+    assert "v_old_kind is distinct from p_kind" in _fn("credits_grant")
+    assert "v_old_kind is distinct from 'reserve'" in _fn("credits_reserve")
+    assert "v_old_kind is distinct from 'tier_upgrade'" in _fn("credits_tier_upgrade")
+    for name in ("credits_grant", "credits_reserve", "credits_tier_upgrade"):
+        assert "v_old_user is distinct from p_user" in _fn(name), name
+        assert "'idempotency_mismatch'" in _fn(name), name
+
+
+def test_settle_inserts_do_not_swallow_conflicts():
+    body = _fn("credits_settle")
+    assert "on conflict" not in body
+    assert "if p_capture > 0 then" in body
+    assert "if v_amount - p_capture > 0 then" in body
+    assert body.count("for update") == 2
+    assert "'reservation_not_found'" in body
