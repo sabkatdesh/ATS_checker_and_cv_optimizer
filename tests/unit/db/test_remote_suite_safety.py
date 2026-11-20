@@ -97,7 +97,7 @@ def test_preflight_exits_when_role_is_unsafe() -> None:
 
     with pytest.raises(pytest.exit.Exception) as exc:
         preflight(True, _env, probe, ref=REF)
-    assert str(exc.value) == ROLE_MESSAGE
+    assert str(exc.value).startswith(ROLE_MESSAGE)
 
 
 def test_preflight_passes_for_dev_app_backend() -> None:

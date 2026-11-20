@@ -95,8 +95,14 @@ def role_problem(row: Mapping[str, Any] | None) -> str | None:
 
 def check_backend_role(conn: Any) -> None:
     """Raise UnsafeTarget unless conn is app_backend: not superuser, owning no table."""
-    if role_problem(conn.execute(ROLE_SQL).fetchone()):
-        raise UnsafeTarget(ROLE_MESSAGE)
+    row = conn.execute(ROLE_SQL).fetchone()
+    problem = role_problem(row)
+    if problem:
+        err = UnsafeTarget(ROLE_MESSAGE)
+        # role names and a fixed label only: never a DSN, password or key
+        names = f"current={row.get('role')}, session={row.get('session_role')}" if row else ""
+        err.reason = f"{problem}; {names}" if names else problem  # type: ignore[attr-defined]
+        raise err
 
 
 def preflight(
@@ -119,8 +125,9 @@ def preflight(
         pytest.exit(PROJECT_MESSAGE, returncode=2)
     try:
         probe(env)
-    except UnsafeTarget:
-        pytest.exit(ROLE_MESSAGE, returncode=2)
+    except UnsafeTarget as exc:
+        reason = getattr(exc, "reason", "")
+        pytest.exit(f"{ROLE_MESSAGE} ({reason})" if reason else ROLE_MESSAGE, returncode=2)
     except (psycopg.OperationalError, httpx.TransportError, TimeoutError, OSError):
         pytest.exit(PAUSED_MESSAGE, returncode=2)
     return env
