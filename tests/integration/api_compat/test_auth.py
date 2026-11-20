@@ -17,7 +17,6 @@ PROTECTED = [
     ("POST", "/settings", {"accent_color": "#112233"}),
     ("GET", "/billing/balance", None),
     ("GET", "/billing/history", None),
-    ("POST", "/billing/add-coins", {"amount": 1}),
 ]
 
 
@@ -26,7 +25,7 @@ def test_protected_route_without_header_is_401(client, backend, method, path, bo
     r = client.request(method, path, json=body)
     assert r.status_code == 401
     assert r.json() == {"detail": "Not logged in"}
-    assert backend.store.calls == []
+    assert backend.sessions.calls == []
     assert backend.pipeline.calls == []
 
 

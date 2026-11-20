@@ -17,8 +17,7 @@ CV = {"full_name": "Test Person"}
 
 
 def _run(client, backend, result, profile=None):
-    backend.store.profiles[USER_A] = {
-        "user_id": USER_A,
+    backend.master_profiles.default[USER_A] = {
         "full_name": "Test Person",
         "email": "test@example.com",
         "education": [{"degree": "BSc"}],
@@ -29,7 +28,12 @@ def _run(client, backend, result, profile=None):
     r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())
     assert r.status_code == 200
     tid = r.json()["thread_id"]
-    return tid, backend.store.sessions[tid]
+    status = client.get(f"/sessions/{tid}/status", headers=auth_header()).json()
+    return tid, status
+
+
+def _signed(tid, kind):
+    return f"https://signed.test/renders/user-a/{tid}/{kind}.pdf?ttl=600"
 
 
 def _eligible(**extra):
@@ -53,8 +57,9 @@ def test_ineligible(client, backend):
     assert row["status"] == "ineligible"
     assert row["eligibility_score"] == 20
     assert backend.storage.objects == {}
+    assert backend.renders.rows == {}
     assert FakePdfRenderer.calls == []
-    assert not [c for c in backend.store.calls if c[0] == "deduct_coins"]
+    assert backend.credits.ledger_rows == []
 
 
 def test_complete_cv_only(client, backend):
@@ -62,7 +67,8 @@ def test_complete_cv_only(client, backend):
     assert row["status"] == "complete"
     assert row["ats_score"] == 82
     assert row["eligibility_score"] == 70
-    assert row["pdf_url"] == f"user-a/{tid}/cv.pdf"
+    assert row["pdf_url"] == _signed(tid, "cv")
+    assert row["domain"] == "tech"
     assert row["cover_letter_text"] is None
     assert row["cover_letter_pdf_url"] is None
     assert FakePdfRenderer.calls == [
@@ -77,8 +83,20 @@ def test_complete_cv_only(client, backend):
             },
         )
     ]
-    deducts = [c for c in backend.store.calls if c[0] == "deduct_coins"]
-    assert [c[1] for c in deducts] == [(USER_A, 0, f"CV generation - thread {tid}")]
+    assert backend.credits.ledger_rows == []  # generation is free until M5
+
+
+def test_complete_records_a_render_row_keyed_by_content_hash(client, backend):
+    import hashlib
+
+    tid, _ = _run(client, backend, _eligible())
+    stored = backend.sessions.raw(tid)
+    render = backend.renders.rows[stored["current_render_id"]]
+    data, _ = backend.storage.objects[("renders", f"user-a/{tid}/cv.pdf")]
+    assert render["content_hash"] == hashlib.sha256(data).hexdigest()
+    assert (render["user_id"], render["session_id"]) == (USER_A, tid)
+    assert render["pdf_path"] == f"user-a/{tid}/cv.pdf"
+    assert render["template_id"] == "classic"
 
 
 def test_complete_uses_profile_template(client, backend):
@@ -114,7 +132,9 @@ def test_complete_with_cover_letter(client, backend):
     assert render[2]["candidate_name"] == "Test Person"
     assert row["status"] == "complete"
     assert row["cover_letter_text"] == "PLAIN COVER LETTER"
-    assert row["cover_letter_pdf_url"] == f"user-a/{tid}/cover_letter.pdf"
+    assert row["cover_letter_pdf_url"] == _signed(tid, "cover_letter")
+    markers = sorted(r["template_id"] for r in backend.renders.rows.values())
+    assert markers == ["classic", "cover_letter"]
 
 
 def test_pdf_failure_still_completes(client, backend):
@@ -146,7 +166,7 @@ def test_requested_but_skipped_cover_letter_completes_with_cv_only(client, backe
         ),
     )
     assert row["status"] == "complete"
-    assert row["pdf_url"] == f"user-a/{tid}/cv.pdf"
+    assert row["pdf_url"] == _signed(tid, "cv")
     assert [c[0] for c in FakePdfRenderer.calls] == ["render"]
     assert FakeCoverLetterRenderer.calls == []
     assert row["cover_letter_text"] is None and row["cover_letter_pdf_url"] is None

@@ -32,13 +32,13 @@ from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.services.generation import resume_after_answers, run_new_session
-from tests.fakes.fake_auth import USER_A, FakeAuth
+from tests.fakes.backend import backend_with_session, legacy_status_of
+from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
-from tests.fakes.memory_store import MemoryStore
 from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, persona_profile, tech_jd
 from tests.pipeline.scripted_gateway import Hang, Outcome, ScriptedGateway
 
-TID = "t-cancel"
+TID = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a02"
 PERSONA = Path(__file__).resolve().parents[2] / "fixtures" / "personas" / "tech_backend"
 OPTIONS = RunOptions(cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
 # Node runs on the happy path, with questions answered and a cover letter requested.
@@ -218,13 +218,10 @@ def test_hook_failure_never_breaks_a_run():
 def _container(script: dict[str, list[Outcome]]) -> Container:
     FakePdfRenderer.calls.clear()
     _, deps = deps_for(script)
-    store = MemoryStore()
-    store.balances[USER_A] = 5
-    store.create_session(USER_A, TID, "job description", cover_letter_requested=False)
+    backend = backend_with_session(USER_A, TID, "job description")
     return Container(
         AppSettings(_env_file=None, env="test"),
-        store=store,
-        auth=FakeAuth(),
+        **backend.repos(),
         pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
@@ -244,15 +241,14 @@ def test_generation_marks_cancelled():
         cover_letter_tone=None,
         cover_letter_length=None,
     )
-    assert c.store.get_session(TID)["status"] == "awaiting_hitl"
+    assert legacy_status_of(c.sessions, USER_A, TID) == "awaiting_hitl"
     timer = threading.Timer(0.2, c.pipeline.cancel, (TID,))
     timer.start()
     resume_after_answers(c, user_id=USER_A, thread_id=TID, reply="answers")
     timer.join()
-    assert c.store.get_session(TID)["status"] == "cancelled"
+    assert legacy_status_of(c.sessions, USER_A, TID) == "cancelled"
     summary = c.pipeline.summary(TID)
     assert summary is not None and summary.cancelled_stage == "rewrite"
     assert summary.error_code is None
     assert FakePdfRenderer.calls == []
-    assert c.store.get_coin_balance(USER_A) == 5
-    assert not [call for call in c.store.calls if call[0] == "deduct_coins"]  # type: ignore[attr-defined]
+    assert c.credits.ledger(USER_A) == []

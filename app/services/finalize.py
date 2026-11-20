@@ -1,12 +1,29 @@
+import hashlib
 import logging
 
 from app.container import Container
-from app.domain.credits.legacy import CV_GENERATION_COST
 from app.pipeline.summary import ats_score_of
 from app.ports.blob_storage import RENDERS_BUCKET, render_path
 from app.ports.pipeline import JsonDict
+from app.ports.repositories import COVER_LETTER_RENDER
 
 logger = logging.getLogger(__name__)
+PDF = "application/pdf"
+
+
+def _store_pdf(
+    c: Container, user_id: str, thread_id: str, kind: str, data: bytes, template_id: str
+) -> str:
+    """Upload to the private bucket and record a renders row; returns the render id."""
+    path = render_path(user_id, thread_id, "cv" if kind == "cv" else "cover_letter")
+    c.storage.put(RENDERS_BUCKET, path, data, PDF)
+    return c.renders.add(
+        user_id,
+        thread_id,
+        pdf_path=path,
+        content_hash=hashlib.sha256(data).hexdigest(),
+        template_id=template_id,
+    )
 
 
 def finalize_session(
@@ -17,32 +34,33 @@ def finalize_session(
     profile: JsonDict | None = None,
 ) -> None:
     """
-    Called after pipeline finishes.
+    Called after pipeline finishes, with the caller's user_id (never read from the row).
     1. Generates CV PDF (WeasyPrint via PDFGenerator)
     2. Optionally generates cover letter PDF (WeasyPrint via CoverLetterService)
-    3. Uploads both PDFs to the private renders bucket (stores the path)
-    4. Deducts coins
-    5. Updates session as complete
+    3. Uploads both PDFs to the private renders bucket and records renders rows
+    4. Marks the session succeeded (current_render_id points at the CV render)
     """
-    pdf_url = None
     ats_score = ats_score_of(result.get("ats"))
     eligibility = result.get("eligibility")
     eligibility_score = eligibility.score if eligibility is not None else None
     domain = result.get("domain") or "general"
+    scores = {"eligibility_score": eligibility_score}
 
     # Check if eligible — only generate PDF if eligible
     if not result.get("eligible"):
-        c.store.update_session(
+        c.sessions.update(
+            user_id,
             thread_id,
-            {
-                "status": "ineligible",
-                "domain": domain,
-                "eligibility_score": eligibility_score,
-            },
+            status="ineligible",
+            awaiting_kind=None,
+            jd_domain=domain,
+            score_breakdown=scores,
         )
         return
 
-    # Generate PDF using WeasyPrint + Jinja2 templates
+    profile = profile or {}
+    template_id = profile.get("preferred_template", "classic")
+    render_id = None
     structured_cv = result.get("tailored_cv")
     if not structured_cv:
         logger.info(
@@ -52,38 +70,26 @@ def finalize_session(
         )
     if structured_cv:
         try:
-            profile = profile or {}
             logger.info(
-                "[PDF] Generating for %s, template=%s, domain=%s",
-                thread_id,
-                profile.get("preferred_template", "classic"),
-                domain,
+                "[PDF] Generating for %s, template=%s, domain=%s", thread_id, template_id, domain
             )
-            generator = c.make_pdf_renderer()
-            pdf_bytes = generator.render(
+            pdf_bytes = c.make_pdf_renderer().render(
                 cv_data=structured_cv,
-                template_id=profile.get("preferred_template", "classic"),
+                template_id=template_id,
                 accent_color=profile.get("accent_color", "#4361ee"),
                 bangla=bool(profile.get("bangla_mode", False)),
                 domain=domain,
             )
-
-            path = render_path(user_id, thread_id, "cv")
-            c.storage.put(RENDERS_BUCKET, path, pdf_bytes, "application/pdf")
-            pdf_url = path  # a bucket path; the API signs it per request
+            render_id = _store_pdf(c, user_id, thread_id, "cv", pdf_bytes, template_id)
             logger.info("[PDF] Uploaded successfully for %s", thread_id)
-
         except Exception:
             logger.exception("[PDF] Generation failed for %s", thread_id)
 
     # ── Cover letter PDF (optional) ─────────────────────────────────────────────
-    cover_letter_pdf_url = None
     cover_letter_text = None
     cl_result = result.get("cover_letter")
-
     if cl_result:
         try:
-            profile = profile or {}
             candidate_name = profile.get("full_name", "")
             options = result.get("options")
             tone = (options.cover_letter_tone if options else None) or "formal"
@@ -95,30 +101,21 @@ def finalize_session(
                 candidate_name=candidate_name,
                 bangla=bool(profile.get("bangla_mode", False)),
             )
-
             # Plain text version — stored so frontend can show editable draft
             cover_letter_text = cl_service.to_plain_text(cl_result, candidate_name)
-
-            cl_path = render_path(user_id, thread_id, "cover_letter")
-            c.storage.put(RENDERS_BUCKET, cl_path, cl_pdf_bytes, "application/pdf")
-            cover_letter_pdf_url = cl_path
-
+            _store_pdf(c, user_id, thread_id, "cover_letter", cl_pdf_bytes, COVER_LETTER_RENDER)
         except Exception:
             logger.exception("Cover letter PDF generation failed for %s", thread_id)
 
-    # Deduct coins
-    c.store.deduct_coins(user_id, CV_GENERATION_COST, f"CV generation - thread {thread_id}")
-
-    # Mark session as complete
-    c.store.update_session(
+    c.sessions.update(
+        user_id,
         thread_id,
-        {
-            "status": "complete",
-            "domain": domain,
-            "ats_score": ats_score,
-            "eligibility_score": eligibility_score,
-            "pdf_url": pdf_url,
-            "cover_letter_text": cover_letter_text,
-            "cover_letter_pdf_url": cover_letter_pdf_url,
-        },
+        status="succeeded",
+        awaiting_kind=None,
+        jd_domain=domain,
+        template_id=template_id,
+        score_after=ats_score,
+        score_breakdown=scores,
+        current_render_id=render_id,
+        cover_letter_text=cover_letter_text,
     )

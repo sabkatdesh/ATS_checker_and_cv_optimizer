@@ -5,25 +5,35 @@ from app.pipeline.errors import NotAwaitingInput
 from tests.fakes.backend import auth_header
 from tests.fakes.fake_auth import USER_A, USER_B
 
+T1 = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+
 
 def _reply(client):
-    return client.post("/sessions/t1/reply", json={"user_qna": "answers"}, headers=auth_header())
+    return client.post(f"/sessions/{T1}/reply", json={"user_qna": "answers"}, headers=auth_header())
 
 
-def _session(backend, status="awaiting_hitl", user=USER_A):
-    backend.store.sessions["t1"] = {"thread_id": "t1", "user_id": user, "status": status}
+def _session(backend, status="awaiting_input", user=USER_A, kind="questions"):
+    backend.sessions.seed(user, T1, status=status, awaiting_kind=kind)
 
 
-def test_reply_404_403(client, backend):
+def _status(backend):
+    return backend.sessions.raw(T1)["status"]
+
+
+def test_reply_404_for_missing_and_foreign(client, backend):
     r = _reply(client)
     assert (r.status_code, r.json()) == (404, {"detail": "Session not found"})
     _session(backend, user=USER_B)
     r = _reply(client)
-    assert (r.status_code, r.json()) == (403, {"detail": "Not your session"})
+    assert (r.status_code, r.json()) == (404, {"detail": "Session not found"})
+    assert backend.pipeline.calls == []
 
 
-def test_reply_wrong_status_400(client, backend):
-    _session(backend, status="running")
+@pytest.mark.parametrize(
+    ("status", "kind"), [("running", None), ("awaiting_input", "cover_letter_options")]
+)
+def test_reply_wrong_status_400(client, backend, status, kind):
+    _session(backend, status=status, kind=kind)
     r = _reply(client)
     assert r.status_code == 400
     assert r.json() == {"detail": "Session is not waiting for your input"}
@@ -34,21 +44,22 @@ def test_reply_ok_response(client, backend):
     r = _reply(client)
     assert r.status_code == 200
     assert r.json() == {"status": "resumed", "message": "Pipeline resumed. Keep polling /status"}
-    assert ("resume", ("t1", "answers"), {}) in backend.pipeline.calls
+    assert ("resume", (T1, "answers"), {}) in backend.pipeline.calls
 
 
 def test_reply_then_cover_letter_options(client, backend):
     _session(backend)
     backend.pipeline.next_nodes = ["cover_letter_options"]
     _reply(client)
-    assert backend.store.sessions["t1"]["status"] == "awaiting_cover_letter_options"
+    row = backend.sessions.raw(T1)
+    assert (row["status"], row["awaiting_kind"]) == ("awaiting_input", "cover_letter_options")
 
 
 def test_reply_then_finalize(client, backend):
     _session(backend)
     backend.pipeline.result = {"eligible": True}
     _reply(client)
-    assert backend.store.sessions["t1"]["status"] == "complete"
+    assert _status(backend) == "succeeded"
 
 
 def test_reply_error(client, backend):
@@ -56,11 +67,11 @@ def test_reply_error(client, backend):
     backend.pipeline.error = RuntimeError("boom")
     r = _reply(client)
     assert r.status_code == 200
-    assert backend.store.sessions["t1"]["status"] == "error"
+    assert _status(backend) == "failed"
 
 
 def _post(client, body):
-    return client.post("/sessions/t1/reply", json=body, headers=auth_header())
+    return client.post(f"/sessions/{T1}/reply", json=body, headers=auth_header())
 
 
 @pytest.mark.parametrize(
@@ -77,15 +88,15 @@ def test_reply_forms_resume_and_complete(client, backend, body, expected):
     _session(backend)
     backend.pipeline.result = {"eligible": True}
     assert _post(client, body).status_code == 200
-    assert ("resume", ("t1", expected), {}) in backend.pipeline.calls
-    assert backend.store.sessions["t1"]["status"] == "complete"
+    assert ("resume", (T1, expected), {}) in backend.pipeline.calls
+    assert _status(backend) == "succeeded"
 
 
 def test_reply_not_awaited_marks_error(client, backend):
     _session(backend)
     backend.pipeline.error = NotAwaitingInput()
     assert _post(client, {"skipped": True}).status_code == 200
-    assert backend.store.sessions["t1"]["status"] == "error"
+    assert _status(backend) == "failed"
 
 
 def test_pause_stores_question_texts_as_gaps(client, backend):
@@ -93,4 +104,8 @@ def test_pause_stores_question_texts_as_gaps(client, backend):
     backend.pipeline.next_nodes = ["await_answers"]
     backend.pipeline.values = {"questions": [GapQuestion(id="q1", text="Kubernetes?")]}
     _post(client, {"skipped": True})
-    assert backend.store.sessions["t1"]["gaps"] == ["Kubernetes?"]
+    row = backend.sessions.raw(T1)
+    assert (row["status"], row["awaiting_kind"]) == ("awaiting_input", "questions")
+    assert row["score_breakdown"]["gaps"] == ["Kubernetes?"]
+    status = client.get(f"/sessions/{T1}/status", headers=auth_header()).json()
+    assert (status["status"], status["gaps"]) == ("awaiting_hitl", ["Kubernetes?"])

@@ -45,6 +45,11 @@ DELETED_MODULES = (
     "app.pipeline.prompts.cover_letter",
     "tests.fakes.fake_chat_model",
     "tests.fakes.fake_llm",
+    "app.ports.legacy_store",
+    "app.adapters.db.supabase_legacy_store",
+    "tests.fakes.memory_store",
+    "app.domain.credits.legacy",
+    "app.api.schemas.billing",
 )
 BRIDGE_NAMES = {"safe_llm_parse", "StructuredLLM", "GatewayChatModel", "GatewayStructuredLLM"}
 
@@ -96,3 +101,17 @@ def test_no_bridge_names_in_app():
             if name in BRIDGE_NAMES:
                 offenders.add(str(path.relative_to(ROOT)))
     assert sorted(offenders) == []
+
+
+LEGACY_STORE = re.compile(r"(legacy_store|supabase_legacy_store|LegacyStore|MemoryStore)")
+
+
+def test_no_legacy_store_imports():
+    offenders = []
+    for folder in ("app", "tests", "scripts"):
+        for path in (ROOT / folder).rglob("*.py"):
+            if path.name == "test_no_legacy.py":
+                continue
+            if LEGACY_STORE.search(path.read_text(encoding="utf-8")):
+                offenders.append(str(path.relative_to(ROOT)))
+    assert offenders == []

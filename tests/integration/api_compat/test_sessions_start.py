@@ -1,4 +1,4 @@
-import re
+import uuid
 from types import SimpleNamespace
 
 from app.domain.parsing.input_validator import validate_jd
@@ -28,13 +28,16 @@ COMPLETE = {
 }
 
 
-def _ready(backend, balance=5, profile=None):
-    backend.store.profiles[USER_A] = profile or dict(COMPLETE)
-    backend.store.balances[USER_A] = balance
+def _ready(backend, profile=None):
+    backend.master_profiles.upsert_default(USER_A, profile or dict(COMPLETE))
 
 
 def _row(backend, r):
-    return backend.store.sessions[r.json()["thread_id"]]
+    return backend.sessions.raw(r.json()["thread_id"])
+
+
+def _creates(backend):
+    return [c for c in backend.sessions.calls if c[0] == "create"]
 
 
 def test_invalid_jd_400_before_profile_check(client):
@@ -49,11 +52,10 @@ def test_no_profile_400(client):
     assert r.json() == {"detail": "Please complete your profile first before generating a CV"}
 
 
-def test_negative_balance_402(client, backend):
-    _ready(backend, balance=-1)
-    r = _start(client)
-    assert r.status_code == 402
-    assert r.json() == {"detail": "Not enough coins. You need 0 coins. Current balance: -1"}
+def test_start_needs_no_credits_while_generation_is_free(client, backend):
+    _ready(backend)
+    assert backend.credits.balance(USER_A) == (0, 0)
+    assert _start(client).status_code == 200
 
 
 def test_start_response_shape(client, backend):
@@ -61,7 +63,8 @@ def test_start_response_shape(client, backend):
     r = _start(client)
     assert r.status_code == 200
     body = r.json()
-    assert re.fullmatch(r"thread_[0-9a-f]{32}", body["thread_id"])
+    assert uuid.UUID(body["thread_id"]).version == 7
+    assert backend.sessions.get(USER_A, body["thread_id"]) is not None
     assert body["status"] == "running"
     assert body["message"] == (
         "CV generation started. Poll /sessions/{thread_id}/status to check progress."
@@ -70,14 +73,18 @@ def test_start_response_shape(client, backend):
 
 def test_start_creates_session_with_cover_letter_args(client, backend):
     _ready(backend)
-    _start(client, cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
-    call = [c for c in backend.store.calls if c[0] == "create_session"][0]
-    assert call[2] == {
+    r = _start(client, cover_letter=True, cover_letter_tone="formal", cover_letter_length="short")
+    (_, args, kwargs), *_ = _creates(backend)
+    assert args == (USER_A, r.json()["thread_id"])
+    assert kwargs == {
+        "jd_text": JD,
+        "source_cv": {k: v for k, v in COMPLETE.items() if k != "user_id"},
+        "options": {
+            "cover_letter": True,
+            "cover_letter_tone": "formal",
+            "cover_letter_length": "short",
+        },
         "template_id": "classic",
-        "domain": None,
-        "cover_letter_requested": True,
-        "cover_letter_tone": "formal",
-        "cover_letter_length": "short",
     }
 
 
@@ -89,15 +96,15 @@ def test_start_pauses_at_hitl(client, backend):
         "eligibility": SimpleNamespace(score=55),
     }
     row = _row(backend, _start(client))
-    assert row["status"] == "awaiting_hitl"
-    assert row["gaps"] == ["g1"]
-    assert row["eligibility_score"] == 55
+    assert (row["status"], row["awaiting_kind"]) == ("awaiting_input", "questions")
+    assert row["score_breakdown"] == {"eligibility_score": 55, "gaps": ["g1"]}
 
 
 def test_start_pauses_for_cover_letter_options(client, backend):
     _ready(backend)
     backend.pipeline.next_nodes = ["cover_letter_options"]
-    assert _row(backend, _start(client))["status"] == "awaiting_cover_letter_options"
+    row = _row(backend, _start(client))
+    assert (row["status"], row["awaiting_kind"]) == ("awaiting_input", "cover_letter_options")
 
 
 def test_start_pipeline_error_sets_error(client, backend):
@@ -105,7 +112,7 @@ def test_start_pipeline_error_sets_error(client, backend):
     backend.pipeline.error = RuntimeError("boom")
     r = _start(client)
     assert r.status_code == 200
-    assert _row(backend, r)["status"] == "error"
+    assert _row(backend, r)["status"] == "failed"
 
 
 def test_start_passes_the_profile_dict_to_pipeline(client, backend):
@@ -113,11 +120,11 @@ def test_start_passes_the_profile_dict_to_pipeline(client, backend):
     _start(client)
     name, _, kwargs = backend.pipeline.calls[0]
     assert name == "run"
-    assert kwargs["profile"] == backend.store.profiles[USER_A]
+    assert kwargs["profile"] == backend.master_profiles.get_default(USER_A)
     assert "user_resume_text" not in kwargs
 
 
-def test_incomplete_profile_is_422_before_session_or_coins(client, backend):
+def test_incomplete_profile_is_422_before_session(client, backend):
     _ready(backend, profile={"user_id": USER_A, "full_name": "Test Person"})
     r = _start(client)
     assert r.status_code == 422
@@ -125,14 +132,13 @@ def test_incomplete_profile_is_422_before_session_or_coins(client, backend):
     assert body["code"] == "PROFILE_INCOMPLETE"
     assert body["missing"] == ["CONTACT", "EXPERIENCE_OR_EDUCATION"]
     assert "Test Person" not in r.text
-    assert backend.store.sessions == {}
-    assert not [c for c in backend.store.calls if c[0] in ("create_session", "deduct_coins")]
-    assert backend.store.balances[USER_A] == 5
+    assert backend.sessions.rows == {}
+    assert _creates(backend) == []
     assert backend.pipeline.calls == []
 
 
-def test_incomplete_profile_is_422_even_with_no_coins(client, backend):
-    _ready(backend, balance=-1, profile={"user_id": USER_A, "email": "test@example.com"})
+def test_incomplete_profile_without_a_name_is_422(client, backend):
+    _ready(backend, profile={"user_id": USER_A, "email": "test@example.com"})
     r = _start(client)
     assert r.status_code == 422
     assert r.json()["missing"] == ["NAME", "EXPERIENCE_OR_EDUCATION"]
@@ -147,12 +153,11 @@ def test_start_builds_run_options(client, backend):
     )
 
 
-def test_zero_width_name_is_422_before_session_or_coins(client, backend):
+def test_zero_width_name_is_422_before_session(client, backend):
     _ready(backend, profile={**COMPLETE, "full_name": "​‌⁠﻿"})
     r = _start(client)
     assert r.status_code == 422
     assert r.json()["code"] == "PROFILE_INCOMPLETE"
     assert r.json()["missing"] == ["NAME"]
-    assert backend.store.sessions == {}
-    assert not [c for c in backend.store.calls if c[0] in ("create_session", "deduct_coins")]
-    assert backend.store.balances[USER_A] == 5
+    assert backend.sessions.rows == {}
+    assert _creates(backend) == []

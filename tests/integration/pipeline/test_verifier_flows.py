@@ -15,10 +15,9 @@ from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
 from app.services.finalize import finalize_session
-from tests.fakes.fake_auth import USER_A, FakeAuth
-from tests.fakes.fake_blob_storage import FakeBlobStorage
+from tests.fakes.backend import backend_with_session, legacy_status_of
+from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
-from tests.fakes.memory_store import MemoryStore
 from tests.pipeline.helpers import (
     deps_for,
     persona_answers,
@@ -31,6 +30,9 @@ from tests.pipeline.scripted_gateway import Outcome, ScriptedGateway
 
 INJECTION = Path(__file__).resolve().parents[2] / "fixtures" / "injection"
 MBA = {"degree": "MBA", "institution": "Example University", "graduation_year": 2022}
+
+
+T1 = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a04"
 
 
 def _clean() -> RewrittenCV:
@@ -65,10 +67,10 @@ def _finish(svc: PipelineService, jd: str | None = None, reply: str | None = Non
     svc.run(
         job_description=jd or persona_jd_text(),
         profile=persona_profile(),
-        thread_id="t1",
+        thread_id=T1,
         options=RunOptions(),
     )
-    return svc.resume("t1", persona_answers().free_text if reply is None else reply)
+    return svc.resume(T1, persona_answers().free_text if reply is None else reply)
 
 
 def _steps(gw: ScriptedGateway) -> list[str]:
@@ -98,13 +100,10 @@ def test_fail_revise_pass():
 def _pdf_container(svc: PipelineService) -> Container:
     FakePdfRenderer.calls.clear()
     FakePdfRenderer.raise_on_render = None
-    store = MemoryStore()
-    store.balances[USER_A] = 5
+    backend = backend_with_session(USER_A, T1)
     return Container(
         AppSettings(_env_file=None, env="test"),
-        store=store,
-        auth=FakeAuth(),
-        storage=FakeBlobStorage(),
+        **backend.repos(),
         pipeline=svc,
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
@@ -120,14 +119,15 @@ def test_fail_twice_warns_and_keeps_claims():
     assert (report.status, report.requires_review, report.revised) == ("warn", True, True)
     assert [c.kind for c in report.unsupported_claims if c.severity == "hard"] == ["degree"]
     assert "MBA" in final["tailored_cv"].model_dump_json()  # D3: kept and flagged
-    assert svc.get_state("t1")["next"] == []
-    summary = svc.summary("t1")
+    assert svc.get_state(T1)["next"] == []
+    summary = svc.summary(T1)
     assert summary is not None and summary.trust_report == report
 
     container = _pdf_container(svc)
-    finalize_session(container, "t1", final, USER_A)
-    assert container.store.sessions["t1"]["status"] == "complete"
-    assert container.store.sessions["t1"]["pdf_url"]
+    finalize_session(container, T1, final, USER_A)
+    assert legacy_status_of(container.sessions, USER_A, T1) == "complete"
+    row = container.sessions.get(USER_A, T1)
+    assert row is not None and row.pdf_path == f"{USER_A}/{T1}/cv.pdf"
     rendered = FakePdfRenderer.calls[0][1][0]
     assert "MBA" in rendered.model_dump_json()
 

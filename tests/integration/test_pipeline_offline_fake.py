@@ -16,11 +16,9 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.main import create_app
 from app.pipeline.state import RunOptions
 from app.services.profile_import import import_profile
-from tests.fakes.backend import auth_header
-from tests.fakes.fake_auth import USER_A, FakeAuth
-from tests.fakes.fake_blob_storage import FakeBlobStorage
+from tests.fakes.backend import FakeBackend, auth_header
+from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
-from tests.fakes.memory_store import MemoryStore
 
 _LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 _PROFILE = Path(__file__).resolve().parents[1] / "fixtures" / "profiles" / "jane_example.json"
@@ -59,9 +57,7 @@ def container() -> Container:
     FakeCoverLetterRenderer.raise_on_render = None
     return Container(
         AppSettings(_env_file=None, env="test", llm={"default_provider": "fake"}),
-        store=MemoryStore(),
-        auth=FakeAuth(),
-        storage=FakeBlobStorage(),
+        **FakeBackend().repos(),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
@@ -119,8 +115,7 @@ def test_usage_records_cover_every_pipeline_step(container):
 
 
 def test_api_start_and_reply_offline(container):
-    container.store.profiles[USER_A] = {"user_id": USER_A, **_profile()}
-    container.store.balances[USER_A] = 5
+    container.master_profiles.upsert_default(USER_A, _profile())
     client = TestClient(create_app(container), raise_server_exceptions=False)
     r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())
     assert r.status_code == 200

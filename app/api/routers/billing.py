@@ -1,46 +1,39 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+"""Balance and history read from the credit ledger (credits change only in SQL functions)."""
+
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, Header
 
 from app.api.deps import get_container, require_user_id
-from app.api.schemas.billing import AddCoinsRequest
 from app.container import Container
-from app.domain.credits.legacy import CV_GENERATION_COST
+from app.ports.repositories import JsonDict
 
 router = APIRouter()
-# Mounted by create_app only when settings.dev_tools_enabled.
-dev_router = APIRouter()
+# Generation is free until M5 adds pricing with reserve/settle.
+COST_PER_CV = 0
+
+
+def _transaction(row: JsonDict) -> JsonDict:
+    created = row.get("created_at")
+    return {
+        "id": row.get("id"),
+        "amount": row.get("delta_balance"),
+        "type": row.get("kind"),
+        "description": row.get("reason"),
+        "created_at": created.isoformat() if isinstance(created, datetime) else created,
+    }
 
 
 @router.get("/billing/balance")
 def get_balance(authorization: str = Header(None), c: Container = Depends(get_container)):
-    """Get current coin balance"""
+    """Available credits (balance minus held)."""
     user_id = require_user_id(c, authorization)
-    balance = c.store.get_coin_balance(user_id)
-    return {"balance": balance, "cost_per_cv": CV_GENERATION_COST}
+    balance, held = c.credits.balance(user_id)
+    return {"balance": balance - held, "cost_per_cv": COST_PER_CV}
 
 
 @router.get("/billing/history")
 def billing_history(authorization: str = Header(None), c: Container = Depends(get_container)):
-    """Get full transaction history"""
+    """Ledger rows, newest first."""
     user_id = require_user_id(c, authorization)
-    transactions = c.store.get_coin_transactions(user_id)
-    return {"transactions": transactions}
-
-
-@dev_router.post("/billing/add-coins")
-def manual_add_coins(
-    body: AddCoinsRequest, authorization: str = Header(None), c: Container = Depends(get_container)
-):
-    """
-    Manually add coins to a user's account.
-    This will later be called by bKash/Nagad webhook after payment.
-    For now used for testing and manual top-ups.
-    """
-    user_id = require_user_id(c, authorization)
-
-    if body.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
-
-    c.store.add_coins(user_id, body.amount, body.description)
-    new_balance = c.store.get_coin_balance(user_id)
-
-    return {"message": f"{body.amount} coins added successfully", "new_balance": new_balance}
+    return {"transactions": [_transaction(r) for r in c.credits.ledger(user_id)]}

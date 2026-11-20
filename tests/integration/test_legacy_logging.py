@@ -18,8 +18,7 @@ def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplo
     from app.domain.ats.schemas import AtsMatch
 
     FakePdfRenderer.raise_on_render = RuntimeError("render failed")
-    backend.store.profiles[USER_A] = {
-        "user_id": USER_A,
+    backend.master_profiles.default[USER_A] = {
         "full_name": "Test Person",
         "email": "test@example.com",
         "education": [{"degree": "BSc"}],
@@ -33,7 +32,7 @@ def test_pdf_failure_logs_traceback_and_session_completes(client, backend, caplo
     }
     with caplog.at_level(logging.ERROR):
         r = client.post("/sessions/start", json={"job_description": JD}, headers=auth_header())
-    row = backend.store.sessions[r.json()["thread_id"]]
-    assert row["status"] == "complete"
-    assert row["pdf_url"] is None
+    row = backend.sessions.raw(r.json()["thread_id"])
+    assert row["status"] == "succeeded"
+    assert row["current_render_id"] is None
     assert any(rec.exc_info for rec in caplog.records if rec.levelno >= logging.ERROR)

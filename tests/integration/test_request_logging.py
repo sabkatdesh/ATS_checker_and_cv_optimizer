@@ -48,8 +48,7 @@ def test_profile_post_logs_no_pii(client, buf):  # noqa: F811
 def test_sessions_start_logs_no_jd_text(client, backend, buf):  # noqa: F811
     from tests.fakes.fake_auth import USER_A
 
-    backend.store.profiles[USER_A] = {
-        "user_id": USER_A,
+    backend.master_profiles.default[USER_A] = {
         "full_name": "Test Person",
         "email": "test@example.com",
         "education": [{"degree": "BSc"}],
@@ -76,7 +75,7 @@ def test_valid_inbound_request_id_kept(client, buf):  # noqa: F811
 
 
 def test_500_is_logged_and_body_unchanged(client, backend, buf):  # noqa: F811
-    backend.store.raise_on["get_user_sessions"] = RuntimeError("db down for a@b.co")
+    backend.sessions.raise_on["list_for_user"] = RuntimeError("db down for a@b.co")
     r = client.get("/sessions", headers=auth_header())
     assert r.status_code == 500
     assert r.text == "Internal Server Error"

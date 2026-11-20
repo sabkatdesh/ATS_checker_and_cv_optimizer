@@ -13,7 +13,6 @@ from app.adapters.db.profile_repo import PgProfileRepo
 from app.adapters.db.render_repo import PgRenderRepo
 from app.adapters.db.session_repo import PgSessionRepo
 from app.adapters.db.supabase_client import make_supabase_client
-from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
 from app.adapters.db.template_repo import PgTemplateRepo
 from app.adapters.llm.stack import LlmStack
@@ -31,7 +30,6 @@ from app.ports.auth import TokenVerifier
 from app.ports.background import BackgroundRunner
 from app.ports.blob_storage import BlobStorage
 from app.ports.embeddings import EmbeddingProvider
-from app.ports.legacy_store import LegacyStore
 from app.ports.llm import LLMGateway
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
@@ -45,10 +43,6 @@ from app.ports.repositories import (
 )
 from app.ports.usage import UsageSink
 from supabase import Client
-
-
-def _default_store(settings: AppSettings, supabase: Callable[[], Client]) -> LegacyStore:
-    return SupabaseLegacyStore(supabase())
 
 
 def _default_storage(settings: AppSettings, supabase: Callable[[], Client]) -> BlobStorage:
@@ -87,7 +81,6 @@ class Container:
         self,
         settings: AppSettings,
         *,
-        store: LegacyStore | None = None,
         auth: TokenVerifier | None = None,
         storage: BlobStorage | None = None,
         pipeline: PipelineRunner | None = None,
@@ -106,9 +99,8 @@ class Container:
         credits: CreditReadRepo | None = None,
     ) -> None:
         self.settings = settings
-        # Reentrant: a default builder may read another lazy property (e.g. pipeline -> store).
+        # Reentrant: a default builder may read another lazy property (e.g. pipeline -> llm).
         self._lock = threading.RLock()
-        self._store = store
         self._auth = auth
         self._storage = storage
         self._pipeline = pipeline
@@ -130,7 +122,7 @@ class Container:
         self._cover_letter_factory = cover_letter_factory or _default_cover_letter
 
     def _supabase_client(self) -> Client:
-        """One Supabase client shared by the default store and token verifier."""
+        """One Supabase client shared by the default storage and token verifier."""
         with self._lock:
             if self._supabase is None:
                 url, key = self.settings.supabase_url, self.settings.supabase_secret_key
@@ -141,13 +133,6 @@ class Container:
                     )
                 self._supabase = make_supabase_client(url, key)
             return self._supabase
-
-    @property
-    def store(self) -> LegacyStore:
-        with self._lock:
-            if self._store is None:
-                self._store = _default_store(self.settings, self._supabase_client)
-            return self._store
 
     @property
     def pool(self) -> ConnectionPool:

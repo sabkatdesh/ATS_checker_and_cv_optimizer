@@ -15,26 +15,23 @@ from app.pipeline.graph import build_graph
 from app.pipeline.service import PipelineService
 from app.ports.llm_errors import LLMOutputInvalid, LLMRefused
 from app.services.generation import resume_after_answers, run_new_session
-from tests.fakes.fake_auth import USER_A, FakeAuth
+from tests.fakes.backend import backend_with_session, legacy_status_of
+from tests.fakes.fake_auth import USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
-from tests.fakes.memory_store import MemoryStore
 from tests.pipeline.helpers import deps_for, persona_profile, tech_jd
 from tests.pipeline.scripted_gateway import Outcome
 
 SECRET = "SENTINEL-jd-text-do-not-log"
-TID = "thread_fail"
+TID = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a01"
 
 
 def _container(script: dict[str, list[Outcome]]) -> Container:
     FakePdfRenderer.calls.clear()
     _, deps = deps_for(script)
-    store = MemoryStore()
-    store.balances[USER_A] = 5
-    store.create_session(USER_A, TID, f"job description {SECRET}", cover_letter_requested=False)
+    backend = backend_with_session(USER_A, TID, f"job description {SECRET}")
     return Container(
         AppSettings(_env_file=None, env="test"),
-        store=store,
-        auth=FakeAuth(),
+        **backend.repos(),
         pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
@@ -66,12 +63,11 @@ def _script(rewrite: list[Outcome], gaps: list[str] | None = None) -> dict[str, 
 def test_rewrite_failure_never_renders_empty_cv():
     c = _container(_script([LLMOutputInvalid(f"bad reply {SECRET}")]))
     _start(c)
-    assert c.store.get_session(TID)["status"] == "error"
+    assert legacy_status_of(c.sessions, USER_A, TID) == "error"
     assert FakePdfRenderer.calls == []
     summary = c.pipeline.summary(TID)
     assert summary is not None and summary.error_code == "LLM_OUTPUT_INVALID"
-    assert c.store.get_coin_balance(USER_A) == 5
-    assert not [call for call in c.store.calls if call[0] == "deduct_coins"]  # type: ignore[attr-defined]
+    assert c.credits.ledger(USER_A) == []
 
 
 def test_failure_after_answers_is_also_an_error_session():
@@ -81,13 +77,13 @@ def test_failure_after_answers_is_also_an_error_session():
     script["gap_questions"] = [GapQuestions(questions=[GapQuestion(id="q1", text="K8s?")])]
     c = _container(script)
     _start(c)
-    assert c.store.get_session(TID)["status"] == "awaiting_hitl"
+    assert legacy_status_of(c.sessions, USER_A, TID) == "awaiting_hitl"
     resume_after_answers(c, user_id=USER_A, thread_id=TID, reply="my private answer")
-    assert c.store.get_session(TID)["status"] == "error"
+    assert legacy_status_of(c.sessions, USER_A, TID) == "error"
     assert FakePdfRenderer.calls == []
     summary = c.pipeline.summary(TID)
     assert summary is not None and summary.error_code == "CONTENT_REFUSED"
-    assert c.store.get_coin_balance(USER_A) == 5
+    assert c.credits.ledger(USER_A) == []
 
 
 def test_no_text_in_error_logs(caplog: pytest.LogCaptureFixture):

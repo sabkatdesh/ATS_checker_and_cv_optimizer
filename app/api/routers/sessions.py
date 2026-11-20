@@ -1,33 +1,36 @@
-import uuid
 from functools import partial
 from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from app.api.deps import get_container, require_user_id
+from app.api.deps import get_container, require_session, require_user_id
 from app.api.errors import AppError
 from app.api.schemas.sessions import HITLReplyRequest, StartSessionRequest
 from app.container import Container
-from app.domain.credits.legacy import CV_GENERATION_COST
+from app.domain.common import uuid7
 from app.domain.cv.minimums import check_minimums
 from app.domain.cv.profile_to_cv import profile_to_universal_cv
 from app.domain.parsing.input_validator import validate_jd
+from app.domain.sessions.status import legacy_status
+from app.ports.repositories import SessionRow
 from app.services.generation import resume_after_answers, run_new_session
-from app.services.pdf_links import with_signed_urls
+from app.services.session_view import list_view, status_view
 
 router = APIRouter()
 _log = structlog.get_logger("pipeline")
+DEFAULT_TEMPLATE = "classic"
 
 
-def _pipeline_summary(c: Container, thread_id: str) -> dict[str, Any] | None:
-    """The status poll must not fail because the summary could not be built."""
+def _pipeline_summary(c: Container, row: SessionRow) -> dict[str, Any] | None:
+    """Live checkpoint summary, else the stored one. The poll must never fail on it."""
     try:
-        summary = c.pipeline.summary(thread_id)
-        return summary.model_dump(mode="json") if summary else None
+        summary = c.pipeline.summary(row.id)
+        if summary:
+            return summary.model_dump(mode="json")
     except Exception as exc:
         _log.error("pipeline.summary_failed", error_type=type(exc).__name__)
-        return None
+    return row.pipeline_summary
 
 
 @router.post("/sessions/start")
@@ -39,26 +42,23 @@ def start_session(
     """
     Start a CV generation session.
     1. Validates JD
-    2. Checks user has a profile
-    3. Checks user has enough coins
-    4. Runs pipeline in background
-    5. Returns thread_id immediately
+    2. Checks user has a profile that meets the minimums
+    3. Creates the session row (status running) and runs the pipeline in the background
+    4. Returns thread_id (the session id) immediately
     """
     user_id = require_user_id(c, authorization)
 
-    # Step 1 — Validate the job description
     jd_check = validate_jd(body.job_description)
     if not jd_check.is_valid:
         raise HTTPException(status_code=400, detail=jd_check.user_message)
 
-    # Step 2 — Check user has a profile
-    profile = c.store.get_cv_profile(user_id)
+    profile = c.master_profiles.get_default(user_id)
     if not profile:
         raise HTTPException(
             status_code=400, detail="Please complete your profile first before generating a CV"
         )
 
-    # Step 2b — The profile must meet the generation minimums (spec 08 H1)
+    # The profile must meet the generation minimums (spec 08 H1)
     missing = check_minimums(profile_to_universal_cv(profile).cv)
     if missing:
         raise AppError(
@@ -69,29 +69,20 @@ def start_session(
             missing=missing,
         )
 
-    # Step 3 — Check coin balance
-    balance = c.store.get_coin_balance(user_id)
-    if balance < CV_GENERATION_COST:
-        raise HTTPException(
-            status_code=402,
-            detail=(
-                f"Not enough coins. You need {CV_GENERATION_COST} coins. Current balance: {balance}"
-            ),
-        )
-
-    # Step 4 — Create session record in database
-    thread_id = f"thread_{uuid.uuid4().hex}"
-    c.store.create_session(
+    thread_id = uuid7()
+    c.sessions.create(
         user_id,
         thread_id,
-        body.job_description,
-        cover_letter_requested=bool(body.cover_letter),
-        cover_letter_tone=body.cover_letter_tone,
-        cover_letter_length=body.cover_letter_length,
+        jd_text=body.job_description,
+        source_cv={k: v for k, v in profile.items() if k != "user_id"},
+        options={
+            "cover_letter": bool(body.cover_letter),
+            "cover_letter_tone": body.cover_letter_tone,
+            "cover_letter_length": body.cover_letter_length,
+        },
+        template_id=DEFAULT_TEMPLATE,
     )
 
-    # Step 5 — Run pipeline in background thread
-    # We use a thread so the API responds immediately
     # User polls /sessions/{thread_id}/status to check progress
     c.runner.submit(
         partial(
@@ -126,19 +117,12 @@ def hitl_reply(
     Resumes the pipeline from where it paused.
     """
     user_id = require_user_id(c, authorization)
-    session = c.store.get_session(thread_id)
+    session = require_session(c, user_id, thread_id)
 
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    if session["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="Not your session")
-
-    if session["status"] != "awaiting_hitl":
+    if legacy_status(session.status, session.awaiting_kind) != "awaiting_hitl":
         raise HTTPException(status_code=400, detail="Session is not waiting for your input")
 
-    # Update status and resume in background
-    c.store.update_session(thread_id, {"status": "running"})
+    c.sessions.update(user_id, thread_id, status="running", awaiting_kind=None)
 
     c.runner.submit(
         partial(
@@ -162,21 +146,12 @@ def session_status(
     Returns current status + scores when complete.
     """
     user_id = require_user_id(c, authorization)
-    session = c.store.get_session(thread_id)
-
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    # Security — only owner can see their session
-    if session["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="Not your session")
-
-    return {**with_signed_urls(c, user_id, session), "pipeline": _pipeline_summary(c, thread_id)}
+    session = require_session(c, user_id, thread_id)
+    return {**status_view(c, user_id, session), "pipeline": _pipeline_summary(c, session)}
 
 
 @router.get("/sessions")
 def list_sessions(authorization: str = Header(None), c: Container = Depends(get_container)):
     """Get all past CV generations for the logged-in user"""
     user_id = require_user_id(c, authorization)
-    sessions = c.store.get_user_sessions(user_id)
-    return {"sessions": [with_signed_urls(c, user_id, s) for s in sessions]}
+    return {"sessions": [list_view(c, user_id, s) for s in c.sessions.list_for_user(user_id)]}

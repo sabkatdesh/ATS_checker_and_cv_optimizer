@@ -7,24 +7,25 @@ from app.config.settings import AppSettings
 from app.container import Container
 from app.main import create_app
 from app.services.finalize import finalize_session
-from tests.fakes.fake_auth import TOKEN_A, USER_A, FakeAuth
-from tests.fakes.fake_blob_storage import FakeBlobStorage
+from tests.fakes.backend import FakeBackend, backend_with_session
+from tests.fakes.fake_auth import TOKEN_A, USER_A
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
-from tests.fakes.memory_store import MemoryStore
 
-TID = "thread_abc"
+TID = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a05"
+CV_PATH = f"{USER_A}/{TID}/cv.pdf"
+CL_PATH = f"{USER_A}/{TID}/cover_letter.pdf"
 
 
-def _container(store=None, storage=None):
-    return Container(
+def _container(backend: FakeBackend | None = None) -> tuple[Container, FakeBackend]:
+    backend = backend or backend_with_session(USER_A, TID)
+    c = Container(
         AppSettings(_env_file=None, env="test"),
-        store=store or MemoryStore(),
-        storage=storage or FakeBlobStorage(),
-        auth=FakeAuth(),
+        **backend.repos(),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
     )
+    return c, backend
 
 
 def _result(**extra):
@@ -37,28 +38,39 @@ def _result(**extra):
     }
 
 
+def _with_renders(backend: FakeBackend, cv: str | None = None, cl: str | None = None) -> None:
+    if cv:
+        rid = backend.renders.add(USER_A, TID, pdf_path=cv, content_hash="cv", template_id="c")
+        backend.sessions.update(USER_A, TID, status="succeeded", current_render_id=rid)
+    if cl:
+        backend.renders.add(USER_A, TID, pdf_path=cl, content_hash="cl", template_id="cover_letter")
+
+
 def test_finalize_stores_path_not_public_url():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
+    c, backend = _container()
     finalize_session(c, TID, _result(cover_letter={"body": "x"}), USER_A, {})
-    row = c.store.sessions[TID]
-    assert row["pdf_url"] == f"{USER_A}/{TID}/cv.pdf"
-    assert row["cover_letter_pdf_url"] == f"{USER_A}/{TID}/cover_letter.pdf"
-    assert c.storage.objects[("renders", f"{USER_A}/{TID}/cv.pdf")] == (
-        b"%PDF-fake-cv",
-        "application/pdf",
-    )
-    assert ("renders", f"{USER_A}/{TID}/cover_letter.pdf") in c.storage.objects
-    assert "https" not in row["pdf_url"]
+    row = c.sessions.get(USER_A, TID)
+    assert row is not None
+    assert (row.pdf_path, row.cover_letter_pdf_path) == (CV_PATH, CL_PATH)
+    assert backend.storage.objects[("renders", CV_PATH)] == (b"%PDF-fake-cv", "application/pdf")
+    assert ("renders", CL_PATH) in backend.storage.objects
+    assert all("://" not in r["pdf_path"] for r in backend.renders.rows.values())
 
 
 def test_finalize_upload_failure_still_completes_with_null():
-    c = _container()
-    c.storage.fail_put = True
-    c.store.create_session(USER_A, TID, "jd")
+    c, backend = _container()
+    backend.storage.fail_put = True
     finalize_session(c, TID, _result(), USER_A, {})
-    assert c.store.sessions[TID]["status"] == "complete"
-    assert c.store.sessions[TID]["pdf_url"] is None
+    row = c.sessions.get(USER_A, TID)
+    assert row is not None and row.status == "succeeded"
+    assert row.current_render_id is None and row.pdf_path is None
+    assert backend.renders.rows == {}
+
+
+def test_finalize_writes_only_the_callers_row():
+    c, backend = _container()
+    finalize_session(c, TID, _result(), "user-b", {})
+    assert backend.sessions.raw(TID)["status"] == "running"
 
 
 def _client(c):
@@ -70,56 +82,41 @@ def _hdr():
 
 
 def test_status_returns_fresh_signed_url():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
-    c.store.update_session(
-        TID,
-        {
-            "status": "complete",
-            "pdf_url": f"{USER_A}/{TID}/cv.pdf",
-            "cover_letter_pdf_url": f"{USER_A}/{TID}/cover_letter.pdf",
-        },
-    )
+    c, backend = _container()
+    _with_renders(backend, cv=CV_PATH, cl=CL_PATH)
     body = _client(c).get(f"/sessions/{TID}/status", headers=_hdr()).json()
-    assert body["pdf_url"] == f"https://signed.test/renders/{USER_A}/{TID}/cv.pdf?ttl=600"
+    assert body["pdf_url"] == f"https://signed.test/renders/{CV_PATH}?ttl=600"
     assert body["cover_letter_pdf_url"].endswith("cover_letter.pdf?ttl=600")
-    # stored value is unchanged (the path), the URL is derived per request
-    assert c.store.sessions[TID]["pdf_url"] == f"{USER_A}/{TID}/cv.pdf"
+    # the stored value stays a path; the URL is derived per request
+    assert c.sessions.get(USER_A, TID).pdf_path == CV_PATH  # type: ignore[union-attr]
 
 
-def test_status_legacy_public_url_and_foreign_path_become_null():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
-    c.store.update_session(
-        TID,
-        {
-            "pdf_url": "https://x.supabase.co/storage/v1/object/public/cv-pdfs/a.pdf",
-            "cover_letter_pdf_url": f"someone-else/{TID}/cover_letter.pdf",
-        },
+def test_status_public_url_and_foreign_path_become_null():
+    c, backend = _container()
+    _with_renders(
+        backend,
+        cv="https://x.supabase.co/storage/v1/object/public/cv-pdfs/a.pdf",
+        cl=f"someone-else/{TID}/cover_letter.pdf",
     )
     body = _client(c).get(f"/sessions/{TID}/status", headers=_hdr()).json()
     assert body["pdf_url"] is None and body["cover_letter_pdf_url"] is None
 
 
 def test_status_null_when_no_pdf():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
-    c.store.update_session(TID, {"pdf_url": None})
+    c, _ = _container()
     assert _client(c).get(f"/sessions/{TID}/status", headers=_hdr()).json()["pdf_url"] is None
 
 
 def test_sessions_list_signs_urls():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
-    c.store.update_session(TID, {"pdf_url": f"{USER_A}/{TID}/cv.pdf"})
+    c, backend = _container()
+    _with_renders(backend, cv=CV_PATH)
     rows = _client(c).get("/sessions", headers=_hdr()).json()["sessions"]
     assert rows[0]["pdf_url"].startswith("https://signed.test/renders/")
 
 
 def test_cover_letter_download_redirects_to_signed_url():
-    c = _container()
-    c.store.create_session(USER_A, TID, "jd")
-    c.store.update_session(TID, {"cover_letter_pdf_url": f"{USER_A}/{TID}/cover_letter.pdf"})
+    c, backend = _container()
+    _with_renders(backend, cl=CL_PATH)
     r = _client(c).get(f"/sessions/{TID}/cover-letter.pdf", headers=_hdr())
     assert r.status_code == 307
     assert r.headers["location"].startswith("https://signed.test/renders/")
