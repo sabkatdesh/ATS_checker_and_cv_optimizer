@@ -99,3 +99,19 @@ def test_repo_maps_pool_failure():
     pool.raise_on_connect = psycopg.OperationalError("password=x")
     with pytest.raises(DbUnavailable):
         PgProfileRepo(pool).get_preferences(UID)
+
+
+def test_save_preferences_only_updates_an_existing_profile():
+    """Never create a profiles row: it would lack email_verified_at (the trigger/backfill own it)."""
+    pool = RecordingPool()
+    PgProfileRepo(pool).save_preferences(UID, {"accent_color": "#fff"})
+    sql, params = pool.log[0]
+    assert sql.lstrip().lower().startswith("update public.profiles")
+    assert "insert" not in sql.lower()
+    assert params["prefs"].obj == {"accent_color": "#fff"}
+
+
+def test_save_preferences_without_a_profile_row_is_a_conflict():
+    pool = RecordingPool(rowcount=0)
+    with pytest.raises(DbConflict):
+        PgProfileRepo(pool).save_preferences(UID, {"accent_color": "#fff"})

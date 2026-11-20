@@ -60,3 +60,15 @@ create trigger on_auth_user_verified
   for each row
   when (old.email_confirmed_at is distinct from new.email_confirmed_at)
   execute function public.handle_user_verified();
+
+-- Backfill: users created before this migration never fired the signup trigger.
+-- Keep an already-recorded verification time; otherwise copy it from auth.users.
+insert into public.profiles (user_id, email_verified_at)
+select id, email_confirmed_at from auth.users
+on conflict (user_id) do update
+  set email_verified_at = coalesce(public.profiles.email_verified_at, excluded.email_verified_at);
+
+-- balance and held default to 0.
+insert into public.credit_balances (user_id)
+select user_id from public.profiles
+on conflict (user_id) do nothing;

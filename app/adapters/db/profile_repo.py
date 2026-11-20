@@ -4,15 +4,14 @@ from typing import Any
 
 from psycopg.types.json import Jsonb
 
-from app.adapters.db.errors import map_db_errors
+from app.adapters.db.errors import DbConflict, map_db_errors
 from app.ports.repositories import BonusState, JsonDict
 
 _GET_PREFS = "select preferences from public.profiles where user_id = %(user_id)s"
-# The profiles row is created by the signup trigger; upsert so a late row never loses settings.
+# Update only: the signup trigger and the 0800 backfill create every profiles row with its
+# email_verified_at. Inserting here could create a row that never learns the user is verified.
 _SAVE_PREFS = (
-    "insert into public.profiles (user_id, preferences) values (%(user_id)s, %(prefs)s) "
-    "on conflict (user_id) do update "
-    "set preferences = public.profiles.preferences || excluded.preferences"
+    "update public.profiles set preferences = preferences || %(prefs)s where user_id = %(user_id)s"
 )
 _BONUS_STATE = (
     "select email_verified_at, bonus_granted_at, bonus_review_at "
@@ -39,7 +38,9 @@ class PgProfileRepo:
 
     def save_preferences(self, user_id: str, prefs: JsonDict) -> None:
         with map_db_errors(), self._pool.connection() as conn:
-            conn.execute(_SAVE_PREFS, {"user_id": user_id, "prefs": Jsonb(prefs)})
+            cur = conn.execute(_SAVE_PREFS, {"user_id": user_id, "prefs": Jsonb(prefs)})
+            if cur.rowcount != 1:
+                raise DbConflict
 
     def bonus_state(self, user_id: str) -> BonusState:
         with map_db_errors(), self._pool.connection() as conn:
