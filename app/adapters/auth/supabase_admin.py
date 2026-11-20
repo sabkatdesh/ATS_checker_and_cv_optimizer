@@ -1,5 +1,6 @@
 """Auth admin operations with the service key (supabase-py auth.admin). Constant error messages."""
 
+import logging
 import time
 from collections.abc import Callable
 from typing import Any
@@ -9,6 +10,7 @@ import httpx
 from app.ports.user_admin import UserAdminError
 from supabase import Client
 
+_log = logging.getLogger(__name__)
 TIMEOUT_S = 10
 RETRIES = 2
 
@@ -43,11 +45,18 @@ class SupabaseAdmin:
         self._client = client
         self._retries = retries
         self._sleep = sleep
+        self.timeout_applied = self._apply_timeout(client)
+
+    @staticmethod
+    def _apply_timeout(client: Client) -> bool:
+        """supabase-py has no public auth timeout option, so set it on the admin's httpx client."""
         try:
             admin: Any = client.auth.admin
             admin._http_client.timeout = httpx.Timeout(TIMEOUT_S)
-        except Exception:  # noqa: S110 - a client without that handle keeps its own default
-            pass
+            return True
+        except Exception:
+            _log.warning("Auth admin timeout could not be applied; client default in use")
+            return False
 
     def delete_user(self, user_id: str) -> bool:
         """True when deleted; False when Auth no longer has the user (already purged)."""

@@ -58,3 +58,24 @@ def test_client_error_not_retried():
     with pytest.raises(UserAdminError):
         admin.delete_user(UID)
     assert call.call_count == 1
+
+
+def test_timeout_applied_on_a_real_client_offline():
+    import httpx
+
+    from supabase import create_client
+
+    client = create_client("https://abc.supabase.co", "a.b.c")
+    admin = SupabaseAdmin(client)
+    assert admin.timeout_applied is True
+    assert client.auth.admin._http_client.timeout == httpx.Timeout(10)
+
+
+def test_missing_timeout_handle_warns(caplog):
+    client = MagicMock()
+    del client.auth.admin._http_client
+    client.auth.admin = object()
+    with caplog.at_level("WARNING"):
+        admin = SupabaseAdmin(client)
+    assert admin.timeout_applied is False
+    assert "Auth admin timeout could not be applied" in caplog.text

@@ -50,3 +50,19 @@ def test_no_service_key_for_db_queries():
         if SUPABASE_IMPORT.search(p.read_text("utf-8")) and not _rel(p).startswith(ALLOWED_SUPABASE)
     ]
     assert offenders == []
+
+
+def test_render_path_and_storage_writers_use_the_user_root():
+    from app.ports.blob_storage import render_path
+
+    uid = "11111111-1111-1111-1111-111111111111"
+    assert render_path(uid, "s", "cv").startswith(f"{uid}/")
+    writers = [
+        _rel(p)
+        for p in _py_files("app")
+        if re.search(r"\.(put|upload)\(", p.read_text("utf-8"))
+        and not _rel(p).startswith("app/adapters/storage/")
+    ]
+    # Only the finalize service writes blobs today (via render_path); photos, imports and
+    # exports writers (M7+) must build paths as f"{user_id}/..." and be added here.
+    assert writers == ["app/services/finalize.py"]

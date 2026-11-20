@@ -11,14 +11,14 @@ class StorageError(Exception):
 
 
 _UUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-_USER_PREFIX = re.compile(rf"^{_UUID}(/{_UUID})?/?$")
+_USER_PREFIX = re.compile(rf"{_UUID}(/{_UUID})?/?")
 
 
 def checked_user_prefix(prefix: str) -> str:
     """Normalised 'user_id' or 'user_id/session_id' (no trailing slash), else StorageError.
 
     Guards bulk deletes against an empty, root or non-user prefix."""
-    if not _USER_PREFIX.match(prefix):
+    if not _USER_PREFIX.fullmatch(prefix):
         raise StorageError("Storage prefix is not a user prefix")
     return prefix.rstrip("/")
 

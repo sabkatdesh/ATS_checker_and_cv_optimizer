@@ -48,10 +48,10 @@ def test_every_user_table_reachable_by_cascade():
 
 def test_set_null_tables_really_set_null():
     blocks, _ = _schema()
-    for name in SET_NULL - {"audit_log"}:
-        assert re.search(
-            r"user_id\s+uuid\s+references\s+public\.profiles\s*\(user_id\)\s+on\s+delete\s+set\s+null",
-            blocks[name],
-            re.I,
-        ), name
-    assert re.search(r"on\s+delete\s+set\s+null", blocks["audit_log"], re.I)
+    owner_col = {"audit_log": "actor"}
+    for name in SET_NULL:
+        col = owner_col.get(name, "user_id")
+        line = next(
+            (ln for ln in blocks[name].splitlines() if re.match(rf"\s*{col}\s", ln, re.I)), ""
+        )
+        assert re.search(r"on\s+delete\s+set\s+null", line, re.I), (name, line)

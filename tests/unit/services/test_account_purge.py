@@ -119,6 +119,14 @@ def test_purge_idempotent_rerun_after_crash_at_step_2():
     assert report.threads_removed == 2
 
 
+def test_rerun_after_auth_404_reports_not_deleted_and_no_threads():
+    deps, _ = _deps(admin_result=False)
+    purge_account(UID, deps)
+    deps.sessions.ids = []  # rows are gone once the Auth user was deleted earlier
+    report = purge_account(UID, deps)
+    assert report == PurgeReport(objects_removed=0, threads_removed=0, user_deleted=False)
+
+
 def test_auth_404_treated_as_done():
     deps, calls = _deps(admin_result=False)
     report = purge_account(UID, deps)
@@ -154,7 +162,23 @@ def test_fake_delete_prefix_matches_whole_segments():
     assert list(fake.objects) == [("renders", "u1/s10/cv.pdf")]
 
 
-@pytest.mark.parametrize("prefix", ["", "/", "//", "u1", "u1/s1", f"{UID}/../x", f"{UID}//s"])
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "",
+        "/",
+        "//",
+        "u1",
+        "u1/s1",
+        f"{UID}/../x",
+        f"{UID}//s",
+        f"{UID}\n",
+        f"{UID}\r\n",
+        f" {UID}",
+        f"{UID}/{S1}\n",
+        f"\n{UID}",
+    ],
+)
 def test_real_adapter_rejects_unsafe_prefix(prefix):
     from unittest.mock import MagicMock
 
