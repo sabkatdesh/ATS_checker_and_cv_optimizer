@@ -43,3 +43,13 @@ MATRIX: dict[str, Rule] = {
 }
 
 CREDIT_TABLES = ("credit_balances", "credit_ledger", "credit_reservations")
+
+# service_role (the dashboard/admin key) on the credit tables: SELECT everywhere; on the
+# ledger UPDATE/DELETE stay granted so the append-only trigger is what rejects them.
+# No INSERT anywhere, no TRUNCATE (it would bypass the row trigger) and no balance/reservation
+# writes: credits move only through the SECURITY DEFINER functions.
+SERVICE_ROLE_CREDIT: dict[str, frozenset[str]] = {
+    "credit_balances": frozenset({"SELECT"}),
+    "credit_reservations": frozenset({"SELECT"}),
+    "credit_ledger": frozenset({"SELECT", "UPDATE", "DELETE"}),
+}

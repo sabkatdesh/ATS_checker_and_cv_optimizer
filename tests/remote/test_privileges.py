@@ -7,7 +7,7 @@ effective ACLs is the real check. The pg_default_acl test then guards future obj
 """
 
 from tests.remote._helpers import Conn, scalar
-from tests.rls_matrix import MATRIX
+from tests.rls_matrix import MATRIX, SERVICE_ROLE_CREDIT
 
 CLIENTS = ("anon", "authenticated")
 
@@ -137,3 +137,11 @@ def test_backend_credit_tables_are_select_only(backend_conn: Conn) -> None:
         ):
             sql = "select has_table_privilege('app_backend', %s, %s)"
             assert scalar(backend_conn, sql, (f"public.{table}", priv)) is expected, (table, priv)
+
+
+def test_service_role_credit_privileges_are_minimal(backend_conn: Conn) -> None:
+    for table, allowed in SERVICE_ROLE_CREDIT.items():
+        for priv in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"):
+            sql = "select has_table_privilege('service_role', %s, %s)"
+            got = scalar(backend_conn, sql, (f"public.{table}", priv))
+            assert got is (priv in allowed), (table, priv)

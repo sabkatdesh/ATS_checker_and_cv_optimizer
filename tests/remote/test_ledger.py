@@ -1,7 +1,8 @@
 """Ledger immutability and the backend's write surface on credit and serial tables.
 
-service_role keeps Supabase's default table grants, so its writes reach the append-only
-trigger and fail with LEDGER_IMMUTABLE. app_backend has SELECT only on the credit tables, so
+service_role keeps UPDATE/DELETE on the ledger (0700 revokes its INSERT and TRUNCATE there,
+and all writes on balances/reservations), so its ledger writes reach the append-only trigger
+and fail with LEDGER_IMMUTABLE. app_backend has SELECT only on the credit tables, so
 its writes fail earlier, on the grant (42501), which is stronger; TRUNCATE (which would bypass
 the row trigger) is revoked from it explicitly.
 

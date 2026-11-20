@@ -44,6 +44,18 @@ revoke all on public.credit_balances from public, anon, authenticated;
 revoke all on public.credit_reservations from public, anon, authenticated;
 revoke all on public.credit_ledger from public, anon, authenticated;
 revoke truncate on public.credit_ledger from public, anon, authenticated, app_backend;
+-- service_role keeps SELECT everywhere, UPDATE/DELETE on the ledger (the append-only
+-- trigger rejects them, which the remote suite proves) and EXECUTE on the credit functions.
+revoke truncate on public.credit_ledger from service_role;
+revoke insert on public.credit_ledger from service_role;
+revoke insert, update, delete, truncate on public.credit_balances, public.credit_reservations from service_role;
+
+-- PostgreSQL grants EXECUTE on every new function to PUBLIC through a built-in global
+-- default; a per-schema `alter default privileges ... in schema` cannot remove it. This
+-- covers functions later created by the migration role only (defaults are per creating
+-- role; supabase_admin's cannot be changed from here), so every function still revokes
+-- PUBLIC explicitly.
+alter default privileges revoke execute on functions from public;
 
 grant select on public.profiles to authenticated;
 grant select on public.master_profiles to authenticated;
