@@ -1,5 +1,6 @@
 from typing import Any
 
+import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -45,7 +46,19 @@ async def _handle_db_conflict(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+async def _handle_psycopg(request: Request, exc: Exception) -> JSONResponse:
+    return await _handle_db_unavailable(request, exc)
+
+
+async def _handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
+    return await _handle_app_error(
+        request, AppError("INTERNAL_ERROR", 500, "Internal error", "Something went wrong.")
+    )
+
+
 def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(DbUnavailable, _handle_db_unavailable)
     app.add_exception_handler(DbConflict, _handle_db_conflict)
+    app.add_exception_handler(psycopg.Error, _handle_psycopg)
+    app.add_exception_handler(Exception, _handle_unhandled)

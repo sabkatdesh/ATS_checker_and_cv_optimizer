@@ -74,11 +74,11 @@ def test_valid_inbound_request_id_kept(client, buf):  # noqa: F811
     assert _http_lines(buf)[0]["request_id"] == "trace-abc12345"
 
 
-def test_500_is_logged_and_body_unchanged(client, backend, buf):  # noqa: F811
+def test_500_is_logged_and_body_is_constant(client, backend, buf):  # noqa: F811
     backend.sessions.raise_on["list_for_user"] = RuntimeError("db down for a@b.co")
     r = client.get("/sessions", headers=auth_header())
     assert r.status_code == 500
-    assert r.text == "Internal Server Error"
+    assert r.json()["code"] == "INTERNAL_ERROR"
     (line,) = _http_lines(buf)
     assert line["status"] == 500
     assert "db down" not in buf.getvalue()

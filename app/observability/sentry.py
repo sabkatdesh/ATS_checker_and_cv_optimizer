@@ -5,7 +5,7 @@ from typing import Any
 import sentry_sdk
 
 from app.config.settings import AppSettings
-from app.observability.redaction import REDACTED, redact_value
+from app.observability.redaction import REDACTED, mask_text, redact_value
 
 _DROPPED_HEADERS = {"authorization", "cookie"}
 
@@ -15,11 +15,14 @@ def scrub_event(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
     if isinstance(request, dict):
         for key in ("data", "cookies", "query_string"):
             request.pop(key, None)
+        if isinstance(request.get("url"), str):
+            request["url"] = mask_text(request["url"])
         headers = request.get("headers")
         if isinstance(headers, dict):
-            request["headers"] = {
-                k: v for k, v in headers.items() if k.lower() not in _DROPPED_HEADERS
-            }
+            request["headers"] = redact_value(
+                "headers",
+                {k: v for k, v in headers.items() if k.lower() not in _DROPPED_HEADERS},
+            )
     for exc in (event.get("exception") or {}).get("values", []):
         exc["value"] = REDACTED
         for frame in (exc.get("stacktrace") or {}).get("frames", []):

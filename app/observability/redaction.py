@@ -6,6 +6,8 @@ import traceback
 from collections.abc import MutableMapping
 from typing import Any
 
+from app.observability.secrets import scrub_secrets
+
 REDACTED = "[REDACTED]"
 EMAIL_RE = r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
 PHONE_RE = r"(?<![\w-])\(?\+?\d(?:[\s().-]{0,2}\d){8,14}(?![\w-])"
@@ -64,6 +66,7 @@ PASSTHROUGH_KEYS: frozenset[str] = frozenset(
 
 
 def mask_text(value: str) -> str:
+    value = scrub_secrets(value)
     value = re.sub(EMAIL_RE, "[EMAIL]", value)
     return re.sub(PHONE_RE, "[PHONE]", value)
 
