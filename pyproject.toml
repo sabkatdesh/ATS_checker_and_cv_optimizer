@@ -39,6 +39,9 @@ package = false
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider"
 pythonpath = ["."]
+markers = [
+    "remote: hits the dev Supabase project; skipped unless M4_REMOTE=1 (tests/remote)",
+]
 
 [tool.ruff]
 target-version = "py312"
