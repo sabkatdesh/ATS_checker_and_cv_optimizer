@@ -1,6 +1,7 @@
 """In-memory repositories mirroring the Pg adapters' behaviour."""
 
-from datetime import UTC, datetime
+import threading
+from datetime import UTC, date, datetime
 
 from app.ports.repositories import BonusState, JsonDict
 
@@ -58,6 +59,7 @@ class MemoryCreditRepo:
         self.balances: dict[str, tuple[int, int]] = {}
         self.ledger_rows: list[JsonDict] = []
         self._by_key: dict[str, JsonDict] = {}
+        self._lock = threading.Lock()  # the SQL function serialises on the key; so does the fake
 
     def balance(self, user_id: str) -> tuple[int, int]:
         return self.balances.get(user_id, (0, 0))
@@ -68,6 +70,10 @@ class MemoryCreditRepo:
         return mine[:limit]
 
     def grant(self, user_id: str, amount: int, kind: str, idem: str) -> int:
+        with self._lock:
+            return self._grant(user_id, amount, kind, idem)
+
+    def _grant(self, user_id: str, amount: int, kind: str, idem: str) -> int:
         if not idem or not idem.strip():
             raise ValueError("credits_grant rejected: INVALID_IDEMPOTENCY_KEY")
         if amount is None or amount <= 0:
@@ -95,3 +101,23 @@ class MemoryCreditRepo:
         balance, held = self.balance(user_id)
         self.balances[user_id] = (balance + amount, held)
         return balance + amount
+
+
+class MemoryGuardRepo:
+    """Counts per bucket, ignoring the day (tests run within one day)."""
+
+    def __init__(self) -> None:
+        self.counts_by_bucket: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def counts(self, ip_bucket: str, device_bucket: str | None, day: date) -> tuple[int, int]:
+        with self._lock:
+            return (
+                self.counts_by_bucket.get(ip_bucket, 0),
+                self.counts_by_bucket.get(device_bucket or "", 0),
+            )
+
+    def bump(self, buckets: list[str], day: date) -> None:
+        with self._lock:
+            for bucket in set(buckets):
+                self.counts_by_bucket[bucket] = self.counts_by_bucket.get(bucket, 0) + 1

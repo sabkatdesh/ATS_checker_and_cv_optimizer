@@ -3,7 +3,7 @@ from fastapi import HTTPException, Request
 from app.api.errors import AppError
 from app.config.settings import ConfigError
 from app.container import Container
-from app.ports.auth import AuthUnavailable
+from app.ports.auth import AuthUnavailable, VerifiedUser
 from app.ports.repositories import SessionRow
 
 
@@ -12,12 +12,12 @@ def get_container(request: Request) -> Container:
     return container
 
 
-def require_user_id(container: Container, authorization: str | None) -> str:
+def require_user(container: Container, authorization: str | None) -> VerifiedUser:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not logged in")
     token = authorization.replace("Bearer ", "")
     try:
-        return container.auth.verify(token).user_id
+        return container.auth.verify(token)
     except (AuthUnavailable, ConfigError):
         raise AppError(
             "AUTH_UNAVAILABLE", 503, "Service unavailable", "Please try again shortly."
@@ -26,6 +26,10 @@ def require_user_id(container: Container, authorization: str | None) -> str:
         raise HTTPException(
             status_code=401, detail="Invalid or expired session. Please log in again."
         ) from None
+
+
+def require_user_id(container: Container, authorization: str | None) -> str:
+    return require_user(container, authorization).user_id
 
 
 def require_session(container: Container, user_id: str, session_id: str) -> SessionRow:

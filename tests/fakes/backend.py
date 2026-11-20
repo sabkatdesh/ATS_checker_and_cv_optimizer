@@ -7,6 +7,7 @@ from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
 from app.ports.repositories import (
     CreditReadRepo,
+    GuardRepo,
     MasterProfileRepo,
     ProfileRepo,
     RenderRepo,
@@ -19,6 +20,7 @@ from tests.fakes.fake_pipeline import FakePipeline
 from tests.fakes.fake_renderers import FakeCoverLetterRenderer, FakePdfRenderer
 from tests.fakes.memory_repos import (
     MemoryCreditRepo,
+    MemoryGuardRepo,
     MemoryMasterProfileRepo,
     MemoryProfileRepo,
     MemoryTemplateRepo,
@@ -38,6 +40,7 @@ _templates: TemplateRepo = MemoryTemplateRepo()
 _sessions: SessionRepo = MemorySessionRepo()
 _renders: RenderRepo = MemoryRenderRepo()
 _credits: CreditReadRepo = MemoryCreditRepo()
+_guards: GuardRepo = MemoryGuardRepo()
 
 
 @dataclass
@@ -52,6 +55,7 @@ class FakeBackend:
     renders: MemoryRenderRepo = field(default_factory=MemoryRenderRepo)
     sessions: MemorySessionRepo = field(init=False)
     credits: MemoryCreditRepo = field(default_factory=MemoryCreditRepo)
+    guards: MemoryGuardRepo = field(default_factory=MemoryGuardRepo)
 
     def __post_init__(self) -> None:
         self.sessions = MemorySessionRepo(self.renders)
@@ -67,6 +71,7 @@ class FakeBackend:
             "sessions": self.sessions,
             "renders": self.renders,
             "credits": self.credits,
+            "guards": self.guards,
         }
 
 

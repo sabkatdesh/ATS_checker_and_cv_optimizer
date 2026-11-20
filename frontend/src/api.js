@@ -6,10 +6,10 @@ function headers(token) {
   return h
 }
 
-async function request(method, path, token, body) {
+async function request(method, path, token, body, extraHeaders) {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: headers(token),
+    headers: { ...headers(token), ...extraHeaders },
     body: body != null ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
@@ -37,5 +37,7 @@ export const api = {
   saveSettings: (token, body) => request('POST', '/settings', token, body),
 
   getBalance: (token) => request('GET', '/billing/balance', token),
+  claimSignupBonus: (token, deviceId) =>
+    request('POST', '/billing/claim-signup-bonus', token, undefined, { 'X-Device-Id': deviceId }),
   getBillingHistory: (token) => request('GET', '/billing/history', token),
 }

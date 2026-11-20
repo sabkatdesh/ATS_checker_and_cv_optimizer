@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Protocol
 
 JsonDict = dict[str, Any]
@@ -126,6 +126,16 @@ class CreditReadRepo(Protocol):
 
     def grant(self, user_id: str, amount: int, kind: str, idem: str) -> int:
         """credits_grant(): idempotent by key; returns the new (or current) balance."""
+        ...
+
+
+class GuardRepo(Protocol):
+    def counts(self, ip_bucket: str, device_bucket: str | None, day: date) -> tuple[int, int]:
+        """(ip attempts, device attempts) recorded for that day; 0 for unseen buckets."""
+        ...
+
+    def bump(self, buckets: list[str], day: date) -> None:
+        """guard_bump(): count + 1 per bucket for the day."""
         ...
 
 

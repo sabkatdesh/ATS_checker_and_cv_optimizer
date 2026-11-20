@@ -41,6 +41,8 @@ class ApiSettings(BaseModel):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+    # Read the client IP from the leftmost X-Forwarded-For (only behind a trusted proxy).
+    trust_proxy: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod

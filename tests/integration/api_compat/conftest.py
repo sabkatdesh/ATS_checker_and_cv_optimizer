@@ -2,9 +2,11 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.adapters.background.inline_runner import InlineRunner
-from app.config.settings import AppSettings
+from app.config.db_settings import BonusSettings
+from app.config.settings import ApiSettings, AppSettings
 from app.container import Container
 from app.main import create_app
 from tests.fakes.backend import FakeBackend
@@ -20,9 +22,19 @@ def backend() -> FakeBackend:
     return FakeBackend()
 
 
-def _build_client(backend: FakeBackend) -> TestClient:
+PEPPER = SecretStr("test-pepper")
+
+
+def _build_client(
+    backend: FakeBackend, *, pepper: SecretStr | None = PEPPER, trust_proxy: bool = False
+) -> TestClient:
     container = Container(
-        AppSettings(_env_file=None, env="test"),
+        AppSettings(
+            _env_file=None,
+            env="test",
+            bonus=BonusSettings(hash_pepper=pepper),
+            api=ApiSettings(trust_proxy=trust_proxy),
+        ),
         **backend.repos(),
         pipeline=backend.pipeline,
         runner=InlineRunner(),

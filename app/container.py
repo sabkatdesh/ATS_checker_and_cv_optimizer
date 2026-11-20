@@ -9,6 +9,7 @@ from app.adapters.auth.factory import build_token_verifier
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.credit_repo import PgCreditRepo
 from app.adapters.db.errors import DbUnavailable
+from app.adapters.db.guard_repo import PgGuardRepo
 from app.adapters.db.master_profile_repo import PgMasterProfileRepo
 from app.adapters.db.pool import make_pool
 from app.adapters.db.profile_repo import PgProfileRepo
@@ -36,6 +37,7 @@ from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
 from app.ports.repositories import (
     CreditReadRepo,
+    GuardRepo,
     MasterProfileRepo,
     ProfileRepo,
     RenderRepo,
@@ -98,6 +100,7 @@ class Container:
         sessions: SessionRepo | None = None,
         renders: RenderRepo | None = None,
         credits: CreditReadRepo | None = None,
+        guards: GuardRepo | None = None,
     ) -> None:
         self.settings = settings
         # Reentrant: a default builder may read another lazy property (e.g. pipeline -> llm).
@@ -115,6 +118,7 @@ class Container:
         self._sessions = sessions
         self._renders = renders
         self._credits = credits
+        self._guards = guards
         self._llm = llm
         self._embeddings = embeddings
         self.prompts = PromptLibrary()
@@ -192,6 +196,13 @@ class Container:
             if self._credits is None:
                 self._credits = PgCreditRepo(self.pool)
             return self._credits
+
+    @property
+    def guards(self) -> GuardRepo:
+        with self._lock:
+            if self._guards is None:
+                self._guards = PgGuardRepo(self.pool)
+            return self._guards
 
     @property
     def storage(self) -> BlobStorage:
