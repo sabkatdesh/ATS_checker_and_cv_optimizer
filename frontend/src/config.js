@@ -10,3 +10,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+export const authCallbackUrl = () => window.location.origin + "/auth/callback"

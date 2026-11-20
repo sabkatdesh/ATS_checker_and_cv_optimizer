@@ -34,6 +34,12 @@ Under Authentication, URL configuration, set the Site URL to the production fron
 origin and add the callback URLs: `http://localhost:5173/auth/callback` for local
 development and `https://<your-frontend-domain>/auth/callback` for production.
 
+## SPA fallback for /auth/callback
+
+Confirmation and OAuth links land on `<frontend-origin>/auth/callback`. The frontend
+host must serve `index.html` for that path (a single-page-app fallback), otherwise
+the link returns a 404 before the session in the URL can be read.
+
 ## Google sign-in
 
 1. In Google Cloud Console configure the OAuth consent screen (app name, support
@@ -56,9 +62,13 @@ development and `https://<your-frontend-domain>/auth/callback` for production.
    `SUPABASE_AUTH_CAPTCHA_SECRET`.
 3. Build the frontend with `VITE_TURNSTILE_SITE_KEY=<site key>`. When unset, the
    widget and the Turnstile script are not loaded.
-4. Local CLI stack: use Cloudflare's published always-pass test secret for
-   `SUPABASE_AUTH_CAPTCHA_SECRET` and the matching always-pass test site key for
-   `VITE_TURNSTILE_SITE_KEY`. Never use test keys in production.
+4. Captcha is verified by Supabase Auth on signup, password sign-in and the
+   confirmation resend, so the frontend sends a fresh single-use token for each.
+5. Local CLI stack: `config.toml` enables captcha, so `supabase start` needs
+   `SUPABASE_AUTH_CAPTCHA_SECRET` exported. Use Cloudflare's public always-pass test
+   secret `1x0000000000000000000000000000000AA` and the matching test site key
+   `1x00000000000000000000AA` for `VITE_TURNSTILE_SITE_KEY`. Never use test keys in
+   production.
 
 ## JWT signing keys (ES256)
 
