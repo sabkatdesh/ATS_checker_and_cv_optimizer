@@ -5,7 +5,7 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.adapters.db.errors import DbConflict, DbUnavailable
+from app.adapters.db.errors import DbConflict, DbInvalidData, DbUnavailable
 
 _log = structlog.get_logger("api")
 
@@ -49,6 +49,23 @@ async def _handle_db_conflict(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+async def _handle_db_invalid_data(request: Request, exc: Exception) -> JSONResponse:
+    return await _handle_app_error(
+        request,
+        AppError("DB_INVALID_DATA", 422, "Invalid data", "The request contains an invalid value."),
+    )
+
+
+async def _handle_db_integrity(request: Request, exc: Exception) -> JSONResponse:
+    _log_db_error(exc)
+    return await _handle_db_conflict(request, exc)
+
+
+async def _handle_db_data(request: Request, exc: Exception) -> JSONResponse:
+    _log_db_error(exc)
+    return await _handle_db_invalid_data(request, exc)
+
+
 def _log_db_error(exc: Exception) -> None:
     """Type and SQLSTATE only; the message can carry a DSN or row data."""
     _log.error(
@@ -75,5 +92,8 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(DbUnavailable, _handle_db_unavailable)
     app.add_exception_handler(DbConflict, _handle_db_conflict)
+    app.add_exception_handler(DbInvalidData, _handle_db_invalid_data)
+    app.add_exception_handler(psycopg.IntegrityError, _handle_db_integrity)
+    app.add_exception_handler(psycopg.DataError, _handle_db_data)
     app.add_exception_handler(psycopg.OperationalError, _handle_db_operational)
     app.add_exception_handler(Exception, _handle_unhandled)
