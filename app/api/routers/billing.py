@@ -47,13 +47,20 @@ def billing_history(authorization: str = Header(None), c: Container = Depends(ge
 _DEVICE_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 
-def client_ip(request: Request, trust_proxy: bool) -> str:
-    """Leftmost X-Forwarded-For only behind a trusted proxy; otherwise the socket peer."""
-    if trust_proxy:
-        first = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        if first:
-            return first
-    return request.client.host if request.client else "unknown"
+def client_ip(request: Request, hops: int, header: str | None) -> str:
+    """The configured edge header, else the Nth X-Forwarded-For entry from the right, else
+    the socket peer. Entries further left than the trusted hops can be forged by the client."""
+    peer = request.client.host if request.client else "unknown"
+    if header:
+        value = request.headers.get(header, "").split(",")[0].strip()
+        if value:
+            return value
+    if hops > 0:
+        parts = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",")]
+        parts = [p for p in parts if p]
+        if len(parts) >= hops:
+            return parts[-hops]
+    return peer
 
 
 def device_id(raw: str | None) -> str | None:
@@ -70,7 +77,8 @@ def claim_bonus(
     """One-time signup bonus; repeat calls are no-ops that report the current state."""
     user = require_user(c, authorization)
     deps = BonusDeps(c.profiles, c.credits, c.guards, c.settings.bonus, load_disposable_domains())
-    ip = client_ip(request, c.settings.api.trust_proxy)
+    api = c.settings.api
+    ip = client_ip(request, api.trusted_proxy_hops, api.client_ip_header)
     try:
         outcome, balance = claim_signup_bonus(user, ip, device_id(x_device_id), deps)
     except ConfigError:

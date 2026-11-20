@@ -1,30 +1,46 @@
-"""Signup-guard counters. Bumps go through guard_bump() (definer), reads hit the table."""
+"""Signup bonus claim: guards and grant in one SQL function (one transaction)."""
 
-from datetime import date
 from typing import Any
+
+import psycopg
 
 from app.adapters.db.errors import map_db_errors
 
-_COUNTS = (
-    "select bucket, count from public.signup_guards "
-    "where bucket = any(%(buckets)s) and day = %(day)s"
+_CLAIM = (
+    "select public.claim_signup_bonus(%(user_id)s, %(ip)s, %(dev)s, "
+    "%(ip_max)s, %(dev_max)s, %(amount)s) as outcome"
 )
-_BUMP = "select public.guard_bump(%(buckets)s, %(day)s)"
 
 
 class PgGuardRepo:
     def __init__(self, pool: Any) -> None:
         self._pool = pool
 
-    def counts(self, ip_bucket: str, device_bucket: str | None, day: date) -> tuple[int, int]:
-        buckets = [ip_bucket] + ([device_bucket] if device_bucket else [])
-        with map_db_errors(), self._pool.connection() as conn:
-            rows = conn.execute(_COUNTS, {"buckets": buckets, "day": day}).fetchall()
-        by_bucket = {r["bucket"]: int(r["count"]) for r in rows}
-        return by_bucket.get(ip_bucket, 0), by_bucket.get(device_bucket or "", 0)
-
-    def bump(self, buckets: list[str], day: date) -> None:
-        if not buckets:
-            return
-        with map_db_errors(), self._pool.connection() as conn:
-            conn.execute(_BUMP, {"buckets": buckets, "day": day})
+    def claim(
+        self,
+        user_id: str,
+        ip_bucket: str,
+        device_bucket: str | None,
+        *,
+        ip_max: int,
+        device_max: int,
+        amount: int,
+    ) -> str:
+        """Outcome string. Function rejections (bad user/bucket) -> ValueError, no details."""
+        params = {
+            "user_id": user_id,
+            "ip": ip_bucket,
+            "dev": device_bucket,
+            "ip_max": ip_max,
+            "dev_max": device_max,
+            "amount": amount,
+        }
+        try:
+            with self._pool.connection() as conn:
+                row = conn.execute(_CLAIM, params).fetchone()
+        except psycopg.errors.RaiseException:
+            raise ValueError("claim_signup_bonus rejected") from None
+        except Exception:
+            with map_db_errors():
+                raise
+        return str(row["outcome"]) if row else "pending_review"

@@ -88,3 +88,6 @@ key material is ever stored in this repository.
 | `SUPABASE_AUTH_SMTP_PASS` | Resend API key |
 | `VITE_TURNSTILE_SITE_KEY` | Frontend captcha widget |
 | `VITE_AUTH_GOOGLE` | Frontend Google button (`1` to show) |
+| `API__TRUSTED_PROXY_HOPS` | Proxies in front of the API (0 = socket peer; N = Nth `X-Forwarded-For` entry from the right). Used for signup-bonus IP guards |
+| `API__CLIENT_IP_HEADER` | Optional trusted edge header with the client IP (e.g. `CF-Connecting-IP`); wins over the hop count |
+| `GUARDS__HASH_PEPPER` | Secret pepper for hashed IP/device guard buckets (required to claim the bonus) |

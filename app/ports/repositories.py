@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any, Protocol
 
 JsonDict = dict[str, Any]
@@ -130,12 +130,20 @@ class CreditReadRepo(Protocol):
 
 
 class GuardRepo(Protocol):
-    def counts(self, ip_bucket: str, device_bucket: str | None, day: date) -> tuple[int, int]:
-        """(ip attempts, device attempts) recorded for that day; 0 for unseen buckets."""
-        ...
+    def claim(
+        self,
+        user_id: str,
+        ip_bucket: str,
+        device_bucket: str | None,
+        *,
+        ip_max: int,
+        device_max: int,
+        amount: int,
+    ) -> str:
+        """claim_signup_bonus(): guards + credits_grant in one transaction.
 
-    def bump(self, buckets: list[str], day: date) -> None:
-        """guard_bump(): count + 1 per bucket for the day."""
+        Returns granted | already_granted | pending_review | email_not_verified. The ip bucket
+        is counted per day, the device bucket for life."""
         ...
 
 

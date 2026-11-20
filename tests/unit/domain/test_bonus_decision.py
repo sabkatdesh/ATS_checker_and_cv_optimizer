@@ -3,7 +3,12 @@ from datetime import UTC, datetime
 import pytest
 
 from app.config.db_settings import BonusSettings
-from app.domain.credits.bonus import BonusInputs, decide_bonus, load_disposable_domains
+from app.domain.credits.bonus import (
+    BonusInputs,
+    decide_bonus,
+    load_disposable_domains,
+    normalize_ip,
+)
 
 NOW = datetime(2026, 11, 20, tzinfo=UTC)
 S = BonusSettings()
@@ -45,6 +50,25 @@ def test_decide_bonus_table(kw, expected):
 @pytest.mark.parametrize("domain", ["MAILINATOR.com", "Sub.Mailinator.Com", "a.b.mailinator.com"])
 def test_disposable_domain_pending(domain):
     assert decide_bonus(inp(email_domain=domain), S, BLOCK) == "pending_review"
+
+
+@pytest.mark.parametrize("domain", ["", "nodot", "a..b", ".com", "com.", "a b.com", "-.com"])
+def test_malformed_domain_pending(domain):
+    assert decide_bonus(inp(email_domain=domain), S, BLOCK) == "pending_review"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("1.2.3.4", "1.2.3.4"),
+        ("::ffff:1.2.3.4", "1.2.3.4"),
+        ("2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2::/64"),
+        ("2001:0db8:0001:0002::1", "2001:db8:1:2::/64"),
+        ("not-an-ip", "not-an-ip"),
+    ],
+)
+def test_normalize_ip(raw, expected):
+    assert normalize_ip(raw) == expected
 
 
 def test_lookalike_domain_is_not_blocked():

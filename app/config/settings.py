@@ -41,8 +41,11 @@ class ApiSettings(BaseModel):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
-    # Read the client IP from the leftmost X-Forwarded-For (only behind a trusted proxy).
-    trust_proxy: bool = False
+    # Proxies we run in front of the app. 0 = use the socket peer; N = the Nth X-Forwarded-For
+    # entry from the right (the leftmost entries are client-controlled and never trusted).
+    trusted_proxy_hops: int = Field(default=0, ge=0, le=10)
+    # Optional single-IP header set by an edge we trust (e.g. CF-Connecting-IP); wins when set.
+    client_ip_header: str | None = None
 
     @field_validator("cors_origins", mode="before")
     @classmethod

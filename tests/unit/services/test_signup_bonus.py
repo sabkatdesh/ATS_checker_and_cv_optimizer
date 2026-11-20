@@ -1,104 +1,158 @@
 import threading
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 from pydantic import SecretStr
 
 from app.config.db_settings import BonusSettings
 from app.config.settings import ConfigError
+from app.domain.credits.bonus import normalize_ip
 from app.ports.auth import VerifiedUser
 from app.services.signup_bonus import BonusDeps, claim_signup_bonus, guard_hash
 from tests.fakes.memory_repos import MemoryCreditRepo, MemoryGuardRepo, MemoryProfileRepo
 
 UID = "11111111-1111-4111-8111-111111111111"
-USER = VerifiedUser(user_id=UID, email="Ann@Example.com")
 PEPPER = SecretStr("pepper-1")
+DAY1, DAY2 = date(2026, 11, 20), date(2026, 11, 21)
+LIFETIME = date(1970, 1, 1)
 
 
-def make(verified=True, pepper=PEPPER, blocklist=frozenset({"mailinator.com"})):
-    profiles, credits, guards = MemoryProfileRepo(), MemoryCreditRepo(), MemoryGuardRepo()
+class Env:
+    def __init__(self, pepper=PEPPER, blocklist=frozenset({"mailinator.com"})):
+        self.day = DAY1
+        self.profiles, self.credits = MemoryProfileRepo(), MemoryCreditRepo()
+        self.guards = MemoryGuardRepo(self.profiles, self.credits, today=lambda: self.day)
+        self.deps = BonusDeps(
+            self.profiles, self.credits, self.guards, BonusSettings(hash_pepper=pepper), blocklist
+        )
+
+    def verify(self, uid=UID):
+        self.profiles.bonus.setdefault(uid, {})["verified"] = datetime.now(UTC)
+
+    def claim(self, uid=UID, ip="1.2.3.4", dev="dev-1", email="a@example.com"):
+        return claim_signup_bonus(VerifiedUser(uid, email), ip, dev, self.deps)
+
+
+def make(verified=True, **kw):
+    env = Env(**kw)
     if verified:
-        profiles.bonus[UID] = {"verified": datetime.now(UTC)}
-    settings = BonusSettings(hash_pepper=pepper)
-    deps = BonusDeps(profiles, credits, guards, settings, blocklist)
-    return deps, profiles, credits, guards
+        env.verify()
+    return env
 
 
-def test_grant_marks_profile_bumps_guards_and_returns_balance():
-    deps, profiles, credits, guards = make()
-    assert claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps) == ("granted", 100)
-    assert credits.ledger_rows[0]["kind"] == "signup_bonus"
-    assert list(credits._by_key) == [f"signup_bonus:{UID}"]
-    assert profiles.bonus_state(UID).granted_at is not None
-    assert sorted(b.split(":")[0] for b in guards.counts_by_bucket) == ["device", "ip"]
+def test_grant_sets_profile_and_counts_both_buckets():
+    env = make()
+    assert env.claim() == ("granted", 100)
+    assert env.credits.ledger_rows[0]["kind"] == "signup_bonus"
+    assert list(env.credits._by_key) == [f"signup_bonus:{UID}"]
+    assert env.profiles.bonus_state(UID).granted_at is not None
+    assert env.guards.counts[(guard_hash("ip", "1.2.3.4", PEPPER), DAY1)] == 1
+    assert env.guards.counts[(guard_hash("device", "dev-1", PEPPER), LIFETIME)] == 1
 
 
 def test_second_claim_is_noop_already_granted():
-    deps, _, credits, guards = make()
-    claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps)
-    calls = []
-    real = credits.grant
-    credits.grant = lambda *a: calls.append(a) or real(*a)  # type: ignore[method-assign]
-    assert claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps) == ("already_granted", 100)
-    assert calls == []
-    assert len(credits.ledger_rows) == 1
-    assert sum(guards.counts_by_bucket.values()) == 2
+    env = make()
+    env.claim()
+    before = dict(env.guards.counts)
+    assert env.claim() == ("already_granted", 100)
+    assert len(env.credits.ledger_rows) == 1
+    assert env.guards.counts == before
 
 
 def test_unverified_gets_nothing():
-    deps, profiles, credits, _ = make(verified=False)
-    assert claim_signup_bonus(USER, "1.2.3.4", None, deps)[0] == "email_not_verified"
-    assert credits.ledger_rows == []
-    assert profiles.bonus_state(UID).review_at is None
+    env = make(verified=False)
+    assert env.claim()[0] == "email_not_verified"
+    assert env.credits.ledger_rows == [] and env.guards.counts == {}
+    assert env.profiles.bonus_state(UID).review_at is None
 
 
-def test_ip_over_limit_goes_to_review_without_grant():
-    deps, profiles, credits, guards = make()
-    guards.counts_by_bucket[guard_hash("ip", "9.9.9.9", PEPPER)] = 3
-    assert claim_signup_bonus(USER, "9.9.9.9", None, deps) == ("pending_review", 0)
-    assert credits.ledger_rows == []
-    assert profiles.bonus_state(UID).review_at is not None
-    assert profiles.bonus_state(UID).granted_at is None
+def test_ip_limit_is_per_day():
+    env = make()
+    for i in range(3):
+        env.verify(f"u{i}")
+        assert env.claim(f"u{i}", dev=None)[0] == "granted"
+    env.verify("u3")
+    assert env.claim("u3", dev=None)[0] == "pending_review"
+    env.day = DAY2
+    env.verify("u4")
+    assert env.claim("u4", dev=None)[0] == "granted"
 
 
-def test_known_device_goes_to_review():
-    deps, _, credits, guards = make()
-    guards.counts_by_bucket[guard_hash("device", "dev-1", PEPPER)] = 1
-    assert claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps)[0] == "pending_review"
-    assert credits.ledger_rows == []
+def test_device_limit_is_lifetime():
+    env = make()
+    assert env.claim()[0] == "granted"
+    env.day = DAY2
+    env.verify("u2")
+    assert env.claim("u2", ip="5.5.5.5")[0] == "pending_review"
+    assert env.credits.balance("u2") == (0, 0)
+    assert env.profiles.bonus_state("u2").review_at is not None
 
 
-def test_disposable_email_goes_to_review():
-    deps, _, credits, _ = make()
-    user = VerifiedUser(user_id=UID, email="x@Sub.Mailinator.com")
-    assert claim_signup_bonus(user, "1.2.3.4", None, deps)[0] == "pending_review"
-    assert credits.ledger_rows == []
+def test_pending_user_repeat_claim_leaves_counters_unchanged():
+    env = make()
+    env.verify("u2")
+    env.claim()
+    assert env.claim("u2", ip="5.5.5.5")[0] == "pending_review"
+    before = dict(env.guards.counts)
+    assert env.claim("u2", ip="6.6.6.6", dev="other")[0] == "pending_review"
+    assert env.guards.counts == before
+
+
+@pytest.mark.parametrize("email", ["x@Sub.Mailinator.com", "x@", "x", None, "x@nodot", "x@a..b"])
+def test_blocked_or_malformed_email_goes_to_review_without_guard_use(email):
+    env = make()
+    assert env.claim(email=email)[0] == "pending_review"
+    assert env.credits.ledger_rows == [] and env.guards.counts == {}
+    assert env.profiles.bonus_state(UID).review_at is not None
 
 
 def test_missing_device_id_skips_device_guard():
-    deps, _, _, guards = make()
-    assert claim_signup_bonus(USER, "1.2.3.4", None, deps)[0] == "granted"
-    assert [b.split(":")[0] for b in guards.counts_by_bucket] == ["ip"]
+    env = make()
+    assert env.claim(dev=None)[0] == "granted"
+    assert [b.split(":")[0] for b, _ in env.guards.counts] == ["ip"]
 
 
-def test_concurrent_claims_one_grant():
-    deps, _, credits, _ = make()
-    results, barrier = [], threading.Barrier(5)
+def _run_threads(fn, n):
+    barrier, out = threading.Barrier(n), []
 
-    def run():
+    def run(i):
         barrier.wait()
-        results.append(claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps))
+        out.append(fn(i))
 
-    threads = [threading.Thread(target=run) for _ in range(5)]
-    for t in threads:
+    ts = [threading.Thread(target=run, args=(i,)) for i in range(n)]
+    for t in ts:
         t.start()
-    for t in threads:
+    for t in ts:
         t.join()
-    assert len(results) == 5
-    assert len(credits.ledger_rows) == 1
-    assert credits.balance(UID) == (100, 0)
-    assert {b for _, b in results} == {100}
-    assert {s for s, _ in results} <= {"granted", "already_granted"}
+    return out
+
+
+def test_duplicate_concurrent_claims_of_one_user_grant_once():
+    env = make()
+    out = _run_threads(lambda i: env.claim(), 5)
+    assert {s for s, _ in out} <= {"granted", "already_granted"}
+    assert [s for s, _ in out].count("granted") == 1
+    assert len(env.credits.ledger_rows) == 1
+    assert env.credits.balance(UID) == (100, 0)
+    assert set(env.guards.counts.values()) == {1}
+
+
+def test_concurrent_different_users_same_ip_stop_at_ip_max():
+    env = make()
+    for i in range(6):
+        env.verify(f"u{i}")
+    out = _run_threads(lambda i: env.claim(f"u{i}", dev=None)[0], 6)
+    assert out.count("granted") == 3 and out.count("pending_review") == 3
+    assert len(env.credits.ledger_rows) == 3
+
+
+def test_concurrent_different_users_same_device_stop_at_device_max():
+    env = make()
+    for i in range(5):
+        env.verify(f"u{i}")
+    out = _run_threads(lambda i: env.claim(f"u{i}", ip=f"9.9.9.{i}")[0], 5)
+    assert out.count("granted") == 1 and out.count("pending_review") == 4
+    assert len(env.credits.ledger_rows) == 1
 
 
 def test_guard_hash_is_peppered_and_stable():
@@ -111,10 +165,17 @@ def test_guard_hash_is_peppered_and_stable():
 
 
 def test_missing_pepper_raises_constant_config_error():
-    deps, _, credits, _ = make(pepper=None)
+    env = make(pepper=None)
     with pytest.raises(ConfigError) as exc:
-        claim_signup_bonus(USER, "1.2.3.4", "dev-1", deps)
+        env.claim()
     assert "1.2.3.4" not in str(exc.value)
-    assert credits.ledger_rows == []
+    assert env.credits.ledger_rows == []
     with pytest.raises(ConfigError):
         guard_hash("ip", "1.2.3.4", None)
+
+
+def test_ipv6_is_bucketed_by_slash_64():
+    env = make()
+    assert env.claim(ip="2001:db8:1:2::1", dev=None)[0] == "granted"
+    bucket = guard_hash("ip", normalize_ip("2001:db8:1:2:ffff::9"), PEPPER)
+    assert env.guards.counts[(bucket, DAY1)] == 1

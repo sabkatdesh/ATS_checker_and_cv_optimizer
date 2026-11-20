@@ -1,34 +1,37 @@
-from datetime import date
+import psycopg
+import pytest
 
 from app.adapters.db.guard_repo import PgGuardRepo
 from tests.fakes.recording_pool import RecordingPool
 
-DAY = date(2026, 11, 20)
+UID = "11111111-1111-4111-8111-111111111111"
 
 
-def test_counts_reads_both_buckets_for_the_day():
-    pool = RecordingPool(rows=[{"bucket": "ip:a", "count": 2}, {"bucket": "device:b", "count": 1}])
-    assert PgGuardRepo(pool).counts("ip:a", "device:b", DAY) == (2, 1)
+def test_claim_calls_the_single_atomic_function():
+    pool = RecordingPool(rows=[{"outcome": "granted"}])
+    out = PgGuardRepo(pool).claim(UID, "ip:a", "device:b", ip_max=3, device_max=1, amount=100)
+    assert out == "granted"
     sql, params = pool.log[0]
-    assert "public.signup_guards" in sql and "day = %(day)s" in sql
-    assert params == {"buckets": ["ip:a", "device:b"], "day": DAY}
+    assert "public.claim_signup_bonus(" in sql
+    assert params == {
+        "user_id": UID,
+        "ip": "ip:a",
+        "dev": "device:b",
+        "ip_max": 3,
+        "dev_max": 1,
+        "amount": 100,
+    }
 
 
-def test_counts_missing_rows_are_zero_and_device_optional():
-    pool = RecordingPool(rows=[])
-    assert PgGuardRepo(pool).counts("ip:a", None, DAY) == (0, 0)
-    assert pool.log[0][1]["buckets"] == ["ip:a"]
+def test_claim_without_device_passes_null():
+    pool = RecordingPool(rows=[{"outcome": "pending_review"}])
+    PgGuardRepo(pool).claim(UID, "ip:a", None, ip_max=3, device_max=1, amount=100)
+    assert pool.log[0][1]["dev"] is None
 
 
-def test_bump_calls_the_definer_function():
+def test_claim_rejection_is_value_error_without_details():
     pool = RecordingPool()
-    PgGuardRepo(pool).bump(["ip:a", "device:b"], DAY)
-    sql, params = pool.log[0]
-    assert "public.guard_bump(%(buckets)s, %(day)s)" in sql
-    assert params == {"buckets": ["ip:a", "device:b"], "day": DAY}
-
-
-def test_bump_with_no_buckets_does_nothing():
-    pool = RecordingPool()
-    PgGuardRepo(pool).bump([], DAY)
-    assert pool.log == []
+    pool.raise_on_connect = psycopg.errors.RaiseException("INVALID_USER secret")
+    with pytest.raises(ValueError) as exc:
+        PgGuardRepo(pool).claim(UID, "ip:a", None, ip_max=3, device_max=1, amount=100)
+    assert "secret" not in str(exc.value)

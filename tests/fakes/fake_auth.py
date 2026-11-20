@@ -11,4 +11,5 @@ class FakeAuth:
     def verify(self, token: str) -> VerifiedUser:
         if token not in self.tokens:
             raise InvalidToken("invalid token")
-        return VerifiedUser(user_id=self.tokens[token])
+        uid = self.tokens[token]
+        return VerifiedUser(user_id=uid, email=f"{uid}@example.com")

@@ -26,14 +26,18 @@ PEPPER = SecretStr("test-pepper")
 
 
 def _build_client(
-    backend: FakeBackend, *, pepper: SecretStr | None = PEPPER, trust_proxy: bool = False
+    backend: FakeBackend,
+    *,
+    pepper: SecretStr | None = PEPPER,
+    hops: int = 0,
+    ip_header: str | None = None,
 ) -> TestClient:
     container = Container(
         AppSettings(
             _env_file=None,
             env="test",
             bonus=BonusSettings(hash_pepper=pepper),
-            api=ApiSettings(trust_proxy=trust_proxy),
+            api=ApiSettings(trusted_proxy_hops=hops, client_ip_header=ip_header),
         ),
         **backend.repos(),
         pipeline=backend.pipeline,

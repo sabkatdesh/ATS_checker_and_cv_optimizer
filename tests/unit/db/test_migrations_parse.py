@@ -19,9 +19,11 @@ def _plpgsql_function_sources():
                 continue
             langs = [o for o in raw.stmt.options or () if o.defname == "language"]
             if langs and langs[0].arg.sval == "plpgsql":
+                # pglast offsets are UTF-8 byte offsets; stmt_len 0 means "to the end".
+                data = sql.encode("utf-8")
                 start = raw.stmt_location
-                end = start + raw.stmt_len if raw.stmt_len else len(sql)
-                yield name, sql[start:end]
+                end = start + raw.stmt_len if raw.stmt_len else len(data)
+                yield name, data[start:end].decode("utf-8")
 
 
 FUNCTIONS = list(_plpgsql_function_sources())

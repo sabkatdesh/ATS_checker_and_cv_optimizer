@@ -79,25 +79,57 @@ def test_claim_without_pepper_is_503_and_grants_nothing(backend):
     assert backend.credits.ledger_rows == []
 
 
-def test_ip_from_forwarded_only_when_trusted(backend):
-    for trust, seen in ((False, "testclient"), (True, "7.7.7.7")):
-        backend.guards.counts_by_bucket.clear()
-        backend.profiles.bonus.clear()
-        _verify(backend)
-        c = _build_client(backend, trust_proxy=trust)
-        hdr = {**auth_header(), "X-Forwarded-For": "7.7.7.7, 10.0.0.1"}
-        c.post("/billing/claim-signup-bonus", headers=hdr)
-        assert guard_hash("ip", seen, PEPPER) in backend.guards.counts_by_bucket, trust
-        assert guard_hash("ip", "10.0.0.1", PEPPER) not in backend.guards.counts_by_bucket
+def _claimed_ip_buckets(backend):
+    return {b for b, _ in backend.guards.counts if b.startswith("ip:")}
+
+
+def _claim_from(backend, headers, **client_kw):
+    backend.guards.counts.clear()
+    backend.profiles.bonus.clear()
+    _verify(backend)
+    c = _build_client(backend, **client_kw)
+    c.post("/billing/claim-signup-bonus", headers={**auth_header(), **headers})
+    return _claimed_ip_buckets(backend)
+
+
+def _ip(value):
+    return {guard_hash("ip", value, PEPPER)}
+
+
+def test_forwarded_header_ignored_without_trusted_hops(backend):
+    got = _claim_from(backend, {"X-Forwarded-For": "7.7.7.7"}, hops=0)
+    assert got == _ip("testclient")
+
+
+def test_forwarded_entry_counted_from_the_right(backend):
+    xff = {"X-Forwarded-For": "6.6.6.6 , 7.7.7.7, 10.0.0.1"}  # leftmost is client-spoofable
+    assert _claim_from(backend, xff, hops=1) == _ip("10.0.0.1")
+    assert _claim_from(backend, xff, hops=2) == _ip("7.7.7.7")
+    assert _claim_from(backend, xff, hops=3) == _ip("6.6.6.6")
+
+
+def test_forwarded_with_too_few_entries_falls_back_to_peer(backend):
+    assert _claim_from(backend, {"X-Forwarded-For": "7.7.7.7"}, hops=2) == _ip("testclient")
+
+
+def test_client_ip_header_takes_precedence(backend):
+    hdr = {"CF-Connecting-IP": "8.8.8.8", "X-Forwarded-For": "7.7.7.7, 10.0.0.1"}
+    assert _claim_from(backend, hdr, hops=1, ip_header="CF-Connecting-IP") == _ip("8.8.8.8")
+    assert _claim_from(backend, {}, hops=0, ip_header="CF-Connecting-IP") == _ip("testclient")
+
+
+def test_ipv6_is_bucketed_by_slash_64_in_the_route(backend):
+    hdr = {"X-Forwarded-For": "2001:db8:1:2:aaaa::1"}
+    assert _claim_from(backend, hdr, hops=1) == _ip("2001:db8:1:2::/64")
 
 
 def test_device_header_validated(client, backend):
     _verify(backend)
     hdr = {**auth_header(), "X-Device-Id": "x" * 65}
     assert client.post("/billing/claim-signup-bonus", headers=hdr).json()["status"] == "granted"
-    assert [b.split(":")[0] for b in backend.guards.counts_by_bucket] == ["ip"]
-    backend.guards.counts_by_bucket.clear()
+    assert [b.split(":")[0] for b, _ in backend.guards.counts] == ["ip"]
+    backend.guards.counts.clear()
     _verify(backend, USER_B)
     hdr = {**auth_header("token-b"), "X-Device-Id": "dev_1.ok-2"}
     client.post("/billing/claim-signup-bonus", headers=hdr)
-    assert guard_hash("device", "dev_1.ok-2", PEPPER) in backend.guards.counts_by_bucket
+    assert guard_hash("device", "dev_1.ok-2", PEPPER) in {b for b, _ in backend.guards.counts}

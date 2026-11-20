@@ -40,7 +40,7 @@ _templates: TemplateRepo = MemoryTemplateRepo()
 _sessions: SessionRepo = MemorySessionRepo()
 _renders: RenderRepo = MemoryRenderRepo()
 _credits: CreditReadRepo = MemoryCreditRepo()
-_guards: GuardRepo = MemoryGuardRepo()
+_guards: GuardRepo = MemoryGuardRepo(MemoryProfileRepo(), MemoryCreditRepo())
 
 
 @dataclass
@@ -55,10 +55,11 @@ class FakeBackend:
     renders: MemoryRenderRepo = field(default_factory=MemoryRenderRepo)
     sessions: MemorySessionRepo = field(init=False)
     credits: MemoryCreditRepo = field(default_factory=MemoryCreditRepo)
-    guards: MemoryGuardRepo = field(default_factory=MemoryGuardRepo)
+    guards: MemoryGuardRepo = field(init=False)
 
     def __post_init__(self) -> None:
         self.sessions = MemorySessionRepo(self.renders)
+        self.guards = MemoryGuardRepo(self.profiles, self.credits)
 
     def repos(self) -> dict[str, Any]:
         """Container keyword overrides for every fake persistence port."""

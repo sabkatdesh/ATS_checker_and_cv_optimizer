@@ -1,6 +1,7 @@
 """In-memory repositories mirroring the Pg adapters' behaviour."""
 
 import threading
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 
 from app.ports.repositories import BonusState, JsonDict
@@ -103,21 +104,51 @@ class MemoryCreditRepo:
         return balance + amount
 
 
-class MemoryGuardRepo:
-    """Counts per bucket, ignoring the day (tests run within one day)."""
+LIFETIME_DAY = date(1970, 1, 1)
 
-    def __init__(self) -> None:
-        self.counts_by_bucket: dict[str, int] = {}
+
+class MemoryGuardRepo:
+    """Models claim_signup_bonus(): one lock, day-aware ip counter, lifetime device counter."""
+
+    def __init__(
+        self,
+        profiles: MemoryProfileRepo,
+        credits: MemoryCreditRepo,
+        today: Callable[[], date] = lambda: datetime.now(UTC).date(),
+    ) -> None:
+        self.counts: dict[tuple[str, date], int] = {}
+        self._profiles, self._credits, self._today = profiles, credits, today
         self._lock = threading.Lock()
 
-    def counts(self, ip_bucket: str, device_bucket: str | None, day: date) -> tuple[int, int]:
+    def claim(
+        self,
+        user_id: str,
+        ip_bucket: str,
+        device_bucket: str | None,
+        *,
+        ip_max: int,
+        device_max: int,
+        amount: int,
+    ) -> str:
         with self._lock:
-            return (
-                self.counts_by_bucket.get(ip_bucket, 0),
-                self.counts_by_bucket.get(device_bucket or "", 0),
-            )
-
-    def bump(self, buckets: list[str], day: date) -> None:
-        with self._lock:
-            for bucket in set(buckets):
-                self.counts_by_bucket[bucket] = self.counts_by_bucket.get(bucket, 0) + 1
+            state = self._profiles.bonus_state(user_id)
+            if state.granted_at is not None:
+                return "already_granted"
+            if state.verified_at is None:
+                return "email_not_verified"
+            if state.review_at is not None:
+                return "pending_review"
+            ip_key = (ip_bucket, self._today())
+            dev_key = (device_bucket, LIFETIME_DAY) if device_bucket else None
+            self.counts.setdefault(ip_key, 0)
+            if dev_key:
+                self.counts.setdefault(dev_key, 0)
+            if self.counts[ip_key] >= ip_max or (dev_key and self.counts[dev_key] >= device_max):
+                self._profiles.mark_bonus(user_id, granted=False)
+                return "pending_review"
+            self._credits.grant(user_id, amount, "signup_bonus", f"signup_bonus:{user_id}")
+            self._profiles.mark_bonus(user_id, granted=True)
+            for key in (ip_key, dev_key):
+                if key:
+                    self.counts[key] += 1
+            return "granted"
