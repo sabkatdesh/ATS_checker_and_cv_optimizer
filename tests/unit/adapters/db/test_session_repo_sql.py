@@ -216,3 +216,12 @@ def test_session_repo_accepts_uuid7_ids():
     pool = RecordingPool()
     PgSessionRepo(pool).get(UID, uuid7())
     assert len(pool.log) == 1
+
+
+def test_session_ids_scoped_by_user_and_returns_ids():
+    pool = RecordingPool(rows=[{"id": SID}])
+    assert PgSessionRepo(pool).session_ids(UID) == [SID]
+    ((sql, params),) = pool.log
+    assert_user_scoped(sql)
+    assert params == {"user_id": UID}
+    assert "limit" not in sql.lower()

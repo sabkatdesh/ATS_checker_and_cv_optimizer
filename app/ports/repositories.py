@@ -104,6 +104,10 @@ class SessionRepo(Protocol):
 
     def list_for_user(self, user_id: str, limit: int = 50) -> list[SessionRow]: ...
 
+    def session_ids(self, user_id: str) -> list[str]:
+        """Every session id of the user (no limit); the checkpoint thread ids for a purge."""
+        ...
+
     def update(self, user_id: str, session_id: str, **fields: Any) -> None:
         """Only SESSION_UPDATABLE columns; raises ValueError for anything else."""
         ...
@@ -126,6 +130,12 @@ class CreditReadRepo(Protocol):
 
     def grant(self, user_id: str, amount: int, kind: str, idem: str) -> int:
         """credits_grant(): idempotent by key; returns the new (or current) balance."""
+        ...
+
+
+class AuditRepo(Protocol):
+    def write(self, *, actor: str | None, action: str, target: str | None, meta: JsonDict) -> None:
+        """Insert-only. Never put an email, raw user id or token in target or meta."""
         ...
 
 

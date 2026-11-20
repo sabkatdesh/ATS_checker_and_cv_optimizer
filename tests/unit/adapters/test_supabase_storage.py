@@ -110,9 +110,10 @@ def test_delete_prefix_removes_listed_objects():
         [],
     ]
     bucket.remove.return_value = []
-    assert store.delete_prefix("renders", "u1") == 3
+    uid = "11111111-1111-1111-1111-111111111111"
+    assert store.delete_prefix("renders", uid) == 3
     removed = [p for c in bucket.remove.call_args_list for p in c.args[0]]
-    assert sorted(removed) == ["u1/s1/cl.pdf", "u1/s1/cv.pdf", "u1/x.pdf"]
+    assert sorted(removed) == [f"{uid}/s1/cl.pdf", f"{uid}/s1/cv.pdf", f"{uid}/x.pdf"]
 
 
 def test_buckets_private():

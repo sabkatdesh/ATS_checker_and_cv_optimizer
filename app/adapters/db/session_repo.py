@@ -37,6 +37,7 @@ _LIST = (
     f"select {_LIGHT} {_FROM} where s.user_id = %(user_id)s "
     "order by s.created_at desc limit %(limit)s"
 )
+_IDS = "select s.id::text as id from public.cv_sessions s where s.user_id = %(user_id)s"
 _CREATE = (
     "insert into public.cv_sessions "
     "(id, user_id, status, jd_text, source_cv, options, template_id) "
@@ -114,6 +115,11 @@ class PgSessionRepo:
         with map_db_errors(), self._pool.connection() as conn:
             rows = conn.execute(_LIST, {"user_id": user_id, "limit": limit}).fetchall()
         return [_row(r) for r in rows]
+
+    def session_ids(self, user_id: str) -> list[str]:
+        with map_db_errors(), self._pool.connection() as conn:
+            rows = conn.execute(_IDS, {"user_id": user_id}).fetchall()
+        return [r["id"] for r in rows]
 
     def update(self, user_id: str, session_id: str, **fields: Any) -> None:
         check_update_columns(fields)

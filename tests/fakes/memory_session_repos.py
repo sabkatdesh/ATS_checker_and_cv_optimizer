@@ -130,6 +130,10 @@ class MemorySessionRepo:
         mine.sort(key=lambda r: (r["created_at"], r["id"]), reverse=True)
         return [self._to_row(r) for r in mine[:limit]]
 
+    def session_ids(self, user_id: str) -> list[str]:
+        self._enter("session_ids", (user_id,), {})
+        return [r["id"] for r in self.rows.values() if r["user_id"] == user_id]
+
     def update(self, user_id: str, session_id: str, **fields: Any) -> None:
         self._enter("update", (user_id, session_id), fields)
         check_update_columns(fields)

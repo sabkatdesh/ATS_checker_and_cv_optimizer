@@ -1,6 +1,6 @@
 """In-memory BlobStorage; signed URLs are fake and carry the ttl so tests can assert it."""
 
-from app.ports.blob_storage import BlobStorage
+from app.ports.blob_storage import BlobStorage, StorageError
 
 
 class FakeBlobStorage:
@@ -19,7 +19,10 @@ class FakeBlobStorage:
         return f"https://signed.test/{bucket}/{path}?ttl={ttl_s}"
 
     def delete_prefix(self, bucket: str, prefix: str) -> int:
-        keys = [k for k in self.objects if k[0] == bucket and k[1].startswith(prefix)]
+        base = prefix.rstrip("/")
+        if not base:
+            raise StorageError("Storage prefix is not a user prefix")
+        keys = [k for k in self.objects if k[0] == bucket and k[1].startswith(base + "/")]
         for k in keys:
             del self.objects[k]
         return len(keys)

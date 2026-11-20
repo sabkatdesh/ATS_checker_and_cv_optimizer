@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from app.ports.blob_storage import StorageError
+from app.ports.blob_storage import StorageError, checked_user_prefix
 from supabase import Client
 
 TIMEOUT_S = 15
@@ -83,7 +83,7 @@ class SupabaseBlobStorage:
             offset += _PAGE
 
     def delete_prefix(self, bucket: str, prefix: str) -> int:
-        prefix = prefix.strip("/")
+        prefix = checked_user_prefix(prefix)
         files: list[str] = []
         stack = [prefix]
         while stack:
