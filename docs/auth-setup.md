@@ -79,6 +79,38 @@ long as old tokens must stay valid, then revoke it. The backend reads the key se
 from `<project-url>/auth/v1/.well-known/jwks.json` (cached for 10 minutes), so no
 key material is ever stored in this repository.
 
+## Backend database role
+
+The API connects as `app_backend`, a role the migrations create without a login or
+password. Before the backend is wired up, the owner gives it one in the dashboard SQL
+editor:
+
+```sql
+alter role app_backend with login password '<generated>';
+```
+
+Use a long generated password (a password manager's generator) and put it only in the
+deployment secret store and your local `.env`. Never share it in chat, tickets or commits.
+
+The DSN goes through the **session** pooler on port 5432:
+
+```text
+postgresql://app_backend.<project-ref>:<password>@aws-<n>-<region>.pooler.supabase.com:5432/postgres
+```
+
+Never use the transaction pooler (port 6543): it breaks the per-connection
+`statement_timeout` and prepared statements, and the API refuses a DSN on that port.
+
+To rotate, re-run the `alter role` statement with a new password, update the secret
+store and `.env`, and restart the API.
+
+## Deployment (M10)
+
+`API__TRUSTED_PROXY_HOPS` defaults to 0, which uses the socket peer as the client IP.
+Behind Railway's proxy that peer is the proxy itself, so every user lands in the same
+signup-bonus IP bucket and the daily limit trips for everyone. Set the hop count (or
+`API__CLIENT_IP_HEADER`, e.g. `CF-Connecting-IP` behind Cloudflare) at deploy time.
+
 ## Environment variable names
 
 | Name | Used by |
