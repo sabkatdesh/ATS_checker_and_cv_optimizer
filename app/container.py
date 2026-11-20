@@ -6,9 +6,12 @@ from collections.abc import Callable
 from psycopg_pool import ConnectionPool
 
 from app.adapters.background.thread_runner import ThreadRunner
+from app.adapters.db.credit_repo import PgCreditRepo
 from app.adapters.db.master_profile_repo import PgMasterProfileRepo
 from app.adapters.db.pool import make_pool
 from app.adapters.db.profile_repo import PgProfileRepo
+from app.adapters.db.render_repo import PgRenderRepo
+from app.adapters.db.session_repo import PgSessionRepo
 from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.supabase_legacy_store import SupabaseLegacyStore
 from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
@@ -32,7 +35,14 @@ from app.ports.legacy_store import LegacyStore
 from app.ports.llm import LLMGateway
 from app.ports.pipeline import PipelineRunner
 from app.ports.rendering import CoverLetterRenderer, CvPdfRenderer
-from app.ports.repositories import MasterProfileRepo, ProfileRepo, TemplateRepo
+from app.ports.repositories import (
+    CreditReadRepo,
+    MasterProfileRepo,
+    ProfileRepo,
+    RenderRepo,
+    SessionRepo,
+    TemplateRepo,
+)
 from app.ports.usage import UsageSink
 from supabase import Client
 
@@ -91,6 +101,9 @@ class Container:
         profiles: ProfileRepo | None = None,
         master_profiles: MasterProfileRepo | None = None,
         templates: TemplateRepo | None = None,
+        sessions: SessionRepo | None = None,
+        renders: RenderRepo | None = None,
+        credits: CreditReadRepo | None = None,
     ) -> None:
         self.settings = settings
         # Reentrant: a default builder may read another lazy property (e.g. pipeline -> store).
@@ -105,6 +118,9 @@ class Container:
         self._profiles = profiles
         self._master_profiles = master_profiles
         self._templates = templates
+        self._sessions = sessions
+        self._renders = renders
+        self._credits = credits
         self._llm = llm
         self._embeddings = embeddings
         self.prompts = PromptLibrary()
@@ -166,6 +182,27 @@ class Container:
             if self._templates is None:
                 self._templates = PgTemplateRepo(self.pool)
             return self._templates
+
+    @property
+    def sessions(self) -> SessionRepo:
+        with self._lock:
+            if self._sessions is None:
+                self._sessions = PgSessionRepo(self.pool)
+            return self._sessions
+
+    @property
+    def renders(self) -> RenderRepo:
+        with self._lock:
+            if self._renders is None:
+                self._renders = PgRenderRepo(self.pool)
+            return self._renders
+
+    @property
+    def credits(self) -> CreditReadRepo:
+        with self._lock:
+            if self._credits is None:
+                self._credits = PgCreditRepo(self.pool)
+            return self._credits
 
     @property
     def storage(self) -> BlobStorage:

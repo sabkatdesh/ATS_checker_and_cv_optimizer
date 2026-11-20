@@ -39,12 +39,12 @@ class RecordingPool:
         yield RecordingConnection(self.rows, self.log)
 
 
-_INSERT_COLUMNS = re.compile(r"^\s*(?:with .*?\)\s*)?insert into [\w.]+ \(([^)]*)\)", re.S | re.I)
+_INSERT_COLUMNS = re.compile(r"insert into [\w.]+ \(([^)]*)\)", re.I)
 
 
 def assert_user_scoped(sql: str) -> None:
     """Inserts must list user_id as a column; everything else must filter on it."""
-    insert = _INSERT_COLUMNS.match(sql)
+    insert = _INSERT_COLUMNS.search(sql)
     if insert:
         columns = [c.strip() for c in insert.group(1).split(",")]
         assert "user_id" in columns, sql
