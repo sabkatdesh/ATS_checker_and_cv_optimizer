@@ -4,12 +4,26 @@ service_role keeps Supabase's default table grants, so its writes reach the appe
 trigger and fail with LEDGER_IMMUTABLE. app_backend has SELECT only on the credit tables, so
 its writes fail earlier, on the grant (42501), which is stronger; TRUNCATE (which would bypass
 the row trigger) is revoked from it explicitly.
+
+Every backend statement here that would be destructive if the permission model were wrong
+(TRUNCATE, UPDATE/DELETE on the ledger, direct DML on credit tables) goes through
+denied_attempt(): a transaction that is always rolled back, so it can never commit. The
+service-key PostgREST attempts cannot be wrapped in a transaction; they are filtered to the
+single row this test created, so a regression could only touch that row.
 """
 
 import pytest
 from psycopg import errors
 
-from tests.remote._helpers import Conn, grant, insert_session, new_key, one, scalar
+from tests.remote._helpers import (
+    Conn,
+    denied_attempt,
+    grant,
+    insert_session,
+    new_key,
+    one,
+    scalar,
+)
 from tests.remote._rest import Rest
 
 
@@ -38,17 +52,19 @@ def test_ledger_immutable_even_for_service_role(
     resp = service_rest.delete("credit_ledger", id=row_id)
     assert resp.status_code >= 400 and "LEDGER_IMMUTABLE" in resp.text
     with pytest.raises(errors.InsufficientPrivilege):
-        backend_conn.execute(
-            "update public.credit_ledger set delta_balance = 999 where id = %s", (row_id,)
+        denied_attempt(
+            backend_conn,
+            "update public.credit_ledger set delta_balance = 999 where id = %s",
+            (row_id,),
         )
     with pytest.raises(errors.InsufficientPrivilege):
-        backend_conn.execute("delete from public.credit_ledger where id = %s", (row_id,))
+        denied_attempt(backend_conn, "delete from public.credit_ledger where id = %s", (row_id,))
     assert _ledger(backend_conn, row_id) == before
 
 
 def test_backend_cannot_truncate_ledger(backend_conn: Conn) -> None:
     with pytest.raises(errors.InsufficientPrivilege):
-        backend_conn.execute("truncate public.credit_ledger")
+        denied_attempt(backend_conn, "truncate public.credit_ledger")
     sql = "select has_table_privilege('app_backend', 'public.credit_ledger', 'TRUNCATE')"
     assert scalar(backend_conn, sql) is False
 
@@ -96,7 +112,7 @@ WRITES = {
 @pytest.mark.parametrize("name", list(WRITES))
 def test_backend_cannot_write_credit_tables_directly(user_a, backend_conn: Conn, name: str):
     with pytest.raises(errors.InsufficientPrivilege):
-        backend_conn.execute(WRITES[name], {"uid": user_a.id})
+        denied_attempt(backend_conn, WRITES[name], {"uid": user_a.id})
 
 
 def test_backend_can_insert_into_serial_tables(user_a, backend_conn: Conn) -> None:

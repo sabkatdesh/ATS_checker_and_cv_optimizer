@@ -22,7 +22,7 @@ LG_TABLES = {"checkpoint_migrations", "checkpoints", "checkpoint_blobs", "checkp
 def _container(dsn: str) -> Container:
     """A fresh container: its own pool and its own PostgresCheckpointerFactory."""
     settings = AppSettings(
-        _env_file=None, env="test", llm={"default_provider": "fake"}, db={"dsn": dsn}
+        _env_file=None, env="test", llm={"default_provider": "fake"}, db={"dsn": dsn, "pool_max": 2}
     )
     return Container(
         settings,

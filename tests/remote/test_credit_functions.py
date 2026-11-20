@@ -176,14 +176,27 @@ RPCS: dict[str, dict[str, object]] = {
 }
 
 
+@pytest.fixture(scope="module")
+def rpc_caller(session_users):
+    """One confirmed user for every authenticated RPC case (not one per case)."""
+    return session_users(confirmed=True)
+
+
 @pytest.mark.parametrize("actor", ["anon", "authenticated"])
 @pytest.mark.parametrize("fn", list(RPCS))
 def test_functions_not_executable_by_authenticated(
-    anon_rest: Rest, rest, user_a, fn: str, actor: str
+    anon_rest: Rest, rest, request: pytest.FixtureRequest, fn: str, actor: str
 ) -> None:
-    """RPC refused: 401/403 (no EXECUTE) or 404 (hidden from the schema cache)."""
-    api = anon_rest if actor == "anon" else rest(user_a)
-    args = {k: (user_a.id if v is None and k == "p_user" else v) for k, v in RPCS[fn].items()}
-    args = {k: (uuid7() if v is None and k != "p_dev_bucket" else v) for k, v in args.items()}
+    """RPC refused for lack of EXECUTE: 401 (anon) / 403 (authenticated). A 404 is NOT
+    accepted: PostgREST lists every public function in its schema cache regardless of
+    privileges, so PGRST202 would mean a missing function or a signature drift.
+
+    Ids are random, so even a wrongly executable function could not touch a real user."""
+    if actor == "anon":
+        api = anon_rest
+    else:
+        api = rest(request.getfixturevalue("rpc_caller"))
+    args = {k: (uuid7() if v is None and k != "p_dev_bucket" else v) for k, v in RPCS[fn].items()}
     resp = api.rpc(fn, args)
-    assert resp.status_code in (*DENIED, 404), f"{actor} ran {fn}: HTTP {resp.status_code}"
+    assert resp.status_code in DENIED, f"{actor} ran {fn}: HTTP {resp.status_code}"
+    assert "PGRST202" not in resp.text

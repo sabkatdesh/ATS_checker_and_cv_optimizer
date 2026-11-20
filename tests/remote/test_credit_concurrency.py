@@ -33,23 +33,24 @@ def test_concurrent_reserves_never_overdraw(user_a, backend_conn: Conn, dsn):
     uid = user_a.id
     grant(backend_conn, uid, 100, new_key("race-fund"))
     sid = insert_session(backend_conn, uid)
-    # 20 reserves of 10 against 100 available, on 10 connections (2 each): the session pooler
-    # on a small dev compute caps client connections around 15, so 20 sockets could be refused.
+    # 24 reserves of 10 against 100 available, on 8 connections (3 each). The session pooler on
+    # a small dev compute caps clients around 15; 8 threads + backend_conn + backend_pool (<=2)
+    # stay <= ~12.
 
-    def two(conn: Conn, i: int) -> list[str | BaseException]:
+    def three(conn: Conn, i: int) -> list[str | BaseException]:
         out: list[str | BaseException] = []
-        for j in range(2):
+        for j in range(3):
             try:
                 out.append(reserve(conn, uid, sid, 10, new_key(f"race-{i}-{j}")))
             except Exception as exc:  # noqa: BLE001 - counted below
                 out.append(exc)
         return out
 
-    nested = run_parallel(10, dsn, two)
+    nested = run_parallel(8, dsn, three)
     assert not [r for r in nested if isinstance(r, BaseException)]
     results = [r for batch in nested if isinstance(batch, list) for r in batch]
-    assert len(results) == 20
+    assert len(results) == 24
     ok = [r for r in results if isinstance(r, str)]
     assert len(ok) == 10
-    assert raised(results, "INSUFFICIENT_CREDITS") == 10
+    assert raised(results, "INSUFFICIENT_CREDITS") == 14
     assert assert_invariant(backend_conn, uid) == (100, 100)

@@ -30,9 +30,11 @@ def test_purge_leaves_zero_rows_and_objects(
     service_storage: StorageHttp,
     supabase_admin,
     remote_env,
+    cleanup_prefixes,
 ) -> None:
     user = make_user(confirmed=True)
     uid = user.id
+    cleanup_prefixes.append(uid)  # objects go even if the purge fails midway
     seeded = seed_user_rows(backend_conn, uid)
     try:
         insert_checkpoint_rows(backend_conn, seeded.session_id)

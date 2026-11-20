@@ -5,12 +5,10 @@ neither upload, list nor download anything, under any prefix; only the secret ke
 """
 
 import time
-from collections.abc import Iterator
 
 import httpx
 import pytest
 
-from app.adapters.storage.supabase_storage import SupabaseBlobStorage
 from app.domain.common import uuid7
 from tests.remote._auth_admin import key_headers
 from tests.remote._rest import StorageHttp, listed_names, public_object_url
@@ -20,14 +18,7 @@ SIGNED_TTL_S = 5  # the app uses 600 s; short here so expiry is observable
 EXPIRY_WAIT_S = 7
 
 
-@pytest.fixture
-def cleanup_prefixes(blob_storage: SupabaseBlobStorage) -> Iterator[list[str]]:
-    """User ids whose prefix is removed from every bucket after the test."""
-    owners: list[str] = []
-    yield owners
-    for uid in owners:
-        for bucket in BUCKET_TYPES:
-            blob_storage.delete_prefix(bucket, f"{uid}/")
+NO_CACHE = {"Cache-Control": "no-cache"}
 
 
 def test_buckets_exist_and_are_private(remote_env, http: httpx.Client) -> None:
@@ -59,10 +50,16 @@ def test_signed_url_works_then_expires(user_a, blob_storage, cleanup_prefixes, h
     data = BUCKET_TYPES["renders"][1]
     blob_storage.put("renders", path, data, "application/pdf")
     url = blob_storage.signed_url("renders", path, SIGNED_TTL_S)
-    first = http.get(url)
+    # A second object signed now but never fetched before expiry: no CDN copy can exist for
+    # its URL, so the late response must come from the origin's token check. (A second URL
+    # for the same path could be byte-identical when signed in the same second.)
+    unseen_path = f"{path}.copy.pdf"
+    blob_storage.put("renders", unseen_path, data, "application/pdf")
+    unseen = blob_storage.signed_url("renders", unseen_path, SIGNED_TTL_S)
+    first = http.get(url, headers=NO_CACHE)
     assert first.status_code == 200 and first.content == data
     time.sleep(EXPIRY_WAIT_S)
-    late = http.get(url)
+    late = http.get(unseen, headers=NO_CACHE)
     assert late.status_code >= 400 and data not in late.content
 
 

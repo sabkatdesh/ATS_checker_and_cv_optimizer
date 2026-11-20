@@ -41,6 +41,22 @@ def scalar(conn: Conn, sql: str, params: Any = None) -> Any:
     return next(iter(one(conn, sql, params).values()))
 
 
+class _Rollback(Exception):
+    """Private: forces the transaction in denied_attempt() to roll back."""
+
+
+def denied_attempt(conn: Conn, sql: str, params: Any = None) -> None:
+    """Run a statement that the permission model must refuse, inside a transaction that is
+    always rolled back. If the model were wrong and it succeeded, nothing is committed (and
+    the caller's pytest.raises fails, because no error is raised)."""
+    try:
+        with conn.transaction():
+            conn.execute(sql, params)
+            raise _Rollback
+    except _Rollback:
+        pass
+
+
 # ─── Credit functions ────────────────────────────────────────────────────────────
 
 

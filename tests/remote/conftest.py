@@ -18,9 +18,10 @@ from app.adapters.storage.supabase_storage import SupabaseBlobStorage
 from app.config.db_settings import DbSettings
 from tests.remote._auth_admin import TIMEOUT_S, AuthAdmin, TestUser
 from tests.remote._env import SKIP_REASON, RemoteEnv, load_remote_env, remote_enabled
-from tests.remote._gate import mark_remote_items, preflight
+from tests.remote._gate import check_backend_role, mark_remote_items, preflight, project_ref
 from tests.remote._helpers import Conn, connect_backend
 from tests.remote._rest import Rest, StorageHttp
+from tests.remote._seed import BUCKET_TYPES
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -29,12 +30,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 def _probe(env: RemoteEnv) -> None:
     with connect_backend(env.db_dsn.get_secret_value(), timeout_s=5) as conn:
-        conn.execute("select 1")
+        check_backend_role(conn)  # app_backend, not superuser, owns nothing
 
 
 @pytest.fixture(scope="session")
 def remote_env() -> RemoteEnv:
-    env = preflight(remote_enabled(), load_remote_env, _probe)
+    env = preflight(remote_enabled(), load_remote_env, _probe, project_ref())
     if env is None:  # only reachable if a test un-skips itself
         pytest.skip(SKIP_REASON)
     return env
@@ -170,15 +171,31 @@ def dsn(remote_env: RemoteEnv) -> str:
 
 @pytest.fixture(scope="session")
 def backend_conn(dsn: str) -> Iterator[Conn]:
-    """psycopg connection as app_backend (autocommit)."""
+    """psycopg connection as app_backend (autocommit); the role is re-checked here."""
     with connect_backend(dsn) as conn:
+        check_backend_role(conn)
         yield conn
 
 
 @pytest.fixture(scope="session")
 def backend_pool(remote_env: RemoteEnv) -> Iterator[ConnectionPool]:
-    """The app's own pool builder, for repos and the checkpointer reader."""
-    pool = make_pool(DbSettings(dsn=remote_env.db_dsn, connect_timeout_s=5, pool_max=4))
+    """The app's own pool builder, for repos and the checkpointer reader.
+
+    pool_max=2 keeps the client count low: backend_conn (1) + this pool (<=2) + at most 8
+    thread connections stays <= ~12 against the session pooler's client cap."""
+    pool = make_pool(DbSettings(dsn=remote_env.db_dsn, connect_timeout_s=5, pool_max=2))
     pool.open(wait=True, timeout=15)
+    with pool.connection() as conn:
+        check_backend_role(conn)
     yield pool
     pool.close()
+
+
+@pytest.fixture
+def cleanup_prefixes(blob_storage: SupabaseBlobStorage) -> Iterator[list[str]]:
+    """User ids whose prefix is removed from every bucket after the test, even on failure."""
+    owners: list[str] = []
+    yield owners
+    for uid in owners:
+        for bucket in BUCKET_TYPES:
+            blob_storage.delete_prefix(bucket, f"{uid}/")

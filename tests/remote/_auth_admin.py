@@ -127,7 +127,7 @@ class TestUser:
 
     id: str
     email: str
-    password: str
+    password: str = field(repr=False)
     confirmed: bool
     _jwt: str | None = field(default=None, repr=False)
 

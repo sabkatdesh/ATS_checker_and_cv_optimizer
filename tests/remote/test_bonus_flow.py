@@ -125,8 +125,13 @@ def test_bonus_device_bucket_is_lifetime(make_user, backend_conn: Conn, buckets)
     assert day == "1970-01-01"
 
 
-def test_claim_rejects_bad_input(backend_conn: Conn) -> None:
+def test_claim_rejects_bad_input(make_user, backend_conn: Conn) -> None:
     with pytest.raises(psycopg.errors.RaiseException, match="INVALID_USER"):
         claim(backend_conn, uuid7(), "ip:m4test-x", None)  # no such profile
-    with pytest.raises(psycopg.errors.RaiseException, match="INVALID_USER"):
-        claim(backend_conn, uuid7(), "  ", None)  # blank ip bucket
+    # A real, verified, eligible profile: only the blank-bucket guard can reject this one, so
+    # removing that guard would make it grant (and fail the test).
+    real = make_user(confirmed=True)
+    for blank in ("", "  "):
+        with pytest.raises(psycopg.errors.RaiseException, match="INVALID_USER"):
+            claim(backend_conn, real.id, blank, None)
+    assert _ledger_bonus_rows(backend_conn, real.id) == 0

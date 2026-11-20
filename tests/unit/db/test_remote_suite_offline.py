@@ -80,7 +80,9 @@ def test_preflight_missing_env_exits_with_names(clean_env) -> None:
 
 
 def test_preflight_unreachable_db_exits_paused(clean_env) -> None:
-    clean_env.setenv("DB__DSN", "postgresql://u:secret-pw@db.example.test/postgres")
+    clean_env.setenv(
+        "DB__DSN", "postgresql://app_backend.proj:secret-pw@pooler.example.test/postgres"
+    )
     clean_env.setenv("AUTH__SUPABASE_URL", BASE)
     clean_env.setenv("SUPABASE_SECRET_KEY", "sb_secret_x")
     clean_env.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x")
@@ -89,7 +91,7 @@ def test_preflight_unreachable_db_exits_paused(clean_env) -> None:
         raise psycopg.OperationalError("timeout")
 
     with pytest.raises(pytest.exit.Exception) as exc:
-        preflight(True, load_remote_env, probe)
+        preflight(True, load_remote_env, probe, ref="proj")
     assert str(exc.value) == PAUSED_MESSAGE
     assert "secret-pw" not in str(exc.value)
 
