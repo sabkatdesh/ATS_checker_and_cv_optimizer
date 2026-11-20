@@ -120,3 +120,37 @@ def test_cover_letter_download_redirects_to_signed_url():
     r = _client(c).get(f"/sessions/{TID}/cover-letter.pdf", headers=_hdr())
     assert r.status_code == 307
     assert r.headers["location"].startswith("https://signed.test/renders/")
+
+
+TID2 = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a06"
+
+
+def _new_session(backend: FakeBackend, user: str, sid: str) -> None:
+    backend.sessions.create(user, sid, jd_text="jd", source_cv={}, options={}, template_id="c")
+
+
+def test_identical_pdfs_in_two_sessions_get_their_own_renders():
+    c, backend = _container()
+    _new_session(backend, USER_A, TID2)
+    for sid in (TID, TID2):  # the fake renderers return identical bytes every time
+        finalize_session(c, sid, _result(cover_letter={"body": "x"}), USER_A, {})
+    assert len(backend.renders.rows) == 4
+    assert len({r["content_hash"] for r in backend.renders.rows.values()}) == 4
+    for sid in (TID, TID2):
+        row = c.sessions.get(USER_A, sid)
+        assert row is not None
+        assert row.pdf_path == f"{USER_A}/{sid}/cv.pdf"
+        assert row.cover_letter_pdf_path == f"{USER_A}/{sid}/cover_letter.pdf"
+        assert backend.renders.rows[row.current_render_id]["session_id"] == sid
+
+
+def test_identical_pdfs_across_users_do_not_conflict_or_link():
+    c, backend = _container()
+    _new_session(backend, "user-b", TID2)
+    finalize_session(c, TID, _result(), USER_A, {})
+    finalize_session(c, TID2, _result(), "user-b", {})
+    a, b = c.sessions.get(USER_A, TID), c.sessions.get("user-b", TID2)
+    assert a is not None and b is not None
+    assert a.pdf_path == f"{USER_A}/{TID}/cv.pdf"
+    assert b.pdf_path == f"user-b/{TID2}/cv.pdf"
+    assert a.current_render_id != b.current_render_id

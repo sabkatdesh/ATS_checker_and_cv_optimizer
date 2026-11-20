@@ -45,6 +45,7 @@ def test_session_reads_join_renders_of_the_same_user():
     PgSessionRepo(pool).get(UID, SID)
     sql = pool.log[0][0]
     assert "r.user_id = s.user_id" in sql
+    assert "r.session_id = s.id" in sql
     assert "c.user_id = s.user_id" in sql
     assert "s.id = %(session_id)s" in sql
     assert f"c.template_id = '{COVER_LETTER_RENDER}'" in sql
@@ -142,7 +143,30 @@ def test_render_add_reuses_the_same_users_row_on_hash_conflict():
     assert rid == "existing"
     sql = pool.log[0][0]
     assert "on conflict (content_hash) do nothing" in sql
-    assert "content_hash = %(content_hash)s and user_id = %(user_id)s" in sql
+    assert (
+        "content_hash = %(content_hash)s and user_id = %(user_id)s "
+        "and session_id = %(session_id)s" in sql
+    )
+
+
+def test_render_add_retries_once_after_a_concurrent_insert_race():
+    class _Race(RecordingPool):
+        def __init__(self):
+            super().__init__()
+            self.results = [[], [{"id": "winner"}]]
+
+        def connection(self, timeout=None):
+            self.rows = self.results.pop(0)
+            return super().connection(timeout)
+
+    pool = _Race()
+    assert PgRenderRepo(pool).add(UID, SID, pdf_path="p", content_hash="h", template_id="c") == (
+        "winner"
+    )
+    assert len(pool.log) == 2
+    retry_sql, params = pool.log[1]
+    assert retry_sql.startswith("select") and "session_id = %(session_id)s" in retry_sql
+    assert params["user_id"] == UID
 
 
 def test_render_add_hash_owned_by_someone_else_is_a_conflict():

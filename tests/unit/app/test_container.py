@@ -179,3 +179,16 @@ def test_app_lifespan_closes_the_container():
     with TestClient(create_app(c)):
         assert pool.closed == 0
     assert pool.closed == 1
+
+
+def test_pool_access_after_close_raises_instead_of_reopening():
+    import pytest
+
+    from app.adapters.db.errors import DbUnavailable
+
+    pool = _ClosablePool()
+    c = Container(AppSettings(_env_file=None), pool=pool)  # type: ignore[arg-type]
+    c.close()
+    with pytest.raises(DbUnavailable):
+        _ = c.pool
+    assert pool.closed == 1

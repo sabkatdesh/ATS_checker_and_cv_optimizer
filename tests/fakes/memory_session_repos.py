@@ -21,7 +21,7 @@ class MemoryRenderRepo:
     ) -> str:
         for rid, row in self.rows.items():
             if row["content_hash"] == content_hash:
-                if row["user_id"] != user_id:
+                if (row["user_id"], row["session_id"]) != (user_id, session_id):
                     raise DbConflict
                 return rid
         rid = uuid7()
@@ -36,9 +36,10 @@ class MemoryRenderRepo:
         }
         return rid
 
-    def cv_path(self, user_id: str, render_id: str | None) -> str | None:
+    def cv_path_for(self, user_id: str, session_id: str, render_id: str | None) -> str | None:
         row = self.rows.get(render_id or "")
-        return row["pdf_path"] if row and row["user_id"] == user_id else None
+        owned = row and (row["user_id"], row["session_id"]) == (user_id, session_id)
+        return row["pdf_path"] if owned and row else None
 
     def cover_letter_path(self, user_id: str, session_id: str) -> str | None:
         rows = [
@@ -114,7 +115,7 @@ class MemorySessionRepo:
         user_id, sid = row["user_id"], row["id"]
         return SessionRow(
             **{k: v for k, v in row.items() if k in _ROW_FIELDS},
-            pdf_path=self.renders.cv_path(user_id, row.get("current_render_id")),
+            pdf_path=self.renders.cv_path_for(user_id, sid, row.get("current_render_id")),
             cover_letter_pdf_path=self.renders.cover_letter_path(user_id, sid),
         )
 

@@ -93,7 +93,7 @@ def test_complete_records_a_render_row_keyed_by_content_hash(client, backend):
     stored = backend.sessions.raw(tid)
     render = backend.renders.rows[stored["current_render_id"]]
     data, _ = backend.storage.objects[("renders", f"user-a/{tid}/cv.pdf")]
-    assert render["content_hash"] == hashlib.sha256(data).hexdigest()
+    assert render["content_hash"] == hashlib.sha256(f"{tid}:cv:".encode() + data).hexdigest()
     assert (render["user_id"], render["session_id"]) == (USER_A, tid)
     assert render["pdf_path"] == f"user-a/{tid}/cv.pdf"
     assert render["template_id"] == "classic"

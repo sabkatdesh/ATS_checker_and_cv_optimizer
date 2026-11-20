@@ -1,9 +1,15 @@
-"""renders rows (render cache). content_hash is globally unique; reuse is per user only."""
+"""renders rows. content_hash is globally unique; callers salt it per session and kind,
+so a reused row is always the same user's row for the same session."""
 
 from typing import Any
 
 from app.adapters.db.errors import DbConflict, map_db_errors
 
+_EXISTING = (
+    "select id::text as id from public.renders "
+    "where content_hash = %(content_hash)s and user_id = %(user_id)s "
+    "and session_id = %(session_id)s"
+)
 # The second select sees the statement's starting snapshot, so it only finds an older row.
 _ADD = (
     "with ins as ("
@@ -14,6 +20,7 @@ _ADD = (
     "union all "
     "select id::text as id from public.renders "
     "where content_hash = %(content_hash)s and user_id = %(user_id)s "
+    "and session_id = %(session_id)s "
     "limit 1"
 )
 
@@ -35,5 +42,9 @@ class PgRenderRepo:
         with map_db_errors(), self._pool.connection() as conn:
             row = conn.execute(_ADD, params).fetchone()
         if not row:
-            raise DbConflict  # the hash belongs to another user's render
+            # A concurrent insert of the same hash commits after our snapshot: look once more.
+            with map_db_errors(), self._pool.connection() as conn:
+                row = conn.execute(_EXISTING, params).fetchone()
+        if not row:
+            raise DbConflict  # the hash belongs to another user's or session's render
         return str(row["id"])

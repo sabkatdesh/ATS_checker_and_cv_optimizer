@@ -1,6 +1,7 @@
 import hashlib
 import logging
 
+from app.adapters.db.errors import DbConflict
 from app.container import Container
 from app.pipeline.summary import ats_score_of
 from app.ports.blob_storage import RENDERS_BUCKET, render_path
@@ -17,12 +18,10 @@ def _store_pdf(
     """Upload to the private bucket and record a renders row; returns the render id."""
     path = render_path(user_id, thread_id, "cv" if kind == "cv" else "cover_letter")
     c.storage.put(RENDERS_BUCKET, path, data, PDF)
+    # Salted per session and kind: identical bytes in two sessions are two renders rows.
+    digest = hashlib.sha256(f"{thread_id}:{kind}:".encode() + data).hexdigest()
     return c.renders.add(
-        user_id,
-        thread_id,
-        pdf_path=path,
-        content_hash=hashlib.sha256(data).hexdigest(),
-        template_id=template_id,
+        user_id, thread_id, pdf_path=path, content_hash=digest, template_id=template_id
     )
 
 
@@ -82,6 +81,8 @@ def finalize_session(
             )
             render_id = _store_pdf(c, user_id, thread_id, "cv", pdf_bytes, template_id)
             logger.info("[PDF] Uploaded successfully for %s", thread_id)
+        except DbConflict:
+            logger.warning("[PDF] Render row conflict for %s; no PDF link recorded", thread_id)
         except Exception:
             logger.exception("[PDF] Generation failed for %s", thread_id)
 
@@ -104,6 +105,8 @@ def finalize_session(
             # Plain text version — stored so frontend can show editable draft
             cover_letter_text = cl_service.to_plain_text(cl_result, candidate_name)
             _store_pdf(c, user_id, thread_id, "cover_letter", cl_pdf_bytes, COVER_LETTER_RENDER)
+        except DbConflict:
+            logger.warning("Cover letter render row conflict for %s", thread_id)
         except Exception:
             logger.exception("Cover letter PDF generation failed for %s", thread_id)
 

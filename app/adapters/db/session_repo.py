@@ -30,7 +30,7 @@ _LIGHT = (
 _HEAVY = _LIGHT + ", s.source_cv, s.tailored_cv, s.pipeline_summary"
 _FROM = (
     "from public.cv_sessions s left join public.renders r "
-    "on r.id = s.current_render_id and r.user_id = s.user_id"
+    "on r.id = s.current_render_id and r.user_id = s.user_id and r.session_id = s.id"
 )
 _GET = f"select {_HEAVY} {_FROM} where s.user_id = %(user_id)s and s.id = %(session_id)s"
 _LIST = (

@@ -7,6 +7,7 @@ from psycopg_pool import ConnectionPool
 
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.credit_repo import PgCreditRepo
+from app.adapters.db.errors import DbUnavailable
 from app.adapters.db.master_profile_repo import PgMasterProfileRepo
 from app.adapters.db.pool import make_pool
 from app.adapters.db.profile_repo import PgProfileRepo
@@ -107,6 +108,7 @@ class Container:
         self._runner = runner
         self._supabase: Client | None = None
         self._pool = pool
+        self._closed = False
         self._profiles = profiles
         self._master_profiles = master_profiles
         self._templates = templates
@@ -138,6 +140,8 @@ class Container:
     def pool(self) -> ConnectionPool:
         """One shared sync pool, opened on first use (connections are made lazily)."""
         with self._lock:
+            if self._closed:
+                raise DbUnavailable  # shut down: never build a fresh, unclosed pool
             if self._pool is None:
                 dsn = self.settings.db.dsn
                 if dsn is None:
@@ -244,6 +248,7 @@ class Container:
         """Close the pool if it was opened; never opens one. Safe to call twice."""
         with self._lock:
             pool, self._pool = self._pool, None
+            self._closed = True
         if pool is not None:
             pool.close()
 
