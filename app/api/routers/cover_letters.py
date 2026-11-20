@@ -27,23 +27,27 @@ def submit_cover_letter_options(
     """
     user_id = require_user_id(c, authorization)
     session = require_session(c, user_id, thread_id)
+    not_waiting = HTTPException(
+        status_code=400,
+        detail="Session is not waiting for cover letter options",
+    )
     if legacy_status(session.status, session.awaiting_kind) != "awaiting_cover_letter_options":
-        raise HTTPException(
-            status_code=400,
-            detail="Session is not waiting for cover letter options",
-        )
+        raise not_waiting
 
     tone = body.tone if body.tone in ("formal", "conversational") else "formal"
     length = body.length if body.length in ("short", "standard") else "standard"
 
-    c.sessions.update(user_id, thread_id, status="running", awaiting_kind=None)
+    # Canonical id = checkpoint thread id; only the compare-and-set winner resumes.
+    sid = session.id
+    if not c.sessions.transition(user_id, sid, session.status, session.awaiting_kind, "running"):
+        raise not_waiting
 
     c.runner.submit(
         partial(
             resume_after_cover_letter_options,
             c,
             user_id=user_id,
-            thread_id=thread_id,
+            thread_id=sid,
             tone=tone,
             length=length,
         )
@@ -64,14 +68,14 @@ def save_cover_letter_edit(
     Triggers a fresh PDF render from the edited text and updates storage.
     """
     user_id = require_user_id(c, authorization)
-    require_session(c, user_id, thread_id)
+    session = require_session(c, user_id, thread_id)
 
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Cover letter text is empty")
 
     # Store the edited text; PDF re-render is lightweight enough to do inline
-    c.sessions.update(user_id, thread_id, cover_letter_text=text)
+    c.sessions.update(user_id, session.id, cover_letter_text=text)
     return {"message": "Cover letter saved successfully"}
 
 

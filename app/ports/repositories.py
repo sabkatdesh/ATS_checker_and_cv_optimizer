@@ -112,6 +112,18 @@ class SessionRepo(Protocol):
         """Only SESSION_UPDATABLE columns; raises ValueError for anything else."""
         ...
 
+    def transition(
+        self,
+        user_id: str,
+        session_id: str,
+        from_status: str,
+        from_awaiting_kind: str | None,
+        to_status: str,
+    ) -> bool:
+        """Compare-and-set: move the row to to_status (clearing awaiting_kind) only if it is
+        still in from_status (and from_awaiting_kind, when given). True for the one winner."""
+        ...
+
 
 class RenderRepo(Protocol):
     def add(

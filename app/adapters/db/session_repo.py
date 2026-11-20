@@ -45,6 +45,12 @@ _CREATE = (
     "%(options)s, %(template_id)s)"
 )
 
+_TRANSITION = (
+    "update public.cv_sessions set status = %(to_status)s, awaiting_kind = null "
+    "where user_id = %(user_id)s and id = %(session_id)s and status = %(from_status)s"
+)
+_AND_KIND = " and awaiting_kind = %(from_kind)s"
+
 
 def _row(r: JsonDict) -> SessionRow:
     created = r.get("created_at")
@@ -138,3 +144,27 @@ class PgSessionRepo:
         params.update(user_id=user_id, session_id=session_id)
         with map_db_errors(), self._pool.connection() as conn:
             conn.execute(sql, params)
+
+    def transition(
+        self,
+        user_id: str,
+        session_id: str,
+        from_status: str,
+        from_awaiting_kind: str | None,
+        to_status: str,
+    ) -> bool:
+        if not is_uuid(session_id):
+            return False
+        params: JsonDict = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "from_status": from_status,
+            "to_status": to_status,
+        }
+        sql = _TRANSITION
+        if from_awaiting_kind is not None:
+            sql += _AND_KIND
+            params["from_kind"] = from_awaiting_kind
+        with map_db_errors(), self._pool.connection() as conn:
+            cur = conn.execute(sql, params)
+        return bool(cur.rowcount == 1)

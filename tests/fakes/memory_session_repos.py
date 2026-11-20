@@ -108,7 +108,8 @@ class MemorySessionRepo:
     def _owned(self, user_id: str, session_id: str) -> JsonDict | None:
         if not is_uuid(session_id):
             return None
-        row = self.rows.get(session_id)
+        # Postgres compares uuids case-insensitively; rows are keyed by the canonical form.
+        row = self.rows.get(session_id.lower())
         return row if row and row["user_id"] == user_id else None
 
     def _to_row(self, row: JsonDict) -> SessionRow:
@@ -140,6 +141,23 @@ class MemorySessionRepo:
         row = self._owned(user_id, session_id)
         if row is not None:
             row.update(fields)
+
+    def transition(
+        self,
+        user_id: str,
+        session_id: str,
+        from_status: str,
+        from_awaiting_kind: str | None,
+        to_status: str,
+    ) -> bool:
+        self._enter("transition", (user_id, session_id, from_status, from_awaiting_kind), {})
+        row = self._owned(user_id, session_id)
+        if row is None or row["status"] != from_status:
+            return False
+        if from_awaiting_kind is not None and row.get("awaiting_kind") != from_awaiting_kind:
+            return False
+        row.update(status=to_status, awaiting_kind=None)
+        return True
 
     def raw(self, session_id: str) -> JsonDict:
         """Test helper: the stored columns of one row, regardless of owner."""

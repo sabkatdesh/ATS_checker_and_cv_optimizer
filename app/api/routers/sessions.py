@@ -124,17 +124,21 @@ def hitl_reply(
     user_id = require_user_id(c, authorization)
     session = require_session(c, user_id, thread_id)
 
+    not_waiting = HTTPException(status_code=400, detail="Session is not waiting for your input")
     if legacy_status(session.status, session.awaiting_kind) != "awaiting_hitl":
-        raise HTTPException(status_code=400, detail="Session is not waiting for your input")
-
-    c.sessions.update(user_id, thread_id, status="running", awaiting_kind=None)
+        raise not_waiting
+    # The canonical (lower-case) id is the checkpoint thread id; only the request that wins
+    # the compare-and-set resumes, so a double submit cannot resume twice.
+    sid = session.id
+    if not c.sessions.transition(user_id, sid, session.status, session.awaiting_kind, "running"):
+        raise not_waiting
 
     c.runner.submit(
         partial(
             resume_after_answers,
             c,
             user_id=user_id,
-            thread_id=thread_id,
+            thread_id=sid,
             reply=body.to_reply(),
         )
     )
