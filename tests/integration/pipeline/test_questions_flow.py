@@ -8,9 +8,9 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
 from app.pipeline.errors import NotAwaitingInput
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from tests.pipeline.helpers import deps_for, persona_jd_text, persona_profile, tech_jd
@@ -31,7 +31,7 @@ def _service(questions: GapQuestions = QUESTIONS, eligibility: Eligibility = ELI
             "verify_claims": [JudgeFindings()],
         }
     )
-    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return gw, PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def _start(svc: PipelineService) -> None:

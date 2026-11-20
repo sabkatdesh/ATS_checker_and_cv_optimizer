@@ -9,8 +9,8 @@ from app.domain.cv.sections import PROTECTED_SECTIONS, SECTIONS, present_section
 from app.domain.cv.universal_cv import UniversalCVStructured
 from app.domain.match.schemas import Eligibility
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from tests.pipeline.helpers import deps_for, persona_cv, persona_jd_text, persona_profile, tech_jd
@@ -48,7 +48,7 @@ def _final(name: str) -> tuple[UniversalCVStructured, RewrittenCV, list[str]]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     final = svc.run(
         job_description=persona_jd_text(name),
         profile=persona_profile(name),

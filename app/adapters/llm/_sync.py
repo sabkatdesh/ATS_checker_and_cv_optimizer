@@ -6,9 +6,15 @@ threading.Event, httpx clients are built per call and boto3 calls run on their o
 """
 
 import asyncio
+import sys
 import threading
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any
+
+
+def _loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """psycopg's async driver cannot run on Windows' default Proactor loop; use a selector loop."""
+    return asyncio.SelectorEventLoop if sys.platform == "win32" else None
 
 
 def run_sync[R](coro: Coroutine[Any, Any, R]) -> R:
@@ -16,18 +22,18 @@ def run_sync[R](coro: Coroutine[Any, Any, R]) -> R:
 
     Never call this from async code: with a running loop in this thread it runs the coroutine on a
     fresh thread and blocks the calling loop until it finishes. Await the gateway there instead.
-    No running loop in this thread: asyncio.run.
+    No running loop in this thread: asyncio.run (a selector loop on Windows).
     """
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(coro)
+        return asyncio.run(coro, loop_factory=_loop_factory())
 
     box: dict[str, Any] = {}
 
     def target() -> None:
         try:
-            box["ok"] = asyncio.run(coro)
+            box["ok"] = asyncio.run(coro, loop_factory=_loop_factory())
         except BaseException as exc:  # noqa: BLE001 - re-raised in the calling thread
             box["err"] = exc
 

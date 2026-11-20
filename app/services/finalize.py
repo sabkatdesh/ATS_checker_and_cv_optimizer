@@ -7,6 +7,7 @@ from app.pipeline.summary import ats_score_of
 from app.ports.blob_storage import RENDERS_BUCKET, render_path
 from app.ports.pipeline import JsonDict
 from app.ports.repositories import COVER_LETTER_RENDER
+from app.services.terminal import finish_session
 
 logger = logging.getLogger(__name__)
 PDF = "application/pdf"
@@ -37,7 +38,8 @@ def finalize_session(
     1. Generates CV PDF (WeasyPrint via PDFGenerator)
     2. Optionally generates cover letter PDF (WeasyPrint via CoverLetterService)
     3. Uploads both PDFs to the private renders bucket and records renders rows
-    4. Marks the session succeeded (current_render_id points at the CV render)
+    4. Marks the session succeeded (current_render_id points at the CV render), stores the
+       pipeline summary, then deletes the thread's checkpoints
     """
     ats_score = ats_score_of(result.get("ats"))
     eligibility = result.get("eligibility")
@@ -47,7 +49,8 @@ def finalize_session(
 
     # Check if eligible — only generate PDF if eligible
     if not result.get("eligible"):
-        c.sessions.update(
+        finish_session(
+            c,
             user_id,
             thread_id,
             status="ineligible",
@@ -110,7 +113,8 @@ def finalize_session(
         except Exception:
             logger.exception("Cover letter PDF generation failed for %s", thread_id)
 
-    c.sessions.update(
+    finish_session(
+        c,
         user_id,
         thread_id,
         status="succeeded",

@@ -58,18 +58,22 @@ class JwksCache:
 
     def _refresh(self, now: float) -> None:
         """Network call runs without the lock; concurrent callers use what is cached."""
+        keys: dict[str, jwt.PyJWK] | None = None
         try:
             keys = self._parse(self._fetch(self._url))
         except Exception:
             keys = None
-        with self._lock:
-            self._in_flight = False
-            if keys is not None:
-                self._keys = keys
-                self._fetched_at = now
-            elif not self._keys:
-                raise AuthUnavailable(_NO_KEYS) from None
-            # otherwise keep serving the stale keys until the next allowed attempt
+        finally:
+            # Even a BaseException (interrupt, cancel) must free the slot for the next attempt.
+            with self._lock:
+                self._in_flight = False
+                if keys is not None:
+                    self._keys = keys
+                    self._fetched_at = now
+                cold = not self._keys
+        if cold:
+            raise AuthUnavailable(_NO_KEYS) from None
+        # otherwise keep serving the stale keys until the next allowed attempt
 
     @staticmethod
     def _parse(document: dict[str, Any]) -> dict[str, jwt.PyJWK]:

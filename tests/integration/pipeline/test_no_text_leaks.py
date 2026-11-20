@@ -13,9 +13,9 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
 from app.pipeline.errors import PipelineStepFailed
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
@@ -66,7 +66,7 @@ def test_full_run_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
     c = Container(
         AppSettings(_env_file=None, env="test"),
         **backend.repos(),
-        pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
+        pipeline=PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory()),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,
@@ -100,7 +100,7 @@ def test_full_run_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
 def test_failed_step_leaks_no_text(caplog: pytest.LogCaptureFixture) -> None:
     secret_error = LLMOutputInvalid(f"bad reply {JD_SENTINEL} {CV_SENTINEL} {ANS_SENTINEL}")
     gw, deps = deps_for(_script([secret_error]))
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     with caplog.at_level(logging.DEBUG), capture_logs() as logs:
         svc.run(
             job_description=JD_TEXT,

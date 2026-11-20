@@ -23,10 +23,10 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.errors import PipelineCancelled
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.hooks import NODE_STAGES, ProgressEvent
 from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
@@ -100,7 +100,7 @@ class Recorder:
 
 def _service(script: dict[str, list[Outcome]]) -> tuple[ScriptedGateway, PipelineService]:
     gw, deps = deps_for(script)
-    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return gw, PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def _start(svc: PipelineService, hooks: object = None) -> None:
@@ -170,7 +170,7 @@ def _fake_router_service() -> PipelineService:
         load_route_table(settings.llm, prices), registry, UsageRecorder(MemoryUsageSink(), prices)
     )
     deps = PipelineDeps(gateway=router, prompts=PromptLibrary(), settings=settings.pipeline)
-    return PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def test_cancel_during_llm_call_under_1_5s():
@@ -222,7 +222,7 @@ def _container(script: dict[str, list[Outcome]]) -> Container:
     return Container(
         AppSettings(_env_file=None, env="test"),
         **backend.repos(),
-        pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
+        pipeline=PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory()),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,

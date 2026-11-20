@@ -9,8 +9,8 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
@@ -60,7 +60,7 @@ def _service(draft: RewrittenCV, **steps: list[Outcome]) -> tuple[ScriptedGatewa
         **steps,
     }
     gw, deps = deps_for(script)
-    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return gw, PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def _finish(svc: PipelineService, jd: str | None = None, reply: str | None = None) -> dict:
@@ -154,7 +154,7 @@ def test_judge_disabled_makes_no_call():
         },
         judge_enabled=False,
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     final = _finish(svc)
     assert "verify_claims" not in _steps(gw)
     assert final["trust_report"].status == "pass"

@@ -31,9 +31,9 @@ from app.config.llm_routes import RouteTable  # noqa: E402
 from app.config.pipeline_settings import PipelineSettings  # noqa: E402
 from app.config.settings import AppSettings, load_settings  # noqa: E402
 from app.container import Container  # noqa: E402
-from app.pipeline.checkpoint_types import new_checkpointer  # noqa: E402
+from app.pipeline.checkpointer import MemoryCheckpointerFactory  # noqa: E402
 from app.pipeline.deps import PipelineDeps  # noqa: E402
-from app.pipeline.graph import build_graph  # noqa: E402
+from app.pipeline.graph import build_state_graph  # noqa: E402
 from app.pipeline.prompts.loader import PromptLibrary  # noqa: E402
 from app.pipeline.service import PipelineService  # noqa: E402
 from app.pipeline.state import RunOptions  # noqa: E402
@@ -80,7 +80,7 @@ def run_persona(
     """One full run: questions answered from answers.json, cover letter formal / standard."""
     folder = PERSONAS_DIR / name
     deps = PipelineDeps(gateway=gateway, prompts=PromptLibrary(), settings=settings)
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     options = RunOptions(
         cover_letter=True, cover_letter_tone="formal", cover_letter_length="standard"
     )

@@ -125,6 +125,14 @@ def test_status_falls_back_to_the_stored_summary(client, backend):
     assert _status(client, sid).json()["pipeline"] == {"domain": "tech"}
 
 
+def test_finished_session_uses_the_stored_summary(client, backend):
+    """Checkpoints of a finished session are gone; the live summary would be partial."""
+    sid = backend.sessions.seed(USER_A, status="failed", pipeline_summary={"domain": "tech"})
+    backend.pipeline.summary_value = SessionSummary(error_code="LLM_OUTPUT_INVALID")
+    assert _status(client, sid).json()["pipeline"] == {"domain": "tech"}
+    assert ("summary", (sid,), {}) not in backend.pipeline.calls
+
+
 def test_status_survives_a_failing_summary(client, backend):
     from structlog.testing import capture_logs
 

@@ -129,8 +129,10 @@ def test_api_start_and_reply_offline(container):
     assert r.json()["status"] == "complete"
     assert r.json()["pdf_url"]
     assert r.json()["pipeline"]["jd"]["title"] == "Backend Engineer"
-    values = container.pipeline.get_state(tid)["values"]
-    assert isinstance(values["tailored_cv"], RewrittenCV) and values["passes"] >= 1
+    # A finished thread keeps its summary on the row and its checkpoints are dropped.
+    row = container.sessions.get(USER_A, tid)
+    assert row is not None and row.pipeline_summary["jd"]["title"] == "Backend Engineer"
+    assert container.pipeline.get_state(tid)["values"] == {}
     assert FakePdfRenderer.calls
 
 

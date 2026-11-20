@@ -95,7 +95,8 @@ def _bind(name: str, fn: NodeFn, deps: PipelineDeps) -> BoundNode:
     return node
 
 
-def build_graph(deps: PipelineDeps, checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
+def build_state_graph(deps: PipelineDeps) -> StateGraph:
+    """The uncompiled graph; PipelineService compiles it with each run's checkpointer."""
     workflow = StateGraph(PipelineState)
     for name, fn in _NODES.items():
         workflow.add_node(name, _bind(name, fn, deps))
@@ -128,4 +129,8 @@ def build_graph(deps: PipelineDeps, checkpointer: BaseCheckpointSaver) -> Compil
         {"generate": "cover_letter", "skip": END},
     )
     workflow.add_edge("cover_letter", END)
-    return workflow.compile(checkpointer=checkpointer)
+    return workflow
+
+
+def build_graph(deps: PipelineDeps, checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
+    return build_state_graph(deps).compile(checkpointer=checkpointer)

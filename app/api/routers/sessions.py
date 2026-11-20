@@ -20,10 +20,16 @@ from app.services.session_view import list_view, status_view
 router = APIRouter()
 _log = structlog.get_logger("pipeline")
 DEFAULT_TEMPLATE = "classic"
+_FINISHED = frozenset({"succeeded", "failed", "cancelled", "expired", "ineligible"})
 
 
 def _pipeline_summary(c: Container, row: SessionRow) -> dict[str, Any] | None:
-    """Live checkpoint summary, else the stored one. The poll must never fail on it."""
+    """Live checkpoint summary, else the stored one. The poll must never fail on it.
+
+    A finished session's checkpoints are deleted, so its stored summary is the record.
+    """
+    if row.status in _FINISHED and row.pipeline_summary is not None:
+        return row.pipeline_summary
     try:
         summary = c.pipeline.summary(row.id)
         if summary:

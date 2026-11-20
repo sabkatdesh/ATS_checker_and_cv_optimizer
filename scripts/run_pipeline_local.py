@@ -25,10 +25,10 @@ from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import load_route_table
 from app.config.settings import AppSettings
 from app.observability.logging import configure_logging
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
 from app.pipeline.deps import PipelineDeps
 from app.pipeline.errors import PipelineStepFailed
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
@@ -58,7 +58,7 @@ def run_fixture(name: str, settings: AppSettings, *, cover_letter: bool) -> dict
         prompts=PromptLibrary(),
         settings=settings.pipeline,
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     options = RunOptions(
         cover_letter=cover_letter,
         cover_letter_tone="formal" if cover_letter else None,

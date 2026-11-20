@@ -82,3 +82,52 @@ revoke execute on function public.claim_signup_bonus(uuid, text, text, int, int,
   from public, anon, authenticated;
 grant execute on function public.claim_signup_bonus(uuid, text, text, int, int, int)
   to app_backend, service_role;
+
+-- prune_checkpoints: the sweep behind ADR-007's per-session delete. A thread's
+-- checkpoint rows are kept only while its cv_sessions row is live (not terminal)
+-- and was updated within p_older; terminal sessions, stale ones and threads with
+-- no session row at all are deleted. Returns the lg.checkpoints rows deleted.
+-- thread_id is compared as text, so a non-uuid thread id is simply orphaned.
+create or replace function public.prune_checkpoints(p_older interval default interval '7 days')
+returns int
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_deleted int;
+begin
+  if p_older is null or p_older < interval '0' then
+    raise exception 'INVALID_INTERVAL' using errcode = 'P0001';
+  end if;
+
+  delete from lg.checkpoint_writes w
+  where not exists (
+    select 1 from public.cv_sessions s
+    where s.id::text = w.thread_id
+      and s.status not in ('succeeded', 'failed', 'cancelled', 'expired', 'ineligible')
+      and s.updated_at >= now() - p_older);
+
+  delete from lg.checkpoint_blobs b
+  where not exists (
+    select 1 from public.cv_sessions s
+    where s.id::text = b.thread_id
+      and s.status not in ('succeeded', 'failed', 'cancelled', 'expired', 'ineligible')
+      and s.updated_at >= now() - p_older);
+
+  delete from lg.checkpoints c
+  where not exists (
+    select 1 from public.cv_sessions s
+    where s.id::text = c.thread_id
+      and s.status not in ('succeeded', 'failed', 'cancelled', 'expired', 'ineligible')
+      and s.updated_at >= now() - p_older);
+  get diagnostics v_deleted = row_count;
+
+  return v_deleted;
+end;
+$$;
+
+revoke execute on function public.prune_checkpoints(interval)
+  from public, anon, authenticated;
+grant execute on function public.prune_checkpoints(interval)
+  to app_backend, service_role;

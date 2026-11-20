@@ -74,3 +74,49 @@ def test_function_parses():
     assert any(type(s.stmt).__name__ == "CreateFunctionStmt" for s in stmts)
     create = sql[: sql.lower().index("revoke execute")]
     assert pglast.parse_plpgsql(create)
+
+
+TERMINAL = ("succeeded", "failed", "cancelled", "expired", "ineligible")
+
+
+def _prune() -> str:
+    flat = _flat()
+    start = flat.index("create or replace function public.prune_checkpoints(")
+    return flat[start:]
+
+
+def test_prune_signature_definer_and_search_path():
+    body = _prune()
+    assert body.startswith(
+        "create or replace function public.prune_checkpoints("
+        "p_older interval default interval '7 days') returns int"
+    )
+    assert "language plpgsql security definer set search_path=''" in body
+    assert any("prune_checkpoints" in f for f in sqlscan.definer_functions(_sql()))
+
+
+def test_prune_deletes_all_three_lg_tables_for_dead_threads():
+    body = _prune()
+    for table in ("checkpoint_writes", "checkpoint_blobs", "checkpoints"):
+        assert f"delete from lg.{table} " in body, table  # noqa: S608 - not a query
+    # A thread is kept only while its session is live and recently updated.
+    assert "s.id::text=" in body
+    assert "s.updated_at>=now()-p_older" in body.replace(" ", "")
+    for status in TERMINAL:
+        assert f"'{status}'" in body
+    assert "get diagnostics v_deleted=row_count" in body
+    assert body.index("delete from lg.checkpoint_writes") < body.index(
+        "delete from lg.checkpoints "
+    )
+
+
+def test_prune_grants():
+    body = _prune()
+    assert (
+        "revoke execute on function public.prune_checkpoints(interval) "
+        "from public,anon,authenticated" in body
+    )
+    assert (
+        "grant execute on function public.prune_checkpoints(interval) to app_backend,service_role"
+        in body
+    )

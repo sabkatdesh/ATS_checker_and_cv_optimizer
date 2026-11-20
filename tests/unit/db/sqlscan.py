@@ -9,6 +9,8 @@ _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _LINE_COMMENT = re.compile(r"--[^\n]*")
 _IDENT = r'"?(\w+)"?'
 _TABLE = re.compile(rf"create\s+table\s+(?:if\s+not\s+exists\s+)?public\.{_IDENT}", re.I)
+# The private lg schema holds only the LangGraph checkpoint tables.
+_LG_TABLE = re.compile(rf"create\s+table\s+(?:if\s+not\s+exists\s+)?lg\.{_IDENT}", re.I)
 _POLICY = re.compile(r"create\s+policy\s+.+?;", re.I | re.S)
 _FUNCTION = re.compile(
     r"create\s+(?:or\s+replace\s+)?function\s+.+?(?=create\s+(?:or\s+replace\s+)?function\s|\Z)",
@@ -56,10 +58,10 @@ def definer_functions(sql: str) -> list[str]:
 
 
 def unqualified_create_tables(sql: str) -> list[str]:
-    """create table statements that are not plain `public.<name>` (lint bypass)."""
+    """create table statements that are not plain `public.<name>` or `lg.<name>` (lint bypass)."""
     clean = strip_comments(sql)
     stmts = re.findall(r"create\s+(?:\w+\s+)*?table\s+[^\n(]*", clean, re.I)
-    return [s for s in stmts if not _TABLE.match(s)]
+    return [s for s in stmts if not (_TABLE.match(s) or _LG_TABLE.match(s))]
 
 
 def table_block(sql: str, name: str) -> str:

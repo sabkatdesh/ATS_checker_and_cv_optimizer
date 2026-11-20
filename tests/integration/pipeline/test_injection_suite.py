@@ -13,8 +13,8 @@ from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.text.invisible import strip_invisible
 from app.domain.trust.judge import JudgeFindings
 from app.pipeline.blocks import DataTag
-from app.pipeline.checkpoint_types import new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from tests.pipeline.helpers import (
@@ -53,7 +53,7 @@ def _run(jd_text: str, draft: RewrittenCV) -> tuple[ScriptedGateway, dict]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     svc.run(job_description=jd_text, profile=persona_profile(), thread_id="t", options=RunOptions())
     return gw, svc.resume("t", persona_answers().free_text)
 

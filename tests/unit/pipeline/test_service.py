@@ -16,9 +16,9 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
 from app.pipeline.errors import PipelineStepFailed
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from app.ports.llm_errors import LLMOutputInvalid
@@ -37,7 +37,7 @@ def _service() -> tuple[object, PipelineService]:
             "verify_claims": [JudgeFindings()],
         }
     )
-    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return gw, PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def _run(svc: PipelineService, tid: str = "t1") -> dict:
@@ -110,7 +110,7 @@ def test_stage_events_carry_no_text():
 def test_pipeline_parse_failure_does_not_leak():
     secret = "SENTINEL secret cv line"
     _, deps = deps_for({"jd_extract": [LLMOutputInvalid(f"bad reply: {secret}")]})
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     with capture_logs() as logs, pytest.raises(PipelineStepFailed) as exc:
         _run(svc)
     assert exc.value.code == "LLM_OUTPUT_INVALID"
@@ -125,13 +125,13 @@ def test_container_builds_pipeline_lazily(monkeypatch):
     import app.container as container_mod
 
     calls: list[object] = []
-    real = container_mod.build_graph
+    real = container_mod.build_state_graph
 
-    def spy(deps, checkpointer):
+    def spy(deps):
         calls.append(deps)
-        return real(deps, checkpointer)
+        return real(deps)
 
-    monkeypatch.setattr(container_mod, "build_graph", spy)
+    monkeypatch.setattr(container_mod, "build_state_graph", spy)
     settings = AppSettings(
         _env_file=None, llm={"default_provider": "fake"}, pipeline={"ats_target": 80}
     )

@@ -7,6 +7,7 @@ from psycopg_pool import ConnectionPool
 
 from app.adapters.auth.factory import build_token_verifier
 from app.adapters.background.thread_runner import ThreadRunner
+from app.adapters.db.checkpointer_select import select_checkpointer
 from app.adapters.db.credit_repo import PgCreditRepo
 from app.adapters.db.errors import DbUnavailable
 from app.adapters.db.guard_repo import PgGuardRepo
@@ -23,9 +24,9 @@ from app.adapters.storage.supabase_storage import SupabaseBlobStorage
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
 from app.config.settings import AppSettings, ConfigError, load_settings
-from app.pipeline.checkpoint_types import new_checkpointer
+from app.pipeline.checkpointer import CheckpointerFactory
 from app.pipeline.deps import PipelineDeps
-from app.pipeline.graph import build_graph
+from app.pipeline.graph import build_state_graph
 from app.pipeline.prompts.loader import PromptLibrary
 from app.pipeline.service import PipelineService
 from app.ports.auth import TokenVerifier
@@ -69,10 +70,19 @@ def _default_cover_letter() -> CoverLetterRenderer:
 
 
 def _default_pipeline(
-    settings: AppSettings, gateway: LLMGateway, prompts: PromptLibrary
+    settings: AppSettings,
+    gateway: LLMGateway,
+    prompts: PromptLibrary,
+    checkpoints: CheckpointerFactory,
 ) -> PipelineRunner:
     deps = PipelineDeps(gateway=gateway, prompts=prompts, settings=settings.pipeline)
-    return PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return PipelineService(build_state_graph(deps), deps.runs, checkpoints)
+
+
+def _default_checkpointer(
+    settings: AppSettings, pool: Callable[[], ConnectionPool]
+) -> CheckpointerFactory:
+    return select_checkpointer(settings, pool)
 
 
 def _default_runner(settings: AppSettings) -> BackgroundRunner:
@@ -101,6 +111,7 @@ class Container:
         renders: RenderRepo | None = None,
         credits: CreditReadRepo | None = None,
         guards: GuardRepo | None = None,
+        checkpointer: CheckpointerFactory | None = None,
     ) -> None:
         self.settings = settings
         # Reentrant: a default builder may read another lazy property (e.g. pipeline -> llm).
@@ -119,6 +130,7 @@ class Container:
         self._renders = renders
         self._credits = credits
         self._guards = guards
+        self._checkpointer = checkpointer
         self._llm = llm
         self._embeddings = embeddings
         self.prompts = PromptLibrary()
@@ -219,10 +231,19 @@ class Container:
             return self._auth
 
     @property
+    def checkpointer(self) -> CheckpointerFactory:
+        with self._lock:
+            if self._checkpointer is None:
+                self._checkpointer = _default_checkpointer(self.settings, lambda: self.pool)
+            return self._checkpointer
+
+    @property
     def pipeline(self) -> PipelineRunner:
         with self._lock:
             if self._pipeline is None:
-                self._pipeline = _default_pipeline(self.settings, self.llm, self.prompts)
+                self._pipeline = _default_pipeline(
+                    self.settings, self.llm, self.prompts, self.checkpointer
+                )
             return self._pipeline
 
     @property

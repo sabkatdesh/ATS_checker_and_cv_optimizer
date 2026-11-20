@@ -10,8 +10,8 @@ from app.adapters.background.inline_runner import InlineRunner
 from app.config.settings import AppSettings
 from app.container import Container
 from app.domain.match.schemas import Eligibility
-from app.pipeline.checkpoint_types import new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.ports.llm_errors import LLMOutputInvalid, LLMRefused
 from app.services.generation import resume_after_answers, run_new_session
@@ -32,7 +32,7 @@ def _container(script: dict[str, list[Outcome]]) -> Container:
     return Container(
         AppSettings(_env_file=None, env="test"),
         **backend.repos(),
-        pipeline=PipelineService(build_graph(deps, new_checkpointer()), deps.runs),
+        pipeline=PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory()),
         runner=InlineRunner(),
         pdf_factory=FakePdfRenderer,
         cover_letter_factory=FakeCoverLetterRenderer,

@@ -148,3 +148,24 @@ def test_symmetric_and_non_sig_entries_ignored(keys, clock):
     for kid in ("sym", "enc"):
         with pytest.raises(InvalidToken):
             cache.key_for(kid)
+
+
+def test_refresh_clears_in_flight_on_base_exception(keys, clock):
+    class Interrupt(BaseException):
+        pass
+
+    state = {"raise": True}
+    good = FakeJwks([keys.jwk("k1")])
+
+    def fetch(url):
+        if state["raise"]:
+            raise Interrupt
+        return good(url)
+
+    cache = make(clock, fetch)
+    with pytest.raises(Interrupt):
+        cache.key_for("k1")
+    assert cache._in_flight is False
+    state["raise"] = False
+    clock.now += 31
+    assert cache.key_for("k1") is not None

@@ -9,6 +9,7 @@ from app.pipeline.errors import NotAwaitingInput, PipelineCancelled, PipelineSte
 from app.pipeline.state import RunOptions
 from app.ports.pipeline import JsonDict
 from app.services.finalize import finalize_session
+from app.services.terminal import finish_session
 
 logger = logging.getLogger(__name__)
 _log = structlog.get_logger("pipeline")
@@ -35,7 +36,7 @@ def _options(c: Container, cover_letter: bool, tone: str | None, length: str | N
 
 
 def _failed(c: Container, user_id: str, thread_id: str) -> None:
-    c.sessions.update(user_id, thread_id, status="failed", awaiting_kind=None)
+    finish_session(c, user_id, thread_id, status="failed", awaiting_kind=None)
 
 
 def _step_failed(c: Container, user_id: str, thread_id: str, failure: PipelineStepFailed) -> None:
@@ -47,7 +48,7 @@ def _step_failed(c: Container, user_id: str, thread_id: str, failure: PipelineSt
 def _cancelled(c: Container, user_id: str, thread_id: str, cancelled: PipelineCancelled) -> None:
     """The user cancelled: mark the session cancelled (no render, no charge)."""
     _log.info("pipeline.cancelled", node=cancelled.node, stage=cancelled.stage, when=cancelled.when)
-    c.sessions.update(user_id, thread_id, status="cancelled", awaiting_kind=None)
+    finish_session(c, user_id, thread_id, status="cancelled", awaiting_kind=None)
 
 
 def _pause_status(c: Container, user_id: str, thread_id: str) -> bool:

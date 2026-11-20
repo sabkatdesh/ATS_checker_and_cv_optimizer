@@ -11,8 +11,9 @@ from app.domain.cv.rewrite import RewrittenCV
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import allowed_modules, new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpoint_types import allowed_modules
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from tests.pipeline.helpers import (
@@ -53,7 +54,7 @@ def test_interrupt_resume_flow_logs_nothing_from_the_serde(
             "cover_letter": [letter],
         }
     )
-    svc = PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    svc = PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
     with caplog.at_level(logging.DEBUG, logger=SERDE_LOGGER):
         svc.run(
             job_description=persona_jd_text(),

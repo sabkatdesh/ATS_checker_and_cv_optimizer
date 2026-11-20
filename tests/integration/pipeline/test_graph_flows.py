@@ -11,8 +11,8 @@ from app.domain.jd.schemas import JDSkillBlock, JobDescriptionStructured
 from app.domain.match.schemas import Eligibility
 from app.domain.questions.schemas import GapAnswers, GapQuestion, GapQuestions
 from app.domain.trust.judge import JudgeFindings
-from app.pipeline.checkpoint_types import new_checkpointer
-from app.pipeline.graph import build_graph
+from app.pipeline.checkpointer import MemoryCheckpointerFactory
+from app.pipeline.graph import build_state_graph
 from app.pipeline.service import PipelineService
 from app.pipeline.state import RunOptions
 from tests.pipeline.helpers import (
@@ -47,7 +47,7 @@ def _script(eligibility: Eligibility, rewrites: int = 2, **extra: list[Outcome])
 
 def _service(script: dict) -> tuple[ScriptedGateway, PipelineService]:
     gw, deps = deps_for(script)
-    return gw, PipelineService(build_graph(deps, new_checkpointer()), deps.runs)
+    return gw, PipelineService(build_state_graph(deps), deps.runs, MemoryCheckpointerFactory())
 
 
 def _start(svc: PipelineService, options: RunOptions | None = None) -> dict:
