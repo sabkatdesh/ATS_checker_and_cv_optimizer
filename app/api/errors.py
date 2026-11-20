@@ -1,10 +1,13 @@
 from typing import Any
 
 import psycopg
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.adapters.db.errors import DbConflict, DbUnavailable
+
+_log = structlog.get_logger("api")
 
 
 class AppError(Exception):
@@ -46,11 +49,23 @@ async def _handle_db_conflict(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
-async def _handle_psycopg(request: Request, exc: Exception) -> JSONResponse:
+def _log_db_error(exc: Exception) -> None:
+    """Type and SQLSTATE only; the message can carry a DSN or row data."""
+    _log.error(
+        "request.db_error", error_type=type(exc).__name__, sqlstate=getattr(exc, "sqlstate", None)
+    )
+
+
+async def _handle_db_operational(request: Request, exc: Exception) -> JSONResponse:
+    _log_db_error(exc)
     return await _handle_db_unavailable(request, exc)
 
 
 async def _handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, psycopg.Error):
+        _log_db_error(exc)
+    else:
+        _log.error("request.unhandled", error_type=type(exc).__name__)
     return await _handle_app_error(
         request, AppError("INTERNAL_ERROR", 500, "Internal error", "Something went wrong.")
     )
@@ -60,5 +75,5 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(DbUnavailable, _handle_db_unavailable)
     app.add_exception_handler(DbConflict, _handle_db_conflict)
-    app.add_exception_handler(psycopg.Error, _handle_psycopg)
+    app.add_exception_handler(psycopg.OperationalError, _handle_db_operational)
     app.add_exception_handler(Exception, _handle_unhandled)

@@ -17,6 +17,8 @@ def scrub_event(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
             request.pop(key, None)
         if isinstance(request.get("url"), str):
             request["url"] = mask_text(request["url"])
+        if isinstance(request.get("env"), dict):
+            request["env"] = redact_value("env", request["env"])
         headers = request.get("headers")
         if isinstance(headers, dict):
             request["headers"] = redact_value(
@@ -31,6 +33,11 @@ def scrub_event(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
         event.pop(key, None)
     if "breadcrumbs" in event:
         event["breadcrumbs"] = redact_value("breadcrumbs", event["breadcrumbs"])
+    for key in ("tags", "user"):
+        if key in event:
+            event[key] = redact_value(key, event[key])
+    if isinstance(event.get("transaction"), str):
+        event["transaction"] = mask_text(event["transaction"])
     if "extra" in event:
         event["extra"] = redact_value("extra", event["extra"])
     return event

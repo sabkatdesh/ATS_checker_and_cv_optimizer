@@ -9,7 +9,7 @@ from typing import Any
 from app.observability.secrets import scrub_secrets
 
 REDACTED = "[REDACTED]"
-EMAIL_RE = r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+EMAIL_RE = r"[\w.+-]{1,64}@[\w-]{1,255}(?:\.[\w-]{1,63}){1,8}"
 PHONE_RE = r"(?<![\w-])\(?\+?\d(?:[\s().-]{0,2}\d){8,14}(?![\w-])"
 
 SENSITIVE_KEYS: frozenset[str] = frozenset(

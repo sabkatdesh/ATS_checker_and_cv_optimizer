@@ -3,12 +3,14 @@
 import base64
 import re
 
-_BEARER = re.compile(r"(?i)\bBearer\s+[\w.~+/=-]+")
-_JWT = re.compile(r"\beyJ[\w-]+\.([\w-]+)\.[\w-]+")
+_BEARER = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}")
+_JWT = re.compile(r"\beyJ[\w-]{1,4096}\.([\w-]{1,4096})\.[\w-]{1,4096}")
 _KEY = re.compile(r"\bsb_(?:secret|publishable)_[\w-]+")
-_URL_DSN = re.compile(r"(\bpostgres(?:ql)?(?:\+\w+)?://[^:/\s@]+:)[^@\s]*(@)", re.I)
-_CONNINFO_PW = re.compile(r"(\bpassword\s*=\s*)(?:'[^']*'|\S+)", re.I)
-_URL_TOKEN = re.compile(r"([?&])token=[^&\s\"'#]*", re.I)
+_URL_DSN = re.compile(r"(\bpostgres(?:ql)?(?:\+\w+)?://[^:/\s@]+:)[^\s/]*(@)", re.I)
+_CONNINFO_PW = re.compile(r"(\b(?:ssl)?password\s*=\s*)(?:'[^']*'|\S+)", re.I)
+_URL_TOKEN = re.compile(
+    r"([?&])((?:access_)?token|x-amz-signature|sig|signature)=[^&\s\"'#]*", re.I
+)
 
 
 def _jwt_sub(match: re.Match[str]) -> str:
