@@ -24,7 +24,8 @@ def fetch_jwks(url: str) -> dict[str, Any]:
             raise ValueError("unexpected JWKS document")
         except Exception as exc:
             last = exc
-    raise last  # type: ignore[misc]
+    assert last is not None  # noqa: S101
+    raise last
 
 
 def build_token_verifier(auth: AuthSettings, supabase_url: str | None = None) -> JwksTokenVerifier:

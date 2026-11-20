@@ -8,6 +8,7 @@ from app.ports.auth import InvalidToken, VerifiedUser
 
 _INVALID = "Invalid token"
 _ASYMMETRIC = ("ES256", "RS256")
+_MAX_TOKEN_CHARS = 8192
 _REQUIRED = ["exp", "sub", "aud", "iss"]
 
 
@@ -28,6 +29,8 @@ class JwksTokenVerifier:
         self._hs256_secret = hs256_secret
 
     def verify(self, token: str) -> VerifiedUser:
+        if len(token) > _MAX_TOKEN_CHARS:
+            raise InvalidToken(_INVALID)
         try:
             header = jwt.get_unverified_header(token)
         except Exception:
@@ -37,7 +40,10 @@ class JwksTokenVerifier:
             kid = header.get("kid")
             if not isinstance(kid, str) or not kid:
                 raise InvalidToken(_INVALID)
-            key: Any = self._cache.key_for(kid).key
+            jwk = self._cache.key_for(kid)
+            if jwk.algorithm_name != alg:
+                raise InvalidToken(_INVALID)
+            key: Any = jwk.key
         elif alg == "HS256" and self._hs256_secret is not None:
             key = self._hs256_secret.get_secret_value()
         else:

@@ -1,3 +1,4 @@
+import json
 import time
 
 import jwt
@@ -164,3 +165,66 @@ def test_error_message_constant_no_token_echo(keys, clock):
         messages.add(str(exc.value))
         assert token not in repr(exc.value)
     assert messages == {"Invalid token"}
+
+
+def test_missing_exp_401(keys, clock):
+    v, _ = ec_verifier(keys, clock)
+    with pytest.raises(InvalidToken):
+        v.verify(sign(keys.ec, make_claims(exp=None)))
+
+
+def _hs256_by_hand(claims, secret):
+    import base64
+    import hashlib
+    import hmac
+
+    def b64(raw):
+        return base64.urlsafe_b64encode(raw).rstrip(b"=")
+
+    head = b64(json.dumps({"alg": "HS256", "typ": "JWT", "kid": "k1"}).encode())
+    body = b64(json.dumps(claims).encode())
+    sig = hmac.new(secret, head + b"." + body, hashlib.sha256).digest()
+    return (head + b"." + body + b"." + b64(sig)).decode()
+
+
+def test_algorithm_confusion_refused_even_with_hs256_secret_configured(keys, clock):
+    from cryptography.hazmat.primitives import serialization as ser
+
+    v, _ = ec_verifier(keys, clock, SecretStr("dev-secret-" + "x" * 32))
+    pem = keys.ec.public_key().public_bytes(ser.Encoding.PEM, ser.PublicFormat.SubjectPublicKeyInfo)
+    for secret in (pem, json.dumps(keys.jwk("k1")).encode()):
+        with pytest.raises(InvalidToken):
+            v.verify(_hs256_by_hand(make_claims(), secret))
+
+
+def test_user_metadata_role_does_not_grant_admin(keys, clock):
+    v, _ = ec_verifier(keys, clock)
+    claims = make_claims(user_metadata={"role": "admin"}, role="admin")
+    assert not v.verify(sign(keys.ec, claims)).is_admin
+    claims = make_claims(user_metadata={"role": "admin"}, app_metadata={"role": "admin"})
+    assert v.verify(sign(keys.ec, claims)).is_admin
+
+
+def test_unknown_kid_message_is_constant(keys, clock):
+    v, _ = ec_verifier(keys, clock)
+    with pytest.raises(InvalidToken) as exc:
+        v.verify(sign(keys.ec, make_claims(), kid="mystery-kid"))
+    assert str(exc.value) == "Invalid token"
+    assert "mystery-kid" not in repr(exc.value)
+
+
+def test_header_alg_must_match_key_algorithm(keys, clock):
+    fetch = FakeJwks([keys.jwk("k1"), keys.jwk("r1", "rsa")])
+    v = build(clock, fetch)
+    token = sign(keys.rsa, make_claims(), "RS256", kid="k1")  # k1 is an EC key
+    with pytest.raises(InvalidToken):
+        v.verify(token)
+    assert v.verify(sign(keys.rsa, make_claims(), "RS256", kid="r1"))
+
+
+def test_oversized_token_rejected_up_front(keys, clock):
+    v, fetch = ec_verifier(keys, clock)
+    with pytest.raises(InvalidToken) as exc:
+        v.verify("a" * 9000)
+    assert str(exc.value) == "Invalid token"
+    assert fetch.calls == 0
