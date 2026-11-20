@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from psycopg_pool import ConnectionPool
 
+from app.adapters.auth.factory import build_token_verifier
 from app.adapters.background.thread_runner import ThreadRunner
 from app.adapters.db.credit_repo import PgCreditRepo
 from app.adapters.db.errors import DbUnavailable
@@ -14,7 +15,6 @@ from app.adapters.db.profile_repo import PgProfileRepo
 from app.adapters.db.render_repo import PgRenderRepo
 from app.adapters.db.session_repo import PgSessionRepo
 from app.adapters.db.supabase_client import make_supabase_client
-from app.adapters.db.supabase_token_verifier import SupabaseTokenVerifier
 from app.adapters.db.template_repo import PgTemplateRepo
 from app.adapters.llm.stack import LlmStack
 from app.adapters.llm.usage_recorder import UsageRecorder
@@ -51,7 +51,7 @@ def _default_storage(settings: AppSettings, supabase: Callable[[], Client]) -> B
 
 
 def _default_auth(settings: AppSettings, supabase: Callable[[], Client]) -> TokenVerifier:
-    return SupabaseTokenVerifier(supabase())
+    return build_token_verifier(settings.auth, settings.supabase_url)
 
 
 def _default_pdf() -> CvPdfRenderer:

@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+from app.ports.auth import InvalidToken, VerifiedUser
 
 USER_A, USER_B = "user-a", "user-b"
 TOKEN_A, TOKEN_B = "token-a", "token-b"
@@ -8,10 +8,7 @@ class FakeAuth:
     def __init__(self):
         self.tokens = {TOKEN_A: USER_A, TOKEN_B: USER_B}
 
-    def user_id_for(self, token: str) -> str:
+    def verify(self, token: str) -> VerifiedUser:
         if token not in self.tokens:
-            raise ValueError("invalid token")
-        return self.tokens[token]
-
-    def legacy_get_user(self, token: str):
-        return SimpleNamespace(user=SimpleNamespace(id=self.user_id_for(token)))
+            raise InvalidToken("invalid token")
+        return VerifiedUser(user_id=self.tokens[token])

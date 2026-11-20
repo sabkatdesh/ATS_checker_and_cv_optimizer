@@ -124,7 +124,7 @@ def test_missing_supabase_config_fails_on_first_use_not_build(monkeypatch):
     c = build_container(AppSettings(_env_file=None))
     with pytest.raises(ConfigError, match="Database access needs AUTH__SUPABASE_URL"):
         _ = c.storage
-    with pytest.raises(ConfigError, match="SUPABASE_SECRET_KEY"):
+    with pytest.raises(ConfigError, match="AUTH__JWKS_URL"):
         _ = c.auth
 
 
