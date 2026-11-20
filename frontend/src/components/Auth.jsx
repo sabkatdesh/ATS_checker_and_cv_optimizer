@@ -5,6 +5,7 @@ import { Zap, Mail, Lock, Loader2 } from 'lucide-react'
 import CheckEmailPanel from './CheckEmailPanel.jsx'
 import CaptchaBox from './CaptchaBox.jsx'
 import { useTurnstile } from './useTurnstile.js'
+import { authLinkNotice } from '../lib/authLinkError.js'
 
 const GOOGLE_ENABLED = import.meta.env.VITE_AUTH_GOOGLE === '1'
 
@@ -16,6 +17,7 @@ export default function Auth() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingEmail, setPendingEmail] = useState(null)
+  const [linkNotice] = useState(authLinkNotice)
   const captcha = useTurnstile(pendingEmail ? null : tab)
 
   async function handleGoogle() {
@@ -88,6 +90,7 @@ export default function Auth() {
             </button>
           </div>
 
+          {linkNotice && <div className="alert alert-error" role="status">{linkNotice}</div>}
           {error && <div className="alert alert-error">{error}</div>}
 
           {tab === 'login' ? (

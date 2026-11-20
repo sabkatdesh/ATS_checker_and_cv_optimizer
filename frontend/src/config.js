@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+// Imported first so it reads the callback URL before the auth client handles it.
+import './lib/authLinkError.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
