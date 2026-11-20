@@ -52,3 +52,20 @@ def test_pepper_env_alias(monkeypatch):
     monkeypatch.setenv("GUARDS__HASH_PEPPER", "pp")
     s = AppSettings()
     assert s.bonus.hash_pepper is not None and s.bonus.hash_pepper.get_secret_value() == "pp"
+
+
+def test_bonus_and_guards_env_prefixes_merge(monkeypatch):
+    """BONUS__* and GUARDS__* both feed AppSettings.bonus; every field must arrive."""
+    monkeypatch.setenv("BONUS__AMOUNT", "50")
+    monkeypatch.setenv("BONUS__IP_DAILY_MAX", "5")
+    monkeypatch.setenv("GUARDS__DEVICE_MAX", "2")
+    monkeypatch.setenv("GUARDS__HASH_PEPPER", "pp")
+    b = AppSettings(_env_file=None).bonus
+    assert (b.amount, b.ip_daily_max, b.device_max) == (50, 5, 2)
+    assert b.hash_pepper is not None and b.hash_pepper.get_secret_value() == "pp"
+
+
+def test_bonus_prefix_alone_still_works(monkeypatch):
+    monkeypatch.setenv("BONUS__HASH_PEPPER", "pb")
+    b = AppSettings(_env_file=None).bonus
+    assert b.hash_pepper is not None and b.hash_pepper.get_secret_value() == "pb"
