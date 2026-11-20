@@ -139,6 +139,13 @@ class AuditRepo(Protocol):
         ...
 
 
+class BonusUnavailable(ValueError):
+    """claim_signup_bonus() refused the claim (unknown user, bad bucket). No details."""
+
+    def __init__(self) -> None:
+        super().__init__("Signup bonus unavailable")
+
+
 class GuardRepo(Protocol):
     def claim(
         self,
@@ -153,7 +160,8 @@ class GuardRepo(Protocol):
         """claim_signup_bonus(): guards + credits_grant in one transaction.
 
         Returns granted | already_granted | pending_review | email_not_verified. The ip bucket
-        is counted per day, the device bucket for life."""
+        is counted per day, the device bucket for life. A SQL rejection raises
+        BonusUnavailable."""
         ...
 
 

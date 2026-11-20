@@ -10,21 +10,34 @@ from app.api.errors import AppError
 from app.config.settings import ConfigError
 from app.container import Container
 from app.domain.credits.bonus import load_disposable_domains
-from app.ports.repositories import JsonDict
+from app.ports.repositories import BonusUnavailable, JsonDict
 from app.services.signup_bonus import BonusDeps, claim_signup_bonus
 
 router = APIRouter()
 # Generation is free until M5 adds pricing with reserve/settle.
 COST_PER_CV = 0
+# History label when a ledger row carries no reason.
+KIND_LABELS = {
+    "signup_bonus": "Signup bonus",
+    "reserve": "Credits reserved",
+    "capture": "CV generation",
+    "release": "Credits released",
+    "tier_upgrade": "Tier upgrade",
+    "purchase": "Credit purchase",
+    "refund_admin": "Refund",
+    "adjustment": "Adjustment",
+}
+DEFAULT_KIND_LABEL = "Credit change"
 
 
 def _transaction(row: JsonDict) -> JsonDict:
     created = row.get("created_at")
+    kind = row.get("kind")
     return {
         "id": row.get("id"),
         "amount": row.get("delta_balance"),
-        "type": row.get("kind"),
-        "description": row.get("reason"),
+        "type": kind,
+        "description": row.get("reason") or KIND_LABELS.get(str(kind), DEFAULT_KIND_LABEL),
         "created_at": created.isoformat() if isinstance(created, datetime) else created,
     }
 
@@ -84,6 +97,13 @@ def claim_bonus(
     except ConfigError:
         raise AppError(
             "BONUS_UNAVAILABLE", 503, "Service unavailable", "Please try again shortly."
+        ) from None
+    except BonusUnavailable:
+        raise AppError(
+            "BONUS_UNAVAILABLE",
+            409,
+            "Bonus unavailable",
+            "The signup bonus is not available for this account.",
         ) from None
     if outcome == "email_not_verified":
         raise AppError(

@@ -5,6 +5,7 @@ from typing import Any
 import psycopg
 
 from app.adapters.db.errors import map_db_errors
+from app.ports.repositories import BonusUnavailable
 
 _CLAIM = (
     "select public.claim_signup_bonus(%(user_id)s, %(ip)s, %(dev)s, "
@@ -26,7 +27,7 @@ class PgGuardRepo:
         device_max: int,
         amount: int,
     ) -> str:
-        """Outcome string. Function rejections (bad user/bucket) -> ValueError, no details."""
+        """Outcome string. Function rejections (bad user/bucket) -> BonusUnavailable."""
         params = {
             "user_id": user_id,
             "ip": ip_bucket,
@@ -39,7 +40,7 @@ class PgGuardRepo:
             with self._pool.connection() as conn:
                 row = conn.execute(_CLAIM, params).fetchone()
         except psycopg.errors.RaiseException:
-            raise ValueError("claim_signup_bonus rejected") from None
+            raise BonusUnavailable from None
         except Exception:
             with map_db_errors():
                 raise

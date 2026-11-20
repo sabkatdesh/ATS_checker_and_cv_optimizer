@@ -2,6 +2,7 @@ import psycopg
 import pytest
 
 from app.adapters.db.guard_repo import PgGuardRepo
+from app.ports.repositories import BonusUnavailable
 from tests.fakes.recording_pool import RecordingPool
 
 UID = "11111111-1111-4111-8111-111111111111"
@@ -29,9 +30,9 @@ def test_claim_without_device_passes_null():
     assert pool.log[0][1]["dev"] is None
 
 
-def test_claim_rejection_is_value_error_without_details():
+def test_claim_rejection_is_bonus_unavailable_without_details():
     pool = RecordingPool()
     pool.raise_on_connect = psycopg.errors.RaiseException("INVALID_USER secret")
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(BonusUnavailable) as exc:
         PgGuardRepo(pool).claim(UID, "ip:a", None, ip_max=3, device_max=1, amount=100)
     assert "secret" not in str(exc.value)
