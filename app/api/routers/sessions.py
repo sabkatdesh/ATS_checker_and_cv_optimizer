@@ -12,7 +12,7 @@ from app.domain.common import uuid7
 from app.domain.cv.minimums import check_minimums
 from app.domain.cv.profile_to_cv import profile_to_universal_cv
 from app.domain.parsing.input_validator import validate_jd
-from app.domain.sessions.status import legacy_status
+from app.domain.sessions.status import TERMINAL_STATUSES, legacy_status
 from app.ports.repositories import SessionRow
 from app.services.generation import resume_after_answers, run_new_session
 from app.services.session_view import list_view, status_view
@@ -20,7 +20,6 @@ from app.services.session_view import list_view, status_view
 router = APIRouter()
 _log = structlog.get_logger("pipeline")
 DEFAULT_TEMPLATE = "classic"
-_FINISHED = frozenset({"succeeded", "failed", "cancelled", "expired", "ineligible"})
 
 
 def _pipeline_summary(c: Container, row: SessionRow) -> dict[str, Any] | None:
@@ -28,7 +27,7 @@ def _pipeline_summary(c: Container, row: SessionRow) -> dict[str, Any] | None:
 
     A finished session's checkpoints are deleted, so its stored summary is the record.
     """
-    if row.status in _FINISHED and row.pipeline_summary is not None:
+    if row.status in TERMINAL_STATUSES and row.pipeline_summary is not None:
         return row.pipeline_summary
     try:
         summary = c.pipeline.summary(row.id)

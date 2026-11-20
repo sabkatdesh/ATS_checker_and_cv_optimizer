@@ -113,13 +113,3 @@ def test_secret_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SENTRY_DSN", "https://sk-test-2@sentry.example/1")
     monkeypatch.setenv("AZURE_OPENAI_KEY", "sk-test-3")
     assert "sk-test" not in repr(load())
-
-
-@pytest.mark.parametrize(
-    ("env", "expected"), [("dev", True), ("test", True), ("staging", False), ("prod", False)]
-)
-def test_dev_tools_enabled(monkeypatch: pytest.MonkeyPatch, env: str, expected: bool) -> None:
-    monkeypatch.setenv("ENV", env)
-    if env in ("staging", "prod"):
-        monkeypatch.setenv("API__CORS_ORIGINS", "https://app.example.com")
-    assert load().dev_tools_enabled is expected

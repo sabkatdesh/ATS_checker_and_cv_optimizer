@@ -29,3 +29,12 @@ def test_table_covers_every_v2_status():
 
 def test_awaiting_kind_is_ignored_outside_awaiting_input():
     assert legacy_status("running", "questions") == "running"
+
+
+def test_terminal_statuses_single_source():
+    from app.api.routers import sessions
+    from app.domain.sessions.status import TERMINAL_STATUSES, V2_STATUSES
+
+    assert TERMINAL_STATUSES == {"succeeded", "failed", "cancelled", "expired", "ineligible"}
+    assert TERMINAL_STATUSES <= set(V2_STATUSES)
+    assert sessions.TERMINAL_STATUSES is TERMINAL_STATUSES

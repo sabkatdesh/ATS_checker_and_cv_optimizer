@@ -18,9 +18,11 @@ def _client(env: str) -> TestClient:
     return TestClient(create_app(container), raise_server_exceptions=False)
 
 
-@pytest.mark.parametrize("env", ["test", "prod"])
-def test_add_coins_absent_everywhere(env):
-    r = _client(env).post("/billing/add-coins", json={"amount": 5}, headers=auth_header())
+@pytest.mark.parametrize("env", ["dev", "test", "prod"])
+@pytest.mark.parametrize("authed", [False, True])
+def test_add_coins_absent_in_every_env(env, authed):
+    headers = auth_header() if authed else {}
+    r = _client(env).post("/billing/add-coins", json={"amount": 5}, headers=headers)
     assert r.status_code == 404
 
 

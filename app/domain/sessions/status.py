@@ -15,6 +15,9 @@ V2Status = Literal[
 ]
 AwaitingKind = Literal["questions", "cover_letter_options"]
 V2_STATUSES: tuple[str, ...] = get_args(V2Status)
+TERMINAL_STATUSES: frozenset[str] = frozenset(
+    {"succeeded", "failed", "cancelled", "expired", "ineligible"}
+)
 
 _AWAITING = {
     "questions": "awaiting_hitl",

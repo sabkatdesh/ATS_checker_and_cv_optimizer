@@ -16,10 +16,10 @@ from app.adapters.db.pool import make_pool
 from app.adapters.db.profile_repo import PgProfileRepo
 from app.adapters.db.render_repo import PgRenderRepo
 from app.adapters.db.session_repo import PgSessionRepo
-from app.adapters.db.supabase_client import make_supabase_client
 from app.adapters.db.template_repo import PgTemplateRepo
 from app.adapters.llm.stack import LlmStack
 from app.adapters.llm.usage_recorder import UsageRecorder
+from app.adapters.storage.supabase_client import SupabaseClient, make_supabase_client
 from app.adapters.storage.supabase_storage import SupabaseBlobStorage
 from app.adapters.usage.memory_sink import MemoryUsageSink
 from app.config.llm_routes import RouteTable
@@ -46,14 +46,13 @@ from app.ports.repositories import (
     TemplateRepo,
 )
 from app.ports.usage import UsageSink
-from supabase import Client
 
 
-def _default_storage(settings: AppSettings, supabase: Callable[[], Client]) -> BlobStorage:
+def _default_storage(settings: AppSettings, supabase: Callable[[], SupabaseClient]) -> BlobStorage:
     return SupabaseBlobStorage(supabase())
 
 
-def _default_auth(settings: AppSettings, supabase: Callable[[], Client]) -> TokenVerifier:
+def _default_auth(settings: AppSettings, supabase: Callable[[], SupabaseClient]) -> TokenVerifier:
     return build_token_verifier(settings.auth, settings.supabase_url)
 
 
@@ -120,7 +119,7 @@ class Container:
         self._storage = storage
         self._pipeline = pipeline
         self._runner = runner
-        self._supabase: Client | None = None
+        self._supabase: SupabaseClient | None = None
         self._pool = pool
         self._closed = False
         self._profiles = profiles
@@ -139,7 +138,7 @@ class Container:
         self._pdf_factory = pdf_factory or _default_pdf
         self._cover_letter_factory = cover_letter_factory or _default_cover_letter
 
-    def _supabase_client(self) -> Client:
+    def _supabase_client(self) -> SupabaseClient:
         """One Supabase client shared by the default storage and token verifier."""
         with self._lock:
             if self._supabase is None:

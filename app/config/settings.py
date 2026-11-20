@@ -132,10 +132,6 @@ class AppSettings(BaseSettings):
     def supabase_url(self) -> str | None:
         return self.auth.supabase_url or self.supabase_url_legacy
 
-    @property
-    def dev_tools_enabled(self) -> bool:
-        return self.env in ("dev", "test")
-
 
 def _format_errors(exc: ValidationError) -> str:
     lines = ["Invalid configuration:"]
